@@ -46,7 +46,7 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
         <AnimatePresence>
           {filteredRecipes.map((recipe) => (
             <motion.div
-              layoutId={\`card-\${recipe.id}\`}
+              layoutId={`card-${recipe.id}`}
               key={recipe.id}
               onClick={() => setSelectedId(recipe.id)}
               initial={{ opacity: 0, y: 20 }}
@@ -57,11 +57,11 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               {/* Abstract Background Element */}
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
               
-              <motion.h3 layoutId={\`title-\${recipe.id}\`} className="text-2xl font-bold text-white mb-2 z-10 relative">
+              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 z-10 relative">
                 {recipe.title}
               </motion.h3>
               
-              <motion.div layoutId={\`tags-\${recipe.id}\`} className="flex flex-wrap gap-2 mb-6 z-10 relative">
+              <motion.div layoutId={`tags-${recipe.id}`} className="flex flex-wrap gap-2 mb-6 z-10 relative">
                 {recipe.tags.map(tag => (
                   <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
                     {tag}
@@ -89,7 +89,7 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
             />
             
             <motion.div
-              layoutId={\`card-\${selectedId}\`}
+              layoutId={`card-${selectedId}`}
               className="w-full max-w-3xl max-h-[85vh] overflow-y-auto bg-slate-900/80 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto relative z-10 custom-scrollbar"
             >
               <button 
@@ -102,11 +102,11 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               <div className="p-8 md:p-12 relative overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-64 bg-gradient-to-b from-indigo-500/20 to-transparent rounded-full blur-3xl pointer-events-none"></div>
                 
-                <motion.h3 layoutId={\`title-\${selectedId}\`} className="text-4xl md:text-5xl font-bold text-white mb-4 relative z-10">
+                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 relative z-10">
                   {selectedRecipe.title}
                 </motion.h3>
                 
-                <motion.div layoutId={\`tags-\${selectedId}\`} className="flex flex-wrap gap-2 mb-8 relative z-10">
+                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap gap-2 mb-8 relative z-10">
                   {selectedRecipe.tags.map(tag => (
                     <span key={tag} className="px-3 py-1 text-sm rounded-full bg-indigo-500/30 text-indigo-100 border border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                       {tag}
