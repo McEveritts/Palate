@@ -33,12 +33,19 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
            tags = Array.isArray(data.tags) ? data.tags : data.tags.split(',').map((t: string) => t.trim());
         }
 
+        let macrosStr = '';
+        if (typeof data.macros === 'object' && data.macros !== null) {
+          macrosStr = Object.entries(data.macros).map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`).join(' | ');
+        } else if (data.macros) {
+          macrosStr = String(data.macros);
+        }
+
         allRecipes.push({
           id: `${category}-${file.replace('.md', '')}`,
           title: data.recipe || data.title || file.replace('.md', ''),
           category,
           tags,
-          macros: data.macros || '',
+          macros: macrosStr,
           content: content.trim()
         });
       }
