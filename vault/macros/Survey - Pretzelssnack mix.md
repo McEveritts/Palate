@@ -1,0 +1,48 @@
+# Survey - Pretzels/snack mix
+| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Pretzel chips, hard, flavored | 370kcal | 9.68g | 77.52g | 2.82g | 3.3g | 2.13g | 2461mg | 1 pretzel chip/crisp/thin 64588 (2.7g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |
+| Pretzel chips, hard, gluten free | 380kcal | 3.43g | 76.7g | 6.51g | 3.2g | 4.12g | 2473mg | 1 pretzel chip/crisp/thin 64588 (2.7g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |
+| Pretzel chips, hard, plain | 375kcal | 9.8g | 78.43g | 2.86g | 3.3g | 2.16g | 2037mg | 1 pretzel chip/crisp/thin 64588 (2.7g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |
+| Pretzels, hard, cheese filled | 463kcal | 9.85g | 66.5g | 16.92g | 3.6g | 17.6g | 1117mg | 1 miniature/bite size 64233 (3.0g); 1 pretzel, NS as to size 64577 (3.0g); 1 small single serving bag 64578 (28.0g); ... |
+| Pretzels, hard, chocolate coated | 467kcal | 7.05g | 70.07g | 17.64g | 3.5g | 38.8g | 494mg | 1 miniature/bite size 64233 (4.0g); 1-3 ring thin pretzel 64574 (7.0g); 1-3 ring thick pretzel 64575 (31.0g); ... |
+| Pretzels, hard, coated, gluten free | 451kcal | 3.76g | 75.06g | 15.57g | 1.4g | 45.25g | 663mg | 1 miniature/bite size 64233 (4.0g); 1-3 ring thin pretzel 64574 (7.0g); 1-3 ring thick pretzel 64575 (31.0g); ... |
+| Pretzels, hard, coated, NFS | 467kcal | 7.05g | 70.07g | 17.64g | 3.5g | 38.8g | 494mg | 1 miniature/bite size 64233 (4.0g); 1-3 ring thin pretzel 64574 (7.0g); 1-3 ring thick pretzel 64575 (31.0g); ... |
+| Pretzels, hard, filled, NFS | 463kcal | 9.85g | 66.5g | 16.92g | 3.6g | 17.6g | 1117mg | 1 miniature/bite size 64233 (3.0g); 1 pretzel, NS as to size 64577 (3.0g); 1 small single serving bag 64578 (28.0g); ... |
+| Pretzels, hard, flavored | 388kcal | 9.92g | 79.44g | 3.88g | 3.4g | 2.18g | 1183mg | 1 miniature/bite size 64233 (1.5g); 1-3 ring thin pretzel 64574 (3.0g); 1-3 ring thick pretzel 64575 (17.0g); ... |
+| Pretzels, hard, flavored, gluten free | 393kcal | 3.48g | 77.69g | 7.58g | 3.3g | 4.17g | 1625mg | 1 pretzel stick 64316 (1.0g); 1 pretzel, NS as to size 64577 (1.3g); 1 small single serving bag 64578 (28.0g); ... |
+| Pretzels, hard, multigrain | 381kcal | 10.15g | 80.08g | 2.96g | 4.2g | 2.17g | 1098mg | 1 miniature/bite size 64233 (1.5g); 1 pretzel stick 64316 (4.0g); 1 rod 64576 (10.0g); ... |
+| Pretzels, hard, NFS | 384kcal | 10.04g | 80.39g | 2.93g | 3.4g | 2.21g | 1120mg | 1 miniature/bite size 64233 (1.5g); 1-3 ring thin pretzel 64574 (3.0g); 1-3 ring thick pretzel 64575 (17.0g); ... |
+| Pretzels, hard, peanut butter filled | 454kcal | 14.04g | 60.79g | 19g | 3.9g | 4.95g | 1039mg | 1 miniature/bite size 64233 (3.0g); 1 pretzel, NS as to size 64577 (3.0g); 1 small single serving bag 64578 (28.0g); ... |
+| Pretzels, hard, plain, gluten free | 389kcal | 3.52g | 78.62g | 6.67g | 3.3g | 4.22g | 1567mg | 1 pretzel stick 64316 (1.0g); 1 pretzel, NS as to size 64577 (1.3g); 1 small single serving bag 64578 (28.0g); ... |
+| Pretzels, hard, plain, lightly salted | 382kcal | 9.57g | 79.8g | 3.22g | 3.1g | 2.21g | 685mg | 1 miniature/bite size 64233 (1.5g); 1-3 ring thin pretzel 64574 (3.0g); 1-3 ring thick pretzel 64575 (17.0g); ... |
+| Pretzels, hard, plain, salted | 384kcal | 10.04g | 80.39g | 2.93g | 3.4g | 2.21g | 1120mg | 1 miniature/bite size 64233 (1.5g); 1-3 ring thin pretzel 64574 (3.0g); 1-3 ring thick pretzel 64575 (17.0g); ... |
+| Pretzels, hard, plain, unsalted | 381kcal | 9.1g | 79.2g | 3.5g | 2.8g | 2.21g | 250mg | 1 miniature/bite size 64233 (1.5g); 1-3 ring thin pretzel 64574 (3.0g); 1-3 ring thick pretzel 64575 (17.0g); ... |
+| Pretzels, hard, white chocolate coated | 445kcal | 5.94g | 74.7g | 14.19g | 1.2g | 44.09g | 442mg | 1 miniature/bite size 64233 (4.0g); 1-3 ring thin pretzel 64574 (7.0g); 1-3 ring thick pretzel 64575 (31.0g); ... |
+| Pretzels, hard, yogurt coated | 438kcal | 5.94g | 76.56g | 12.17g | 1.1g | 45.42g | 441mg | 1 miniature/bite size 64233 (4.0g); 1-3 ring thin pretzel 64574 (7.0g); 1-3 ring thick pretzel 64575 (31.0g); ... |
+| Pretzels, NFS | 384kcal | 10.04g | 80.39g | 2.93g | 3.4g | 2.21g | 1120mg | 1 pretzel, NS as to size 64577 (3.0g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |
+| Pretzels, soft, filled with cheese | 339kcal | 10.22g | 62.35g | 5.36g | 1.5g | 0.45g | 310mg | 1 medium/regular 64591 (99.0g); 1 pretzel, NS as to size 64577 (99.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, cinnamon sugar coated | 374kcal | 6.22g | 73.99g | 6.14g | 2.1g | 19.74g | 248mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, coated or flavored | 365kcal | 7.89g | 66.02g | 7.75g | 1.6g | 0.23g | 896mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, NFS | 345kcal | 8.01g | 69.38g | 4g | 1.7g | 0.24g | 775mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, salted | 340kcal | 8.09g | 70.06g | 3.06g | 1.7g | 0.25g | 783mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, topped with cheese | 339kcal | 10.22g | 62.35g | 5.36g | 1.5g | 0.45g | 310mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, topped with meat | 349kcal | 11.48g | 53.36g | 9.93g | 1.3g | 0.49g | 438mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from frozen, unsalted | 345kcal | 8.2g | 71.04g | 3.1g | 1.7g | 0.25g | 252mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, from school lunch | 339kcal | 8.55g | 70.73g | 3.16g | 3.7g | 0.26g | 240mg | 1 medium/regular 64591 (71.0g); 1 pretzel, NS as to size 64577 (71.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, gluten free | 297kcal | 4.03g | 57.27g | 5.74g | 4g | 3.77g | 839mg | 1 medium/regular 64591 (95.0g); 1 pretzel, NS as to size 64577 (95.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, gluten free, cinnamon sugar coated | 339kcal | 3.1g | 63.75g | 8.14g | 3.8g | 22.41g | 631mg | 1 medium/regular 64591 (95.0g); 1 pretzel, NS as to size 64577 (95.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, gluten free, coated or flavored | 326kcal | 4.1g | 54.15g | 10.37g | 3.7g | 3.56g | 808mg | 1 medium/regular 64591 (95.0g); 1 pretzel, NS as to size 64577 (95.0g); 1 bite size/nugget 64590 (14.0g); ... |
+| Pretzels, soft, multigrain | 337kcal | 8.49g | 70.26g | 3.13g | 3.6g | 0.26g | 495mg | 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); 1 large 60919 (143.0g); ... |
+| Pretzels, soft, NFS | 345kcal | 8.01g | 69.38g | 4g | 1.7g | 0.24g | 775mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Pretzels, soft, ready-to-eat, cinnamon sugar coated | 374kcal | 6.22g | 73.99g | 6.14g | 2.1g | 19.74g | 248mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (74.0g); 1 medium/regular 64591 (147.0g); ... |
+| Pretzels, soft, ready-to-eat, coated or flavored | 365kcal | 7.89g | 66.02g | 7.75g | 1.6g | 0.23g | 896mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (65.0g); 1 medium/regular 64591 (125.0g); ... |
+| Pretzels, soft, ready-to-eat, NFS | 345kcal | 8.01g | 69.38g | 4g | 1.7g | 0.24g | 775mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Pretzels, soft, ready-to-eat, salted, buttered | 345kcal | 8.01g | 69.38g | 4g | 1.7g | 0.24g | 775mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Pretzels, soft, ready-to-eat, salted, no butter | 340kcal | 8.09g | 70.06g | 3.06g | 1.7g | 0.25g | 783mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Pretzels, soft, ready-to-eat, topped with cheese | 339kcal | 10.22g | 62.35g | 5.36g | 1.5g | 0.45g | 310mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (74.0g); 1 medium/regular 64591 (147.0g); ... |
+| Pretzels, soft, ready-to-eat, topped with meat | 349kcal | 11.48g | 53.36g | 9.93g | 1.3g | 0.49g | 438mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (74.0g); 1 medium/regular 64591 (147.0g); ... |
+| Pretzels, soft, ready-to-eat, unsalted, buttered | 350kcal | 8.12g | 70.34g | 4.05g | 1.7g | 0.25g | 250mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Pretzels, soft, ready-to-eat, unsalted, no butter | 345kcal | 8.2g | 71.04g | 3.1g | 1.7g | 0.25g | 252mg | 1 bite size/nugget 64590 (14.0g); 1 small 62015 (62.0g); 1 medium/regular 64591 (120.0g); ... |
+| Snack mix | 504kcal | 6.87g | 63.11g | 25.79g | 3.1g | 1.9g | 729mg | 1 cup 10205 (60.0g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |
+| Snack mix, plain (Chex Mix) | 417kcal | 8.74g | 72.2g | 10.34g | 4.6g | 7.98g | 707mg | 1 cup 10205 (60.0g); 1 small single serving bag 64578 (28.0g); 1 medium single serving bag 64579 (57.0g); ... |

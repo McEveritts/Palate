@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
+  <defs>
+    <linearGradient id="gradCap" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#d946ef" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+    <linearGradient id="fadeStem" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Organic Cap with Sharp V Drip -->
+  <path d="M20,100 C20,40 180,40 180,100 C180,110 160,115 140,115 C120,115 110,120 100,140 C90,120 80,115 60,115 C40,115 20,110 20,100 Z" fill="url(#gradCap)" />
+  
+  <!-- Ambient fade stem -->
+  <rect x="97" y="145" width="6" height="40" rx="3" fill="url(#fadeStem)" />
+  <rect x="85" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+  <rect x="111" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+  <rect x="75" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+  <rect x="122" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+</svg>

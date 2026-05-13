@@ -1,0 +1,160 @@
+<style>
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-800: #1e293b;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-white: #ffffff;
+    --color-fuchsia-500: #d946ef; /* Adding a warm flavor color */
+  }
+  
+  .presentation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .logo-card {
+    background: var(--color-slate-900);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .logo-card:hover {
+    background: var(--color-slate-800);
+    border-color: var(--color-indigo-500);
+    transform: translateY(-5px);
+  }
+  
+  .logo-container {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-slate-950);
+    border-radius: 1rem;
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .logo-title {
+    color: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+  }
+
+  .logo-desc {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>
+
+<h2>Tweaking: Organic to Digital</h2>
+<p class="subtitle">Refining Option 2. Which of these balances the flavor and the tech best?</p>
+
+<div class="presentation-grid">
+
+  <!-- Variation A: The Data Spores -->
+  <div class="logo-card" data-choice="data-spores" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradA" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#818cf8" />
+            <stop offset="100%" stop-color="#4f46e5" />
+          </linearGradient>
+        </defs>
+        <!-- Solid organic cap -->
+        <path d="M20,100 C20,20 180,20 180,100 C180,115 140,115 100,115 C60,115 20,115 20,100 Z" fill="url(#gradA)" />
+        
+        <!-- Stem that breaks into neat data blocks -->
+        <path d="M75,115 L125,115 L125,140 L75,140 Z" fill="#312e81" />
+        <rect x="75" y="145" width="20" height="15" fill="#4f46e5" />
+        <rect x="100" y="145" width="25" height="15" fill="#6366f1" />
+        <rect x="85" y="165" width="15" height="10" fill="#818cf8" />
+        <rect x="105" y="165" width="20" height="10" fill="#4f46e5" />
+        
+        <!-- Data "Spores" falling/floating up -->
+        <rect x="60" y="130" width="8" height="8" fill="#818cf8" />
+        <rect x="135" y="150" width="6" height="6" fill="#6366f1" />
+        <rect x="110" y="185" width="8" height="8" fill="#818cf8" />
+      </svg>
+    </div>
+    <h3 class="logo-title">A. Data Spores</h3>
+    <p class="logo-desc">Keeps the solid organic cap, but the stem shatters into distinct, blocky data chunks that float away like spores.</p>
+  </div>
+
+  <!-- Variation B: The Flavor Gradient -->
+  <div class="logo-card" data-choice="flavor-gradient" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <!-- Adding a warmer 'flavor' color to the tech blue -->
+          <linearGradient id="gradB" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="50%" stop-color="#d946ef" /> <!-- Fuchsia/Umami pop -->
+            <stop offset="100%" stop-color="#f43f5e" /> 
+          </linearGradient>
+        </defs>
+        <!-- Organic Cap -->
+        <path d="M25,100 C25,35 175,35 175,100 Z" fill="url(#gradB)" />
+        <path d="M25,100 C25,110 175,110 175,100" fill="#1e293b" />
+        
+        <!-- Digital stem dissolving -->
+        <rect x="85" y="100" width="30" height="10" fill="#4f46e5" />
+        <rect x="90" y="115" width="20" height="15" fill="#6366f1" />
+        <rect x="95" y="135" width="10" height="20" fill="#818cf8" />
+        <rect x="95" y="160" width="10" height="10" fill="#a5b4fc" />
+      </svg>
+    </div>
+    <h3 class="logo-title">B. Flavor Gradient</h3>
+    <p class="logo-desc">Injects a warm, savory gradient (fuchsia/red) into the cap to represent "flavor", contrasting with the cold digital blue stem.</p>
+  </div>
+
+  <!-- Variation C: The Wireframe Reveal -->
+  <div class="logo-card" data-choice="wireframe-reveal" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradC" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#818cf8" />
+            <stop offset="100%" stop-color="#4f46e5" />
+          </linearGradient>
+        </defs>
+        
+        <!-- Solid left half -->
+        <path d="M100,20 C50,20 20,60 20,100 C20,110 100,110 100,110 Z" fill="url(#gradC)" />
+        <path d="M85,110 L100,110 L100,170 L85,170 Z" fill="#4f46e5" />
+        
+        <!-- Wireframe/Digital right half -->
+        <path d="M100,20 C150,20 180,60 180,100 C180,110 100,110 100,110 Z" fill="none" stroke="#6366f1" stroke-width="2" stroke-dasharray="4 4" />
+        
+        <!-- Right side grid lines inside cap -->
+        <path d="M100,40 C130,40 155,60 160,80" stroke="#4f46e5" stroke-width="1.5" fill="none" />
+        <path d="M100,60 C120,60 140,75 145,90" stroke="#4f46e5" stroke-width="1.5" fill="none" />
+        <path d="M100,80 C110,80 120,90 125,100" stroke="#4f46e5" stroke-width="1.5" fill="none" />
+        
+        <!-- Right side pixel stem -->
+        <rect x="105" y="115" width="15" height="10" fill="#6366f1" />
+        <rect x="105" y="130" width="10" height="15" fill="#818cf8" />
+        <rect x="110" y="150" width="5" height="15" fill="#4f46e5" />
+      </svg>
+    </div>
+    <h3 class="logo-title">C. Wireframe Reveal</h3>
+    <p class="logo-desc">The left half is solid and organic, while the right half is stripped down to a wireframe blueprint and pixels.</p>
+  </div>
+
+</div>

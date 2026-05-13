@@ -1,0 +1,159 @@
+<style>
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-800: #1e293b;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-white: #ffffff;
+  }
+  
+  .presentation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .logo-card {
+    background: var(--color-slate-900);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .logo-card:hover {
+    background: var(--color-slate-800);
+    border-color: var(--color-indigo-500);
+    transform: translateY(-5px);
+  }
+  
+  .logo-container {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-slate-950);
+    border-radius: 1rem;
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .logo-title {
+    color: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+  }
+
+  .logo-desc {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>
+
+<h2>Back to Option 2: Fixing the Transition</h2>
+<p class="subtitle">Keeping the smooth organic cap and the digital stem, but blending the connection point so they don't look glued together.</p>
+
+<div class="presentation-grid">
+
+  <!-- Blended 1: The Glitch Bleed -->
+  <div class="logo-card" data-choice="blend-glitch" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradGlitch" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="50%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" /> 
+          </linearGradient>
+        </defs>
+        <!-- Organic Cap that starts glitching at the bottom -->
+        <path d="M20,100 C20,30 180,30 180,100 Z" fill="url(#gradGlitch)" />
+        
+        <!-- The bottom edge of the cap breaks into pixels, physically merging with the stem -->
+        <path d="M20,100 L40,100 L40,110 L60,110 L60,100 L80,100 L80,115 L120,115 L120,100 L140,100 L140,110 L160,110 L160,100 L180,100 Z" fill="url(#gradGlitch)" />
+        
+        <!-- Stem blocks inheriting the gradient color before fading to blue -->
+        <rect x="85" y="115" width="15" height="15" fill="#d946ef" />
+        <rect x="100" y="115" width="20" height="10" fill="#a21caf" />
+        <rect x="80" y="130" width="25" height="15" fill="#6366f1" />
+        <rect x="105" y="125" width="15" height="20" fill="#4f46e5" />
+        <rect x="90" y="145" width="10" height="15" fill="#312e81" />
+        <rect x="100" y="145" width="15" height="10" fill="#4338ca" />
+      </svg>
+    </div>
+    <h3 class="logo-title">1. The Pixel Bleed</h3>
+    <p class="logo-desc">The smooth edge of the cap fractures into pixels, pulling the warm flavor colors down directly into the digital stem blocks.</p>
+  </div>
+
+  <!-- Blended 2: Tech Roots -->
+  <div class="logo-card" data-choice="blend-roots" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradRoots" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="60%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" /> 
+          </linearGradient>
+        </defs>
+        <!-- Organic Cap -->
+        <path d="M20,100 C20,30 180,30 180,100 C180,110 140,110 100,110 C60,110 20,110 20,100 Z" fill="url(#gradRoots)" />
+        
+        <!-- Digital stem that reaches UP into the cap like roots/gills -->
+        <rect x="85" y="110" width="30" height="15" fill="#312e81" />
+        <rect x="90" y="125" width="20" height="15" fill="#4f46e5" />
+        <rect x="95" y="140" width="10" height="15" fill="#6366f1" />
+        
+        <!-- The integration lines moving from the stem up into the gradient cap -->
+        <path d="M100,110 L100,70" stroke="#312e81" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M90,110 L70,80" stroke="#312e81" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M110,110 L130,80" stroke="#312e81" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="100" cy="70" r="4" fill="#312e81" />
+        <circle cx="70" cy="80" r="3" fill="#312e81" />
+        <circle cx="130" cy="80" r="3" fill="#312e81" />
+      </svg>
+    </div>
+    <h3 class="logo-title">2. Tech Roots</h3>
+    <p class="logo-desc">The digital stem acts as a root system, sending dark circuit traces up into the bright organic cap to anchor the two pieces together.</p>
+  </div>
+
+  <!-- Blended 3: Data Drip -->
+  <div class="logo-card" data-choice="blend-drip" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradDrip" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="60%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" /> 
+          </linearGradient>
+        </defs>
+        <!-- Organic Cap dripping downwards -->
+        <path d="M20,100 C20,30 180,30 180,100 Z" fill="url(#gradDrip)" />
+        <path d="M20,100 C40,100 50,115 60,115 C70,115 80,100 90,100 C100,100 100,130 110,130 C120,130 120,100 140,100 C160,100 160,110 180,100 Z" fill="url(#gradDrip)" />
+        
+        <!-- The organic drips transform into square data blocks as they fall -->
+        <rect x="55" y="125" width="10" height="10" fill="#d946ef" />
+        <rect x="55" y="140" width="10" height="10" fill="#818cf8" />
+        
+        <rect x="100" y="135" width="20" height="20" fill="#c026d3" />
+        <rect x="105" y="160" width="10" height="10" fill="#4f46e5" />
+        <rect x="90" y="150" width="10" height="10" fill="#6366f1" />
+      </svg>
+    </div>
+    <h3 class="logo-title">3. Data Drip</h3>
+    <p class="logo-desc">The organic food shape melts and drips downward, but instead of forming puddles, the drips crystallize into rigid tech blocks.</p>
+  </div>
+
+</div>

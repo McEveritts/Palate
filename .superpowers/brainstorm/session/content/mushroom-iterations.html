@@ -1,0 +1,166 @@
+<style>
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-800: #1e293b;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-white: #ffffff;
+  }
+  
+  .presentation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .logo-card {
+    background: var(--color-slate-900);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .logo-card:hover {
+    background: var(--color-slate-800);
+    border-color: var(--color-indigo-500);
+    transform: translateY(-5px);
+  }
+  
+  .logo-container {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-slate-950);
+    border-radius: 1rem;
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .logo-title {
+    color: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+  }
+
+  .logo-desc {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>
+
+<h2>The Digital Mushroom: 3 Iterations</h2>
+<p class="subtitle">Exploring the clash between the organic "Umami" shape and technology/AI.</p>
+
+<div class="presentation-grid">
+
+  <!-- Iteration 1 -->
+  <div class="logo-card" data-choice="geometric" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#818cf8" />
+            <stop offset="100%" stop-color="#4f46e5" />
+          </linearGradient>
+        </defs>
+        <!-- Stem -->
+        <path d="M85,100 L85,170 L115,170 L115,100 Z" fill="#1e293b" stroke="#6366f1" stroke-width="3" />
+        <!-- Circuit traces on stem -->
+        <circle cx="100" cy="150" r="4" fill="#818cf8" />
+        <path d="M100,150 L100,120 L115,120" stroke="#818cf8" stroke-width="2" fill="none" />
+        <circle cx="85" cy="135" r="3" fill="#818cf8" />
+        <path d="M85,135 L95,135 L95,110" stroke="#818cf8" stroke-width="2" fill="none" />
+        <!-- Geometric Cap -->
+        <path d="M100,30 L170,100 L30,100 Z" fill="url(#grad1)" stroke="#818cf8" stroke-width="2" stroke-linejoin="round" />
+        <!-- Gills (Data lines) -->
+        <path d="M60,100 L60,80 M80,100 L80,65 M100,100 L100,50 M120,100 L120,65 M140,100 L140,80" stroke="#020617" stroke-width="4" stroke-linecap="round" />
+      </svg>
+    </div>
+    <h3 class="logo-title">1. The Circuit-Shroom</h3>
+    <p class="logo-desc">Hard geometric angles. The gills are rendered as negative-space data slots, and the stem is a literal circuit board.</p>
+  </div>
+
+  <!-- Iteration 2 -->
+  <div class="logo-card" data-choice="pixelated" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="100%" stop-color="#818cf8" />
+          </linearGradient>
+        </defs>
+        <!-- Pixelated/Data Stem -->
+        <rect x="85" y="100" width="30" height="15" fill="#312e81" />
+        <rect x="85" y="120" width="30" height="10" fill="#4f46e5" />
+        <rect x="90" y="135" width="20" height="15" fill="#6366f1" />
+        <rect x="85" y="155" width="10" height="10" fill="#818cf8" />
+        <rect x="105" y="155" width="10" height="10" fill="#6366f1" />
+        <rect x="95" y="170" width="10" height="10" fill="#818cf8" />
+        <!-- Floating data bits -->
+        <rect x="75" y="145" width="6" height="6" fill="#4f46e5" />
+        <rect x="120" y="130" width="8" height="8" fill="#4f46e5" />
+        <!-- Organic Cap -->
+        <path d="M20,100 C20,30 180,30 180,100 Z" fill="url(#grad2)" />
+        <path d="M20,100 C20,110 180,110 180,100" fill="#312e81" />
+        <!-- Gills -->
+        <path d="M40,100 C60,115 140,115 160,100" stroke="#1e293b" stroke-width="2" fill="none" />
+        <path d="M60,100 C80,120 120,120 140,100" stroke="#1e293b" stroke-width="2" fill="none" />
+      </svg>
+    </div>
+    <h3 class="logo-title">2. Organic to Digital</h3>
+    <p class="logo-desc">A smooth, natural cap representing food/flavor, but the stem dissolves into raw pixels/data blocks.</p>
+  </div>
+
+  <!-- Iteration 3 -->
+  <div class="logo-card" data-choice="neural" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <!-- Stem base -->
+        <path d="M90,100 L90,160 Q90,170 100,170 Q110,170 110,160 L110,100" fill="none" stroke="#4f46e5" stroke-width="8" stroke-linecap="round" />
+        
+        <!-- Neural Net Nodes (forming the cap shape) -->
+        <!-- Center node -->
+        <circle cx="100" cy="50" r="6" fill="#ffffff" />
+        <!-- Middle layer -->
+        <circle cx="60" cy="70" r="5" fill="#818cf8" />
+        <circle cx="100" cy="75" r="5" fill="#818cf8" />
+        <circle cx="140" cy="70" r="5" fill="#818cf8" />
+        <!-- Bottom layer -->
+        <circle cx="30" cy="100" r="4" fill="#6366f1" />
+        <circle cx="65" cy="100" r="4" fill="#6366f1" />
+        <circle cx="100" cy="100" r="6" fill="#ffffff" />
+        <circle cx="135" cy="100" r="4" fill="#6366f1" />
+        <circle cx="170" cy="100" r="4" fill="#6366f1" />
+        
+        <!-- Connections -->
+        <!-- From Top -->
+        <path d="M100,50 L60,70 M100,50 L100,75 M100,50 L140,70" stroke="#6366f1" stroke-width="2" opacity="0.6" />
+        <!-- Middle cross-links -->
+        <path d="M60,70 L100,75 L140,70" stroke="#6366f1" stroke-width="1.5" opacity="0.4" />
+        <!-- To Bottom -->
+        <path d="M60,70 L30,100 M60,70 L65,100 M60,70 L100,100" stroke="#4f46e5" stroke-width="2" opacity="0.6" />
+        <path d="M100,75 L65,100 M100,75 L100,100 M100,75 L135,100" stroke="#4f46e5" stroke-width="2" opacity="0.6" />
+        <path d="M140,70 L100,100 M140,70 L135,100 M140,70 L170,100" stroke="#4f46e5" stroke-width="2" opacity="0.6" />
+        <!-- Bottom cross-links -->
+        <path d="M30,100 L65,100 L100,100 L135,100 L170,100" stroke="#4f46e5" stroke-width="3" opacity="0.8" />
+      </svg>
+    </div>
+    <h3 class="logo-title">3. The Neural Node</h3>
+    <p class="logo-desc">Leans heavily into the AI/Genie aspect. The mushroom shape is constructed entirely out of a glowing neural network diagram.</p>
+  </div>
+
+</div>

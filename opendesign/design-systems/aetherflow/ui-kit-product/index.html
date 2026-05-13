@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherFlow UI Kit</title>
+    <link rel="stylesheet" href="../../tokens/colors_and_type.css">
+    <style>
+        body {
+            background-color: var(--color-slate-950);
+            color: var(--color-slate-200);
+            font-family: var(--font-inter);
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        .section { display: flex; flex-direction: column; gap: 1rem; }
+        .row { display: flex; gap: 1rem; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AetherFlow UI Kit</h1>
+        
+        <div class="section">
+            <h2>Buttons</h2>
+            <div class="row">
+                <button class="glass-button h-10 px-4 py-2 inline-flex items-center justify-center rounded-xl text-sm font-medium">Default Glass Button</button>
+                <button class="glass-button-primary h-10 px-4 py-2 inline-flex items-center justify-center rounded-xl text-sm font-medium">Primary Glass Button</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Inputs</h2>
+            <div class="row">
+                <input class="glass-input flex h-10 w-full px-3 py-2 text-sm rounded-xl" placeholder="Search recipes..." />
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Cards</h2>
+            <div class="glass-card relative overflow-hidden flex flex-col space-y-1.5 p-6">
+                <h3 class="text-lg font-semibold text-white m-0">Recipe Card</h3>
+                <p class="text-sm text-slate-400 mt-1">This is a glass card showcasing the UI kit.</p>
+            </div>
+            
+            <div class="glass-panel relative overflow-hidden flex flex-col space-y-1.5 p-6">
+                <h3 class="text-lg font-semibold text-white m-0">Panel Variant</h3>
+                <p class="text-sm text-slate-400 mt-1">This uses the darker glass-panel class.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

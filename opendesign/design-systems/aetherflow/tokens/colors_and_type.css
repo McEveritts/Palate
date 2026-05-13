@@ -1,0 +1,104 @@
+:root {
+  /* Raw Color Variables (Based on Tailwind Defaults) */
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-500: #64748b;
+  --color-slate-400: #94a3b8;
+  --color-slate-300: #cbd5e1;
+  --color-slate-200: #e2e8f0;
+  
+  --color-indigo-500: #6366f1;
+  --color-indigo-400: #818cf8;
+  
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Typography Variables */
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-sans: var(--font-inter);
+  
+  --text-sm: 0.875rem; /* 14px */
+  --text-base-size: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+
+  /* Semantic Colors */
+  --bg-app: var(--color-slate-950);
+  --text-base: var(--color-slate-200);
+  --text-muted: var(--color-slate-400);
+  --text-strong: var(--color-white);
+  --accent-primary: var(--color-indigo-500);
+  --accent-primary-hover: var(--color-indigo-400);
+  
+  /* Radii & Shadows */
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --shadow-card: 0 12px 40px rgba(0,0,0,0.4);
+  --shadow-panel: 0 20px 50px rgba(0,0,0,0.6);
+  --shadow-button: 0 4px 24px rgba(0,0,0,0.2);
+  --shadow-button-primary: 0 4px 24px rgba(99,102,241,0.4);
+}
+
+/* Glassmorphism Component Utilities from AetherFlow */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-panel {
+  background-color: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(64px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-panel);
+}
+
+.glass-button {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--color-white);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  transition: all 300ms;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-button);
+}
+
+.glass-button:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.glass-button:active {
+  transform: scale(0.95);
+}
+
+.glass-button-primary {
+  background-color: rgba(99, 102, 241, 0.8);
+  color: var(--color-white);
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  border-radius: var(--radius-xl);
+  transition: all 300ms;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-button-primary);
+}
+
+.glass-button-primary:hover {
+  background-color: var(--color-indigo-400);
+}
+
+.glass-input {
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-slate-200);
+  border-radius: var(--radius-xl);
+  transition: all 200ms;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.glass-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6);
+  border-color: rgba(99, 102, 241, 0.6);
+}

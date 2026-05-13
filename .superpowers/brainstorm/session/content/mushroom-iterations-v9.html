@@ -1,0 +1,164 @@
+<style>
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-800: #1e293b;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-white: #ffffff;
+  }
+  
+  .presentation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .logo-card {
+    background: var(--color-slate-900);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .logo-card:hover {
+    background: var(--color-slate-800);
+    border-color: var(--color-indigo-500);
+    transform: translateY(-5px);
+  }
+  
+  .logo-container {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-slate-950);
+    border-radius: 1rem;
+    box-shadow: inset 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .logo-title {
+    color: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+  }
+
+  .logo-desc {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+</style>
+
+<h2>Tweaking the Drip</h2>
+<p class="subtitle">Focusing solely on the geometric transition between the organic cap and the fading stem.</p>
+
+<div class="presentation-grid">
+
+  <!-- Drip 1: Seamless Curve -->
+  <div class="logo-card" data-choice="drip-seamless" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradEleg3C" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="50%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="fadeStem" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        
+        <!-- Modified to flow smoothly down without a sharp inner corner -->
+        <path d="M20,100 C20,40 180,40 180,100 C180,115 150,115 130,115 C115,115 105,125 105,140 L95,140 C95,125 85,115 70,115 C50,115 20,115 20,100 Z" fill="url(#gradEleg3C)" />
+        
+        <!-- Ambient fade stem (shifted slightly to match new drip width) -->
+        <rect x="97" y="145" width="6" height="40" rx="3" fill="url(#fadeStem)" />
+        <rect x="85" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="111" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="75" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+        <rect x="122" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+      </svg>
+    </div>
+    <h3 class="logo-title">1. Seamless Curve</h3>
+    <p class="logo-desc">Removes the sharp pinch entirely. The cap flows smoothly inward like an hourglass before dropping the data lines.</p>
+  </div>
+
+  <!-- Drip 2: The Sharp V -->
+  <div class="logo-card" data-choice="drip-sharp" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradEleg3C" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="50%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="fadeStem" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        
+        <!-- Modified to form a sharp, aggressive V shape -->
+        <path d="M20,100 C20,40 180,40 180,100 C180,110 160,115 140,115 C120,115 110,120 100,140 C90,120 80,115 60,115 C40,115 20,110 20,100 Z" fill="url(#gradEleg3C)" />
+        
+        <!-- Ambient fade stem -->
+        <rect x="97" y="145" width="6" height="40" rx="3" fill="url(#fadeStem)" />
+        <rect x="85" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="111" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="75" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+        <rect x="122" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+      </svg>
+    </div>
+    <h3 class="logo-title">2. Sharp V</h3>
+    <p class="logo-desc">Creates a sharper, more aggressive point. It looks less like a liquid drip and more like a precise funnel channeling data.</p>
+  </div>
+
+  <!-- Drip 3: Stepped Tech -->
+  <div class="logo-card" data-choice="drip-stepped" onclick="toggleSelect(this)">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="160" height="160">
+        <defs>
+          <linearGradient id="gradEleg3C" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#4f46e5" />
+            <stop offset="50%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#f43f5e" />
+          </linearGradient>
+          <linearGradient id="fadeStem" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        
+        <path d="M20,100 C20,40 180,40 180,100 C180,110 160,115 140,115 C120,115 115,130 100,130 C85,130 80,115 60,115 C40,115 20,110 20,100 Z" fill="url(#gradEleg3C)" />
+        
+        <!-- Modified to form stepped, rigid blocks instead of a fluid curve -->
+        <path d="M90,130 L110,130 L110,135 L105,135 L105,140 L95,140 L95,135 L90,135 Z" fill="#6366f1" />
+        
+        <!-- Ambient fade stem -->
+        <rect x="97" y="145" width="6" height="40" rx="3" fill="url(#fadeStem)" />
+        <rect x="85" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="111" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+        <rect x="75" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+        <rect x="122" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+      </svg>
+    </div>
+    <h3 class="logo-title">3. Stepped Tech</h3>
+    <p class="logo-desc">The fluid wave shape drops into rigid, stepped blocks, intentionally contrasting the smooth top with the digital bottom.</p>
+  </div>
+
+</div>

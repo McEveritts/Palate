@@ -1,0 +1,15 @@
+# Survey - Bacon
+| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Bacon bits | 476kcal | 32g | 28.6g | 25.9g | 10.2g | 0g | 1770mg | 1 tablespoon 21000 (7.0g); Quantity not specified 90000 (4.0g) |
+| Bacon or side pork, fresh, cooked | 468kcal | 33.92g | 1.7g | 35.09g | 0g | 0g | 1684mg | 1 medium slice (yield after cooking) 61410 (8.0g); 1 oz, raw (yield after cooking) 40054 (8.0g); Quantity not specified 90000 (16.0g); ... |
+| Bacon, NS as to type of meat, cooked | 484kcal | 37.41g | 1.9g | 35.8g | 0g | 1.57g | 1757mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Bacon, NS as to type of meat, reduced sodium, cooked | 253kcal | 13.33g | 4.8g | 20g | 0g | 0g | 900mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Beef, bacon, cooked | 449kcal | 31.3g | 1.4g | 34.4g | 0g | 0g | 1500mg | 1 oz, cooked 40040 (28.35g); 1 oz, raw (yield after cooking) 40054 (9.0g); 1 slice, cooked (approx .8 oz, raw) 62010 (6.5g); ... |
+| Beef, bacon, reduced sodium, cooked | 541kcal | 37.04g | 1.43g | 41.78g | 0g | 0g | 1030mg | 1 oz, cooked 40040 (28.35g); 1 oz, raw (yield after cooking) 40054 (9.0g); 1 slice, cooked (approx .8 oz, raw) 62010 (6.5g); ... |
+| Pork bacon, NS as to fresh, smoked or cured, cooked | 484kcal | 37.41g | 1.9g | 35.8g | 0g | 1.57g | 1757mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Pork bacon, NS as to fresh, smoked or cured, reduced sodium, cooked | 541kcal | 37.04g | 1.43g | 41.78g | 0g | 0g | 1030mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Pork bacon, smoked or cured, cooked | 468kcal | 33.92g | 1.7g | 35.09g | 0g | 0g | 1684mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Pork bacon, smoked or cured, reduced sodium, cooked | 541kcal | 37.04g | 1.43g | 41.78g | 0g | 0g | 1030mg | 1 thin slice (yield after cooking) 62314 (5.0g); 1 medium slice (yield after cooking) 61410 (8.0g); 1 thick slice (yield after cooking) 62303 (12.0g); ... |
+| Turkey bacon, cooked | 368kcal | 29.5g | 4.24g | 25.87g | 0g | 4.24g | 2021mg | 1 oz, cooked 40040 (28.35g); 1 oz, raw (yield after cooking) 40054 (16.0g); 1 thin slice (yield after cooking) 62314 (8.0g); ... |
+| Turkey bacon, reduced sodium, cooked | 253kcal | 13.33g | 4.8g | 20g | 0g | 0g | 900mg | 1 oz, cooked 40040 (28.35g); 1 oz, raw (yield after cooking) 40054 (16.0g); 1 thin slice (yield after cooking) 62314 (8.0g); ... |

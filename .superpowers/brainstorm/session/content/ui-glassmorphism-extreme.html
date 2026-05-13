@@ -1,0 +1,558 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-800: #1e293b;
+    --color-slate-400: #94a3b8;
+    --color-slate-200: #e2e8f0;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-fuchsia-500: #d946ef;
+    --color-white: #ffffff;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --shadow-card: 0 12px 40px rgba(0,0,0,0.3);
+    --shadow-panel: 0 20px 50px rgba(0,0,0,0.5);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-slate-950);
+    color: var(--color-white);
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* Extreme Glassmorphism Utilities - INCREASED TRANSPARENCY */
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.00) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.15); 
+    border-left: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+    color: var(--color-white);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s;
+  }
+  .glass-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  }
+
+  .glass-panel {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.25) 0%, rgba(2, 6, 23, 0.35) 100%);
+    backdrop-filter: blur(48px);
+    -webkit-backdrop-filter: blur(48px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-panel);
+    border-radius: var(--radius-xl);
+  }
+
+  .glass-button-primary {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(217, 70, 239, 0.7));
+    backdrop-filter: blur(12px);
+    color: var(--color-white);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s;
+  }
+  .glass-button-primary:hover {
+    transform: scale(1.02);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .glass-input {
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
+    color: var(--color-white);
+    border-radius: 2rem;
+    padding: 1rem 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.3s;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.15);
+  }
+  .glass-input:focus {
+    border-color: var(--color-indigo-400);
+    background: rgba(0, 0, 0, 0.25);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.25), 0 0 20px rgba(99, 102, 241, 0.15);
+  }
+  .glass-input::placeholder {
+    color: var(--color-slate-400);
+  }
+
+  /* App Container & Backgrounds */
+  .app-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    margin: 1rem;
+    border-radius: var(--radius-2xl);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    background-color: var(--color-slate-950);
+  }
+
+  /* Glowing Orbs */
+  .glow-orb-1 {
+    position: absolute;
+    top: -10%;
+    left: 10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+    filter: blur(60px);
+    z-index: 0;
+    border-radius: 50%;
+  }
+  .glow-orb-2 {
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(217, 70, 239, 0.2) 0%, transparent 70%);
+    filter: blur(80px);
+    z-index: 0;
+    border-radius: 50%;
+  }
+  .glow-orb-3 {
+    position: absolute;
+    top: 40%;
+    left: 40%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
+    filter: blur(40px);
+    z-index: 0;
+    border-radius: 50%;
+  }
+
+  .bg-mesh {
+    position: absolute;
+    inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2500&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: 0;
+    mix-blend-mode: screen;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    margin: 1rem 0 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.005) 100%);
+  }
+
+  .brand-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+  }
+
+  .brand-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-white);
+  }
+
+  .nav-section {
+    margin-bottom: 2rem;
+  }
+
+  .nav-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-slate-400);
+    margin-bottom: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .nav-item {
+    padding: 0.6rem 0.75rem;
+    color: var(--color-slate-200);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.05);
+    color: white;
+  }
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.02));
+    border-color: rgba(99, 102, 241, 0.2);
+    border-left: 3px solid var(--color-indigo-400);
+    color: var(--color-white);
+    font-weight: 500;
+  }
+
+  /* Main Content Area */
+  .main-area {
+    flex: 1;
+    z-index: 2;
+    padding: 1rem 2rem 1rem 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* Recipe Genie Hero */
+  .genie-hero {
+    padding: 4rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.1) 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .genie-icon-wrapper {
+    width: 64px; 
+    height: 64px; 
+    border-radius: 50%; 
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(217, 70, 239, 0.15)); 
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 1.75rem; 
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.3), inset 0 2px 10px rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+  }
+
+  .genie-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.03em;
+    color: var(--color-white);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+
+  .genie-subtitle {
+    font-size: 1.1rem;
+    color: var(--color-slate-200);
+    max-width: 550px;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .input-wrapper {
+    width: 100%;
+    max-width: 700px;
+    position: relative;
+    margin-top: 1.5rem;
+  }
+
+  .upload-btn {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    border-radius: 1.5rem;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+  .upload-btn:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+  }
+
+  /* Content Grid */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+  }
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+  .section-link {
+    color: var(--color-indigo-400);
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .recipe-image-container {
+    width: 100%;
+    height: 180px;
+    border-radius: 0.75rem;
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .recipe-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+
+  .glass-card:hover .recipe-image {
+    transform: scale(1.05);
+  }
+
+  .image-glass-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(15,23,42,0.8) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .recipe-tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.75rem;
+  }
+  .tag {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--color-white);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .tag.primary {
+    background: rgba(99, 102, 241, 0.4);
+    border-color: rgba(99, 102, 241, 0.8);
+  }
+
+  .recipe-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem 0;
+    color: white;
+  }
+  .recipe-meta {
+    font-size: 0.85rem;
+    color: var(--color-slate-400);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .meta-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-slate-400);
+  }
+</style>
+
+<div class="app-container">
+  <!-- Dynamic Glowing Orbs to highlight Glassmorphism -->
+  <div class="glow-orb-1"></div>
+  <div class="glow-orb-2"></div>
+  <div class="glow-orb-3"></div>
+  <div class="bg-mesh"></div>
+
+  <!-- Sidebar -->
+  <div class="glass-panel sidebar">
+    <div class="brand-area">
+      <!-- Final Umami Logo (Sharp V variant) -->
+      <div class="brand-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+          <defs>
+            <linearGradient id="gradCap" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#4f46e5" />
+              <stop offset="50%" stop-color="#d946ef" />
+              <stop offset="100%" stop-color="#f43f5e" />
+            </linearGradient>
+            <linearGradient id="fadeStem" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1" />
+              <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M20,100 C20,40 180,40 180,100 C180,110 160,115 140,115 C120,115 110,120 100,140 C90,120 80,115 60,115 C40,115 20,110 20,100 Z" fill="url(#gradCap)" />
+          <rect x="97" y="145" width="6" height="40" rx="3" fill="url(#fadeStem)" />
+          <rect x="85" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+          <rect x="111" y="135" width="4" height="30" rx="2" fill="url(#fadeStem)" />
+          <rect x="75" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+          <rect x="122" y="125" width="3" height="20" rx="1.5" fill="url(#fadeStem)" />
+        </svg>
+      </div>
+      <div class="brand-name">Palate</div>
+    </div>
+
+    <!-- Updated Copy -->
+    <div class="nav-section">
+      <div class="nav-label">Intelligence</div>
+      <div class="nav-item active">✨ Ask Sage</div>
+      <div class="nav-item">🧠 Generated Plans</div>
+      <div class="nav-item">📚 All Recipes</div>
+      <div class="nav-item">📤 Upload Recipes</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Smart Collections</div>
+      <div class="nav-item">🧬 Macro-Optimized</div>
+      <div class="nav-item">⏱️ Flash Synthesize</div>
+      <div class="nav-item">🌱 Zero-Waste</div>
+      <div class="nav-item">🧪 Flavor Profiles</div>
+    </div>
+
+    <!-- Pushes Settings to the bottom -->
+    <div style="flex-grow: 1;"></div>
+
+    <div class="nav-section" style="margin-bottom: 0;">
+      <div class="nav-item">⚙️ Settings</div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-area">
+    <!-- Sage Hero -->
+    <div class="glass-panel genie-hero">
+      <div class="genie-icon-wrapper">
+        🌿
+      </div>
+      
+      <h1 class="genie-title">Sage is Ready.</h1>
+      <p class="genie-subtitle">Upload a photo of your fridge, specify your macros, or describe a craving. Let Sage synthesize your perfect meal.</p>
+      
+      <div class="input-wrapper">
+        <input class="glass-input" placeholder="e.g. 'Generate a high-protein dinner using chicken and broccoli...'">
+        <button class="upload-btn">
+          📷 Parse Image
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Section -->
+    <div>
+      <div class="section-header">
+        <h2 class="section-title">Curated by Sage</h2>
+        <span class="section-link">View all parameters →</span>
+      </div>
+      
+      <div class="grid-3">
+        <!-- Card 1 -->
+        <div class="glass-card">
+          <div class="recipe-image-container">
+            <img class="recipe-image" src="https://images.unsplash.com/photo-1552611052-33e04de081de?q=80&w=800&auto=format&fit=crop" alt="Ramen">
+            <div class="image-glass-overlay"></div>
+            <div class="recipe-tags">
+              <span class="tag primary">AI Perfected</span>
+              <span class="tag">80g Protein</span>
+            </div>
+          </div>
+          <h3 class="recipe-title">Optimized Tonkotsu Matrix</h3>
+          <p class="recipe-meta">Synthesis: 15m <span class="meta-dot"></span> Simmer: 8h</p>
+        </div>
+        
+        <!-- Card 2 -->
+        <div class="glass-card">
+          <div class="recipe-image-container">
+            <img class="recipe-image" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop" alt="Bowl">
+            <div class="image-glass-overlay"></div>
+            <div class="recipe-tags">
+              <span class="tag primary">Smart Macros</span>
+              <span class="tag">Omega-3</span>
+            </div>
+          </div>
+          <h3 class="recipe-title">Algorithmic Salmon Bowl</h3>
+          <p class="recipe-meta">Synthesis: 10m <span class="meta-dot"></span> Execute: 15m</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="glass-card">
+          <div class="recipe-image-container">
+            <img class="recipe-image" src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?q=80&w=800&auto=format&fit=crop" alt="Pasta">
+            <div class="image-glass-overlay"></div>
+            <div class="recipe-tags">
+              <span class="tag primary">Flavor Profile</span>
+              <span class="tag">Comfort</span>
+            </div>
+          </div>
+          <h3 class="recipe-title">Truffle Emulsion Risotto</h3>
+          <p class="recipe-meta">Synthesis: 20m <span class="meta-dot"></span> Execute: 30m</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

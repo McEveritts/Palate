@@ -1,0 +1,222 @@
+<style>
+  :root {
+    --color-slate-950: #020617;
+    --color-slate-900: #0f172a;
+    --color-slate-400: #94a3b8;
+    --color-slate-200: #e2e8f0;
+    --color-indigo-500: #6366f1;
+    --color-indigo-400: #818cf8;
+    --color-white: #ffffff;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --shadow-card: 0 12px 40px rgba(0,0,0,0.4);
+    --shadow-panel: 0 20px 50px rgba(0,0,0,0.6);
+  }
+
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+    color: var(--color-white);
+  }
+
+  .glass-panel {
+    background-color: rgba(2, 6, 23, 0.6);
+    backdrop-filter: blur(64px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-panel);
+    border-radius: var(--radius-xl);
+  }
+
+  .glass-button-primary {
+    background-color: rgba(99, 102, 241, 0.8);
+    color: var(--color-white);
+    border: 1px solid rgba(129, 140, 248, 0.4);
+    border-radius: var(--radius-xl);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .glass-input {
+    background-color: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-slate-200);
+    border-radius: var(--radius-xl);
+    padding: 0.75rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+  }
+
+  @keyframes slowPan {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(-2%, -2%); }
+  }
+
+  .layout-container {
+    display: flex;
+    height: 650px;
+    gap: 1.5rem;
+    border-radius: 1rem;
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bg-animated {
+    position: absolute;
+    inset: -10%;
+    background: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
+    animation: slowPan 30s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+
+  .layout-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.85);
+    z-index: 1;
+  }
+
+  .sidebar {
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: relative;
+    z-index: 2;
+    padding: 1rem;
+  }
+
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 2;
+    overflow-y: auto;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .nav-item {
+    padding: 0.5rem 1rem;
+    color: var(--color-slate-400);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-item:hover {
+    color: var(--color-slate-200);
+    background: rgba(255,255,255,0.02);
+  }
+  .nav-item.active {
+    background: rgba(255,255,255,0.05);
+    color: var(--color-white);
+  }
+
+  .genie-hero {
+    background: linear-gradient(145deg, rgba(99, 102, 241, 0.2) 0%, rgba(2, 6, 23, 0.6) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .genie-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<h2>Recipe Genie Front and Center</h2>
+<p class="subtitle">The animated food background is applied. The main view now features the Recipe Genie prominently at the top, ready for text or image uploads.</p>
+
+<div class="layout-container">
+  <!-- Animated Background Layer -->
+  <div class="bg-animated"></div>
+
+  <!-- Sidebar -->
+  <div class="glass-panel sidebar">
+    <div style="font-size: 1.25rem; font-weight: bold; color: white; margin-bottom: 1rem;">Umami</div>
+    
+    <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--color-slate-400); margin-bottom: 0.5rem;">Library</div>
+    <div class="nav-item active">Home / Genie</div>
+    <div class="nav-item">All Recipes</div>
+    <div class="nav-item">Favorites</div>
+    
+    <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--color-slate-400); margin-top: 1rem; margin-bottom: 0.5rem;">Categories</div>
+    <div class="nav-item">Dinner</div>
+    <div class="nav-item">Desserts</div>
+    <div class="nav-item">Quick Meals</div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    
+    <!-- Recipe Genie Hero -->
+    <div class="glass-panel genie-hero">
+      <div class="genie-icon">✨</div>
+      <h2 style="margin: 0; color: white; font-size: 1.5rem;">What are we making today?</h2>
+      <p style="margin: 0; color: var(--color-slate-400); max-width: 400px;">
+        Tell me what you're craving, list your ingredients, or drop a photo of your fridge.
+      </p>
+      
+      <div style="display: flex; width: 100%; max-width: 600px; margin-top: 1rem; position: relative;">
+        <input class="glass-input" placeholder="e.g. 'I have chicken, rice, and broccoli'..." style="padding-right: 4rem; border-radius: 2rem;">
+        <button class="glass-button-primary" style="position: absolute; right: 4px; top: 4px; bottom: 4px; border-radius: 1.5rem; display: flex; align-items: center; justify-content: center;">
+          Upload 📷
+        </button>
+      </div>
+    </div>
+
+    <!-- Recent Recipes -->
+    <h3 style="margin: 0; color: white; margin-top: 1rem;">Recent Recipes</h3>
+    <div class="grid-3">
+      <div class="glass-card">
+        <h4 style="margin: 0 0 0.5rem 0;">Spicy Miso Ramen</h4>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--color-slate-400);">Prep: 20m | Cook: 15m</p>
+      </div>
+      <div class="glass-card">
+        <h4 style="margin: 0 0 0.5rem 0;">Garlic Butter Steak</h4>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--color-slate-400);">Prep: 10m | Cook: 10m</p>
+      </div>
+      <div class="glass-card">
+        <h4 style="margin: 0 0 0.5rem 0;">Matcha Cheesecake</h4>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--color-slate-400);">Prep: 30m | Chill: 4h</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="options" style="margin-top: 2rem;">
+  <div class="option" data-choice="approved" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Perfect</h3>
+      <p>This layout and the animated background hit the mark.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="more-tweaks" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes</h3>
+      <p>I want to adjust something else.</p>
+    </div>
+  </div>
+</div>
