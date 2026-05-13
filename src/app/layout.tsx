@@ -20,10 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="flex h-screen w-screen overflow-hidden bg-slate-950 text-white" suppressHydrationWarning>
-        {/* Dynamic Glowing Orbs to highlight Glassmorphism - Brighter to contrast the vignette */}
-        <div className="fixed -top-[10%] left-[10%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(99,102,241,0.60)_0%,transparent_50%)] blur-[60px] z-0 rounded-full pointer-events-none"></div>
-        <div className="fixed -bottom-[20%] -right-[10%] w-[800px] h-[800px] bg-[radial-gradient(circle,rgba(217,70,239,0.55)_0%,transparent_50%)] blur-[80px] z-0 rounded-full pointer-events-none"></div>
-        <div className="fixed top-[40%] left-[40%] w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(79,70,229,0.50)_0%,transparent_50%)] blur-[40px] z-0 rounded-full pointer-events-none"></div>
+        {/* Aurora Background to highlight Glassmorphism - respects existing glass physics */}
+        <div className="fixed -top-[20%] -left-[10%] w-[80vw] h-[60vh] bg-[radial-gradient(ellipse,rgba(99,102,241,0.4)_0%,transparent_60%)] blur-[100px] z-0 pointer-events-none animate-aurora-1 opacity-80"></div>
+        <div className="fixed top-[20%] -right-[20%] w-[70vw] h-[80vh] bg-[radial-gradient(ellipse,rgba(217,70,239,0.35)_0%,transparent_60%)] blur-[120px] z-0 pointer-events-none animate-aurora-2 opacity-80"></div>
+        <div className="fixed -bottom-[30%] left-[10%] w-[90vw] h-[50vh] bg-[radial-gradient(ellipse,rgba(79,70,229,0.4)_0%,transparent_60%)] blur-[100px] z-0 pointer-events-none animate-aurora-3 opacity-80"></div>
         
         {/* Background Image & Screen-wide Vignette */}
         <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2500&auto=format&fit=crop')] bg-cover bg-center opacity-5 mix-blend-screen z-0 pointer-events-none"></div>
@@ -47,8 +47,8 @@ export default function RootLayout({
               <Link href="/plans" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
                 <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Currated By Sage</span>
               </Link>
-              <Link href="/recipes" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <LibraryBig size={18} suppressHydrationWarning /> All Recipes
+              <Link href="/vault" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
+                <LibraryBig size={18} suppressHydrationWarning /> Vault
               </Link>
               <Link href="/upload" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
                 <UploadCloud size={18} suppressHydrationWarning /> Upload Recipes
