@@ -19,7 +19,7 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl bg-black/40 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 backdrop-blur-xl transition-all"
+          className="glass-input block w-full pl-10 pr-3 py-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50"
           placeholder="Search recipes, tags, or ingredients..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

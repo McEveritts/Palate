@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VaultFilters } from './VaultFilters';
 import { VaultRecipe } from '@/lib/vaultParser';
@@ -14,6 +14,17 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedId) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedId]);
 
   const filteredRecipes = useMemo(() => {
     return initialRecipes.filter(recipe => {
@@ -70,8 +81,8 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               </motion.div>
 
               {/* Hover Macros */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-10">
-                <p className="text-sm text-fuchsia-200/80 font-medium">{recipe.macros || "Macros not calculated"}</p>
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-900/90 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-10">
+                <p className="text-sm text-fuchsia-200/80 font-medium line-clamp-2">{recipe.macros || "Macros not calculated"}</p>
               </div>
             </motion.div>
           ))}
@@ -90,29 +101,32 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
             
             <motion.div
               layoutId={`card-${selectedId}`}
-              className="w-full max-w-3xl max-h-[85vh] overflow-y-auto bg-slate-900/80 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto relative z-10 custom-scrollbar"
+              className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900/80 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto relative z-10 overflow-hidden"
             >
-              <button 
-                onClick={() => setSelectedId(null)}
-                className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-20"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Close Button - fixed to top right of modal, outside scroll container */}
+              <div className="absolute top-0 right-0 p-6 z-20 bg-gradient-to-bl from-slate-900/80 to-transparent rounded-tr-3xl pointer-events-none">
+                <button 
+                  onClick={() => setSelectedId(null)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors pointer-events-auto"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-              <div className="p-8 md:p-12 relative overflow-hidden">
+              <div className="p-8 md:p-12 relative overflow-y-auto custom-scrollbar flex-1">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-64 bg-gradient-to-b from-indigo-500/20 to-transparent rounded-full blur-3xl pointer-events-none"></div>
                 
-                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 relative z-10">
+                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 pr-12 relative z-10">
                   {selectedRecipe.title}
                 </motion.h3>
                 
-                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap gap-2 mb-8 relative z-10">
+                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap items-center gap-2 mb-8 relative z-10">
                   {selectedRecipe.tags.map(tag => (
                     <span key={tag} className="px-3 py-1 text-sm rounded-full bg-indigo-500/30 text-indigo-100 border border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                       {tag}
                     </span>
                   ))}
-                  <span className="px-3 py-1 text-sm rounded-full bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 ml-auto font-medium">
+                  <span className="px-3 py-1 text-sm rounded-full bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 font-medium w-full sm:w-auto mt-2 sm:mt-0">
                     {selectedRecipe.macros}
                   </span>
                 </motion.div>
