@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { VaultFilters } from './VaultFilters';
 import { VaultRecipe } from '@/lib/vaultParser';
 import { X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
@@ -132,9 +134,10 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
                 </motion.div>
 
                 <div className="prose prose-invert prose-indigo max-w-none relative z-10 mt-8">
-                  {/* Basic markdown rendering. For full markdown support, we'd add react-markdown, but pre-rendering the text block is sufficient for the plan */}
-                  <div className="whitespace-pre-wrap font-mono text-sm bg-black/30 p-6 rounded-xl border border-white/5">
-                    {selectedRecipe.content}
+                  <div className="bg-black/30 p-6 rounded-xl border border-white/5">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedRecipe.content}
+                    </ReactMarkdown>
                   </div>
                 </div>
               </div>

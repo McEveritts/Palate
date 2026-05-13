@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Image from "next/image";
-import Link from "next/link";
-import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, Zap, Leaf, Droplets, Settings } from "lucide-react";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -30,60 +28,7 @@ export default function RootLayout({
         <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(2,6,23,0.8)_100%)] z-0 pointer-events-none"></div>
 
         {/* Left Navigation Sidebar */}
-        <aside className="w-72 flex flex-col z-10 p-6 glass-panel border-y-0 border-l-0 rounded-none border-r border-white/5 relative">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]">
-              <Image src="/assets/logos/palate-logo.svg" alt="Palate Logo" width={36} height={36} suppressHydrationWarning />
-            </div>
-            <div className="text-2xl font-bold tracking-tight text-white">Palate</div>
-          </div>
-
-          <div className="mb-8">
-            <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Intelligence</div>
-            <nav className="flex flex-col gap-1">
-              <Link href="/" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-white font-medium bg-gradient-to-r from-indigo-500/15 to-indigo-500/5 border border-indigo-500/20 border-l-[3px] border-l-indigo-400">
-                <Sparkles size={18} suppressHydrationWarning /> Ask Sage
-              </Link>
-              <Link href="/plans" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Currated By Sage</span>
-              </Link>
-              <Link href="/vault" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <LibraryBig size={18} suppressHydrationWarning /> Vault
-              </Link>
-              <Link href="/upload" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <UploadCloud size={18} suppressHydrationWarning /> Upload Recipes
-              </Link>
-            </nav>
-          </div>
-
-          <div className="mb-8">
-            <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
-            <nav className="flex flex-col gap-1">
-              <Link href="/collections/macros" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
-              </Link>
-              <Link href="/collections/flash" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <Zap size={18} suppressHydrationWarning /> Flash Synthesize
-              </Link>
-              <Link href="/collections/zero-waste" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <Leaf size={18} suppressHydrationWarning /> Zero-Waste
-              </Link>
-              <Link href="/collections/flavor" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <Droplets size={18} suppressHydrationWarning /> Flavor Profiles
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex-grow"></div>
-
-          <div className="mt-auto">
-            <nav className="flex flex-col gap-1">
-              <Link href="/settings" className="px-3 py-2.5 rounded-lg flex items-center gap-3 text-slate-200 hover:bg-white/5 hover:text-white transition-colors border border-transparent">
-                <Settings size={18} suppressHydrationWarning /> Settings
-              </Link>
-            </nav>
-          </div>
-        </aside>
+        <Sidebar />
 
         {/* Middle Content Area (Chatbot) */}
         <main className="flex-1 z-10 p-0 overflow-y-auto relative flex flex-col h-full">
