@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Leaf, Sparkles } from "lucide-react";
+import { Leaf, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ZeroWastePage() {
@@ -22,6 +22,10 @@ export default function ZeroWastePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
+
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status} ${res.statusText}`);
+      }
 
       if (!res.body) throw new Error("No response body");
 
@@ -47,7 +51,7 @@ export default function ZeroWastePage() {
   return (
     <div className="w-full h-full flex flex-col justify-center relative max-w-4xl mx-auto p-8">
       <AnimatePresence mode="wait">
-        {!response ? (
+        {response === null ? (
           <motion.div 
             key="hero"
             initial={{ opacity: 0, y: 20 }}
@@ -75,10 +79,11 @@ export default function ZeroWastePage() {
               />
               <button
                 type="submit"
-                disabled={!prompt.trim()}
-                className="absolute right-3 top-3 bottom-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-6 flex items-center gap-2 transition-all disabled:opacity-50"
+                disabled={!prompt.trim() || isGenerating}
+                className="absolute right-3 top-3 bottom-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-6 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Sparkles size={16} /> Rescue
+                {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {isGenerating ? "Rescuing..." : "Rescue"}
               </button>
             </form>
           </motion.div>
