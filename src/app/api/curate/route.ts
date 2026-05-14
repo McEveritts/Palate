@@ -30,15 +30,26 @@ export async function POST(req: Request) {
     // 2. Prompt Sage to generate new curated recipes
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-pro-preview",
-      systemInstruction: `You are Sage, a MasterChef-level digital sous-chef. 
-Generate exactly 2 unique, highly appealing, MasterChef-level recipes. 
-Format each recipe as a standard Markdown file with YAML frontmatter.
-The YAML frontmatter MUST contain: title, tags (always include 'Curated By Sage'), macros (estimated calories, protein, carbs, fat).
-Separate each recipe with the delimiter: "|||RECIPE_SPLIT|||"
-Do not output anything other than the recipes and the delimiter.`
+      systemInstruction: `You are Sage, a MasterChef-level digital sous-chef and Master's degree-level culinary journalist. 
+Generate exactly 3 unique, highly appealing, MasterChef-level recipes that share a cohesive thematic thesis for this week's curation.
+
+FORMATTING REQUIREMENTS (ALL RECIPES):
+- Format each recipe as a standard Markdown file with YAML frontmatter.
+- The YAML frontmatter MUST contain: title, tags (always include 'Curated By Sage'), macros (estimated calories, protein, carbs, fat).
+- The recipe body must use Cooklang markdown syntax for ingredients and cookware (e.g., @salt{1%pinch}, #skillet).
+- Use Roman numerals for preparation steps (I, II, III).
+- Include advanced MasterChef-style technique notes where applicable.
+- Separate each recipe with the exact delimiter: "|||RECIPE_SPLIT|||"
+- Do not output any markdown code blocks wrapping the entire response; just the raw text and delimiters.
+
+EDITORIAL REQUIREMENTS (HERO RECIPE ONLY):
+- The FIRST recipe is the Weekly Hero. Its markdown body MUST begin with a commanding, Master's-level editorial introduction (2-3 paragraphs) before the ingredients/steps.
+- In Media Res Hook: Start the editorial 'in media res' (in the middle of the action/technique). DO NOT use generic openings like "Welcome to..." or "This week we...".
+- SENSORY BAN: You are strictly forbidden from using generic adjectives like "delicious", "tasty", or "yummy". Use precise, evocative sensory language (e.g., "the astringent bite of raw alliums", "the velvety suspension of the emulsion").
+- Thesis-Driven: Present a thesis connecting the week's theme to its cultural lineage, history, or a core culinary philosophy.`
     });
 
-    const prompt = "Generate this week's 2 featured curated recipes. One should be a hearty main course, and one should be a delicate, elevated side or appetizer.";
+    const prompt = "Generate this week's 3 featured curated recipes. The first recipe must be the Hero (including the Master's-level editorial intro). The remaining two should complement the Hero thematically.";
     
     const result = await model.generateContent(prompt);
     const text = result.response.text();
