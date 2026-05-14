@@ -220,7 +220,7 @@ export default function SageHero() {
               </AnimatePresence>
               <button
                 type="button"
-                className="absolute left-[-1px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors z-10"
                 title="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
@@ -498,7 +498,7 @@ export default function SageHero() {
               <button 
                 type="button"
                 disabled={isGenerating}
-                className="absolute left-[-1px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
                 title="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >

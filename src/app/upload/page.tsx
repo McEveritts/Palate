@@ -155,7 +155,7 @@ export default function UploadPage() {
               
               <button
                 type="button"
-                className="absolute left-[1px] top-[1px] bottom-[1px] w-[60px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.06] border-r border-white/10 rounded-l-[15px] text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[60px] flex items-center justify-center bg-transparent text-slate-400 hover:text-indigo-400 transition-colors z-10"
                 title="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
