@@ -159,9 +159,9 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
               </div>
 
               <div className="p-8 md:p-12 relative overflow-y-auto custom-scrollbar flex-1">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-64 bg-gradient-to-b from-indigo-500/20 to-transparent rounded-full blur-3xl pointer-events-none"></div>
-                
-                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 pr-32 relative z-10">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-gradient-to-b from-fuchsia-500/20 via-indigo-500/10 to-transparent rounded-full blur-[100px] pointer-events-none"></div>
+
+                <motion.h3 layoutId={`title-${selectedId}`} className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-6 pr-16 md:pr-48 relative z-10 leading-tight tracking-tight text-balance">
                   {selectedRecipe.title}
                 </motion.h3>
                 
