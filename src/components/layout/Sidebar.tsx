@@ -56,9 +56,6 @@ export function Sidebar() {
           <Link href="/collections/macro-optimized" className={getLinkClass('/collections/macro-optimized')}>
             <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
           </Link>
-          <Link href="/collections/flavor-profile" className={getLinkClass('/collections/flavor-profile')}>
-            <Droplets size={18} suppressHydrationWarning /> Flavor Profiles
-          </Link>
         </nav>
       </div>
 

@@ -81,29 +81,6 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
               </motion.h3>
               
               <div className="grid grid-cols-1 grid-rows-1">
-                <motion.div layoutId={`tags-${heroRecipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
-                  <div className="flex flex-wrap gap-3 transition-all duration-500 group-hover:opacity-0 group-hover:-translate-y-4">
-                    {heroRecipe.tags.map(tag => (
-                      <span key={tag} className="px-3 py-1.5 text-sm font-medium rounded-md bg-indigo-500/20 text-indigo-100 border border-indigo-500/30 backdrop-blur-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-
-                <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-3 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none">
-                  {heroRecipe.macros ? (
-                    heroRecipe.macros.split('|').map((macro, idx) => (
-                      <span key={idx} className="px-3 py-1.5 text-sm font-bold rounded-full bg-fuchsia-600/90 text-white shadow-xl backdrop-blur-md border border-fuchsia-400/50">
-                        {macro.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="px-3 py-1.5 text-sm font-bold rounded-full bg-fuchsia-600/90 text-white shadow-xl backdrop-blur-md border border-fuchsia-400/50">
-                      Macros not calculated
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -148,29 +125,6 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
             </div>
             
             <div className="grid grid-cols-1 grid-rows-1 z-10 mt-auto">
-              <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
-                <div className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
-                  {recipe.tags.map(tag => (
-                    <span key={tag} className="px-2 py-1 text-xs rounded bg-slate-800/80 text-slate-300 border border-slate-700/50">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-
-              <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
-                {recipe.macros ? (
-                  recipe.macros.split('|').map((macro, idx) => (
-                    <span key={idx} className="px-2 py-1 text-xs font-semibold rounded-md bg-indigo-500/80 text-white shadow-lg backdrop-blur-md">
-                      {macro.trim()}
-                    </span>
-                  ))
-                ) : (
-                  <span className="px-2 py-1 text-xs font-semibold rounded-md bg-indigo-500/80 text-white shadow-lg backdrop-blur-md">
-                    Macros not calculated
-                  </span>
-                )}
-              </div>
             </div>
           </motion.div>
         ))}

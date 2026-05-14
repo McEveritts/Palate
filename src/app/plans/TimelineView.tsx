@@ -89,13 +89,6 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
                     <motion.h3 layoutId={`archive-title-${heroRecipe.id}`} className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
                       {heroRecipe.title}
                     </motion.h3>
-                    <div className="flex flex-wrap gap-2">
-                      {heroRecipe.tags.map(tag => (
-                        <span key={tag} className="px-2 py-1 text-xs rounded-md bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 </motion.div>
               )}
@@ -117,14 +110,6 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
                     <motion.h3 layoutId={`archive-title-${recipe.id}`} className="text-xl md:text-2xl font-bold text-white mb-auto leading-snug">
                       {recipe.title}
                     </motion.h3>
-                    
-                    <div className="flex flex-wrap gap-2 mt-6">
-                      {recipe.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="px-2 py-1 text-[10px] rounded bg-slate-800/80 text-slate-300 border border-slate-700/50">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 </motion.div>
               ))}
