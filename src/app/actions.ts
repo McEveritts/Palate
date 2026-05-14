@@ -38,9 +38,40 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
   }
 }
 
+export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides', title: string) {
+  try {
+    const cleanContent = markdown.trim();
+    
+    // Slugify title for filename
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const filename = `${slug}.md`;
+    
+    const vaultPath = path.join(process.cwd(), "vault", category);
+    await fs.mkdir(vaultPath, { recursive: true });
+    
+    let filePath = path.join(vaultPath, filename);
+    
+    // Prevent overwrite
+    try {
+      await fs.access(filePath);
+      // File exists, append timestamp
+      const newFilename = `${slug}-${Date.now()}.md`;
+      filePath = path.join(vaultPath, newFilename);
+    } catch {
+      // File does not exist, safe to write
+    }
+    
+    await fs.writeFile(filePath, cleanContent, "utf-8");
+    
+    return { success: true, message: `Recipe saved to vault/${category} as ${path.basename(filePath)}` };
+  } catch (error: unknown) {
+    console.error("Save parsed recipe error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 export async function saveCuratedToVault(id: string) {
   try {
-    // ID format: curated-current-filename or curated-archive-filename
     const [_, type, ...filenameParts] = id.split('-');
     const filename = filenameParts.join('-') + '.md';
     const curatedPath = path.join(process.cwd(), 'vault', 'curated', type, filename);
