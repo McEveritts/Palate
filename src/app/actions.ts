@@ -5,6 +5,10 @@ import path from "path";
 
 export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 'md') {
   try {
+    if (format !== 'md' && format !== 'txt') {
+      throw new Error('Invalid format. Must be md or txt.');
+    }
+
     // 1. Clean the content to ensure standard YAML frontmatter (---) instead of ```yaml
     let cleanContent = content.trim();
     if (cleanContent.startsWith("```yaml")) {
@@ -40,6 +44,10 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
 
 export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides', title: string) {
   try {
+    if (category !== 'mains' && category !== 'sides') {
+      throw new Error('Invalid category. Must be mains or sides.');
+    }
+
     const cleanContent = markdown.trim();
     
     // Slugify title for filename
@@ -73,6 +81,11 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
 export async function saveCuratedToVault(id: string) {
   try {
     const [_, type, ...filenameParts] = id.split('-');
+    
+    if (type !== 'current' && type !== 'archive') {
+      throw new Error('Invalid curated type. Must be current or archive.');
+    }
+
     const filename = filenameParts.join('-') + '.md';
     const curatedPath = path.join(process.cwd(), 'vault', 'curated', type, filename);
     

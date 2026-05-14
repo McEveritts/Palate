@@ -17,7 +17,24 @@ export async function POST(req: Request) {
     // Check if input is a URL
     if (input && (input.trim().startsWith('http://') || input.trim().startsWith('https://'))) {
       try {
-        const response = await fetch(input.trim());
+        const urlStr = input.trim();
+        const urlObj = new URL(urlStr);
+        const hostname = urlObj.hostname;
+
+        // Basic SSRF protection: block local/private IP ranges and localhost
+        if (
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname === '::1' ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('169.254.') ||
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+        ) {
+          return NextResponse.json({ success: false, error: 'Access to internal networks is not allowed.' }, { status: 403 });
+        }
+
+        const response = await fetch(urlStr);
         if (!response.ok) {
           throw new Error(`Failed to fetch URL: ${response.statusText}`);
         }
