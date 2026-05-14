@@ -76,7 +76,7 @@ II. **[Step Title]**
 *   **[Textural Contrast]:** [Suggestion for plating or garnish]`
     });
 
-    const prompt = "Generate this week's 3 featured curated recipes. The first recipe must be the Hero (including the Master's-level editorial intro). The remaining two should complement the Hero thematically.";
+    const prompt = "Generate this week's 3 featured curated recipes. The first recipe must be the Hero main dish (including the Master's-level editorial intro). The remaining two recipes MUST be elevated side dishes that pair perfectly and can be served alongside the Hero main dish.";
     
     const result = await model.generateContent(prompt);
     const text = result.response.text();
