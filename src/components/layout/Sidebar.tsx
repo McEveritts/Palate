@@ -36,7 +36,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Header (Hidden on Desktop) */}
-      <div className="lg:hidden flex items-center justify-between p-4 z-20 glass-panel rounded-none border-b border-white/5 w-full shrink-0">
+      <div className={`lg:hidden flex items-center justify-between p-4 z-20 glass-panel rounded-none border-b border-white/5 w-full shrink-0 transition-all duration-300 ${isOpen ? "opacity-0 -translate-y-full absolute" : "opacity-100 translate-y-0"}`}>
         <Link href="/" className="flex items-center gap-3">
           <div className="w-8 h-8 drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]">
             <Image src="/assets/logos/palate-logo.svg" alt="Palate Logo" width={32} height={32} suppressHydrationWarning />
@@ -57,7 +57,7 @@ export function Sidebar() {
       )}
 
       {/* Main Sidebar */}
-      <aside className={`fixed lg:relative top-0 left-0 h-full w-72 flex flex-col z-50 p-6 glass-panel border-y-0 border-l-0 rounded-none border-r border-white/5 shrink-0 transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`fixed lg:relative top-0 left-0 h-full w-72 flex flex-col z-50 p-6 glass-panel border-y-0 border-l-0 rounded-none border-r border-white/5 shrink-0 overflow-y-auto transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         
         {/* Mobile-only additional opacity layer (+12%) */}
         <div className="lg:hidden absolute inset-0 bg-black/[0.12] pointer-events-none -z-10"></div>

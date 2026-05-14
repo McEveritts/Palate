@@ -3,7 +3,8 @@
 import { signIn } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, LogIn, User } from "lucide-react";
+import Image from "next/image";
+import { LogIn, User } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
@@ -28,8 +29,8 @@ export default function LoginPage() {
         className="w-full max-w-md relative z-10"
       >
         <div className="glass-panel p-10 md:p-12 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center mb-8 shadow-xl">
-            <UtensilsCrossed className="w-10 h-10 text-white drop-shadow-md" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-8 shadow-xl drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+            <Image src="/assets/logos/palate-logo.svg" alt="Palate Logo" width={80} height={80} priority suppressHydrationWarning />
           </div>
 
           <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2">

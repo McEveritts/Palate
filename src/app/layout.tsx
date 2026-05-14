@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
   title: "Palate - Your AI Sous-Chef",
   description: "Local-first AI recipe engine powered by Sage",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
