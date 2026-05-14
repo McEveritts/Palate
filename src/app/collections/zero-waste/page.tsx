@@ -54,7 +54,7 @@ export default function ZeroWastePage() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-center relative max-w-4xl mx-auto p-8">
+    <div className="w-full flex-1 flex flex-col justify-center relative max-w-4xl mx-auto p-8">
       <AnimatePresence mode="wait">
         {response === null ? (
           <motion.div 
@@ -98,7 +98,7 @@ export default function ZeroWastePage() {
             key="chat"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full flex flex-col gap-6 h-full pb-8"
+            className="w-full flex flex-col gap-6 flex-1 pb-8"
           >
             <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20">
                <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2"><Leaf className="text-emerald-400"/> Rescued Recipe</h3>

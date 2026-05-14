@@ -103,7 +103,7 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center relative p-8">
+    <div className="w-full flex-1 flex flex-col items-center justify-center relative p-8">
       
       <AnimatePresence mode="wait">
         {!parsedData && !isParsing && (

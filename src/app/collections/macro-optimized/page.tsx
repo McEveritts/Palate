@@ -28,7 +28,7 @@ export default async function MacroOptimizedPage() {
     .sort((a, b) => b.density - a.density);
 
   return (
-    <div className="w-full min-h-full p-8 md:p-12 max-w-7xl mx-auto">
+    <div className="w-full flex-1 p-8 md:p-12 max-w-7xl mx-auto">
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-white tracking-tight">Macro-Optimized</h1>
         <p className="text-slate-400 mt-2 text-lg">Your vault, sorted strictly by protein density.</p>

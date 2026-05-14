@@ -27,7 +27,7 @@ export default function SettingsPage() {
   if (!mounted) return null;
 
   return (
-    <div className="w-full min-h-full p-8 md:p-12 max-w-4xl mx-auto overflow-y-auto">
+    <div className="w-full flex-1 p-8 md:p-12 max-w-4xl mx-auto overflow-y-auto">
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-white tracking-tight">Settings</h1>
         <p className="text-slate-400 mt-2 text-lg">Manage your account and AI configuration.</p>

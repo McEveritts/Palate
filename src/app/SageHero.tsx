@@ -172,7 +172,7 @@ export default function SageHero() {
   };
 
   return (
-    <div className={`w-full h-full flex flex-col justify-center relative ${!hasStarted ? 'max-w-4xl mx-auto' : ''}`}>
+    <div className={`w-full flex-1 flex flex-col justify-center relative ${!hasStarted ? 'max-w-4xl mx-auto' : ''}`}>
       <AnimatePresence mode="wait">
         {!hasStarted ? (
           // Initial Hero State
