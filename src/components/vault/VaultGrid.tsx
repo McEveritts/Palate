@@ -74,8 +74,8 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
                 {recipe.title}
               </motion.h3>
               
-              <div className="relative mb-6 z-10">
-                <motion.div layoutId={`tags-${recipe.id}`} className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
+              <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
+                <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
                   {recipe.tags.map(tag => (
                     <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
                       {tag}
@@ -84,7 +84,7 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
                 </motion.div>
 
                 {/* Hover Macros */}
-                <div className="absolute top-0 left-0 w-full flex flex-wrap gap-2 opacity-0 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
+                <div className="col-start-1 row-start-1 flex flex-wrap gap-2 opacity-0 translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
                   {recipe.macros ? (
                     recipe.macros.split('|').map((macro, idx) => (
                       <span key={idx} className="px-2 py-1 text-xs font-medium rounded bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
