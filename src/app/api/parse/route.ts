@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
 
     const extractionPrompt = `
 You are an expert culinary AI for 'Palate', a local-first recipe application.
