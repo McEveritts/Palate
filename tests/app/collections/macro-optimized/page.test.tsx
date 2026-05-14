@@ -6,9 +6,9 @@ import '@testing-library/jest-dom/vitest';
 import MacroOptimizedPage from '../../../../src/app/collections/macro-optimized/page';
 
 vi.mock('../../../../src/lib/vaultParser', () => ({
-  getAllVaultRecipes: vi.fn(() => [
-    { title: 'Chicken', category: 'mains', markdown: '', frontmatter: { recipe: 'Chicken', tags: [], macros: 'Calories: 200 | Protein: 40g | Carbs: 0g | Fat: 5g' } },
-    { title: 'Pasta', category: 'mains', markdown: '', frontmatter: { recipe: 'Pasta', tags: [], macros: 'Calories: 400 | Protein: 10g | Carbs: 80g | Fat: 5g' } }
+  getVaultRecipes: vi.fn(() => [
+    { id: '1', title: 'Chicken', category: 'mains', tags: [], macros: 'Calories: 200 | Protein: 40g | Carbs: 0g | Fat: 5g', content: '' },
+    { id: '2', title: 'Pasta', category: 'mains', tags: [], macros: 'Calories: 400 | Protein: 10g | Carbs: 80g | Fat: 5g', content: '' }
   ])
 }));
 
