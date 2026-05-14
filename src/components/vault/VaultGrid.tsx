@@ -11,10 +11,9 @@ import remarkGfm from 'remark-gfm';
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
   onSaveAction?: (id: string) => Promise<void>;
-  layoutType?: 'masonry' | 'editorial';
 }
 
-export function VaultGrid({ initialRecipes, onSaveAction, layoutType = 'masonry' }: VaultGridProps) {
+export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,89 +61,66 @@ export function VaultGrid({ initialRecipes, onSaveAction, layoutType = 'masonry'
     setSelectedId(null);
   };
 
-  const gridClass = layoutType === 'editorial'
-    ? "grid grid-cols-1 md:grid-cols-2 gap-8"
-    : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
-
   return (
     <div className="w-full relative">
-      {layoutType === 'masonry' && (
-        <VaultFilters 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-        />
-      )}
+      <VaultFilters 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+      />
 
       <motion.div 
-        className={gridClass}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         animate={{ opacity: selectedId ? 0.3 : 1, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
         transition={{ duration: 0.3 }}
       >
         <AnimatePresence>
-          {filteredRecipes.map((recipe, index) => {
-            const isHero = layoutType === 'editorial' && index === 0;
-
-            return (
-              <motion.div
-                layoutId={`card-${recipe.id}`}
-                key={recipe.id}
-                onClick={() => setSelectedId(recipe.id)}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className={`cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl shadow-xl transition-all duration-300 ${
-                  isHero ? 'md:col-span-2 min-h-[350px] p-8 md:p-12 flex flex-col justify-end' : 'p-6'
-                }`}
-              >
-                {/* Abstract Background Element */}
-                <div className={`absolute -top-20 -right-20 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500 ${isHero ? 'w-96 h-96' : 'w-40 h-40'}`}></div>
+          {filteredRecipes.map((recipe) => (
+            <motion.div
+              layoutId={`card-${recipe.id}`}
+              key={recipe.id}
+              onClick={() => setSelectedId(recipe.id)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl p-6 shadow-xl transition-all duration-300"
+            >
+              {/* Abstract Background Element */}
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
+              
+              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 z-10 relative">
+                {recipe.title}
+              </motion.h3>
                 
-                {isHero && (
-                  <div className="absolute top-8 left-8">
-                    <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-900/40 rounded-full border border-indigo-500/30">
-                      Recipe of the Week
-                    </span>
-                  </div>
-                )}
-
-                <motion.h3 
-                  layoutId={`title-${recipe.id}`} 
-                  className={`font-bold text-white mb-2 z-10 relative ${isHero ? 'text-4xl md:text-5xl mt-12' : 'text-2xl'}`}
-                >
-                  {recipe.title}
-                </motion.h3>
-                
-                <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
-                  <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
-                    <div className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
-                      {recipe.tags.map(tag => (
-                        <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-
-                  {/* Hover Macros */}
-                  <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
-                    {recipe.macros ? (
-                      recipe.macros.split('|').map((macro, idx) => (
-                        <span key={idx} className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
-                          {macro.trim()}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
-                        Macros not calculated
+              <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
+                <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
+                  <div className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
+                    {recipe.tags.map(tag => (
+                      <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
+                        {tag}
                       </span>
-                    )}
+                    ))}
                   </div>
+                </motion.div>
+
+                {/* Hover Macros */}
+                <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
+                  {recipe.macros ? (
+                    recipe.macros.split('|').map((macro, idx) => (
+                      <span key={idx} className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
+                        {macro.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
+                      Macros not calculated
+                    </span>
+                  )}
                 </div>
-              </motion.div>
-            );
-          })}
+              </div>
+            </motion.div>
+          ))}
         </AnimatePresence>
       </motion.div>
 

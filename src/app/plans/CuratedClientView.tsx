@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { VaultRecipe } from '@/lib/vaultParser';
 import { VaultGrid } from '@/components/vault/VaultGrid';
+import { EditorialView } from './EditorialView';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { saveCuratedToVault } from '@/app/actions';
@@ -63,12 +64,10 @@ export default function CuratedClientView({ currentRecipes, archiveRecipes }: Cu
           <div className="text-center py-20 text-slate-500 italic">
             No curated recipes found for this view.
           </div>
+        ) : view === 'editorial' ? (
+          <EditorialView initialRecipes={displayedRecipes} onSaveAction={handleSave} />
         ) : (
-          <VaultGrid 
-            initialRecipes={displayedRecipes} 
-            onSaveAction={handleSave} 
-            layoutType={view === 'editorial' ? 'editorial' : 'masonry'} 
-          />
+          <VaultGrid initialRecipes={displayedRecipes} onSaveAction={handleSave} />
         )}
       </div>
     </div>
