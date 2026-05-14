@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Leaf, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppStore } from "@/lib/store";
 
 export default function ZeroWastePage() {
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
+  const geminiApiKey = useAppStore((state) => state.geminiApiKey);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +21,10 @@ export default function ZeroWastePage() {
     try {
       const res = await fetch("/api/sage/zero-waste", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-gemini-api-key": geminiApiKey
+        },
         body: JSON.stringify({ prompt }),
       });
 

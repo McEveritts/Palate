@@ -79,10 +79,12 @@ async function fetchMacros(ingredient_names: string[]) {
   }
 }
 
-export async function askSage(prompt: string, context?: string, usePro: boolean = false) {
-  if (!apiKey) {
+export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string) {
+  const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
+  if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
+  const genAI = new GoogleGenerativeAI(finalApiKey);
 
   const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it";
   const model = genAI.getGenerativeModel({ 
@@ -100,10 +102,12 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string) {
-  if (!apiKey) {
+export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string) {
+  const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
+  if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
+  const genAI = new GoogleGenerativeAI(finalApiKey);
 
   const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it"; // testing 26b for tool calling
   const model = genAI.getGenerativeModel({ 

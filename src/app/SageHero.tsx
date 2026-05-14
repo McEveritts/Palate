@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseSageStream } from "../lib/parser";
+import { useAppStore } from "@/lib/store";
 
 interface Message {
   id: string;
@@ -51,6 +52,8 @@ export default function SageHero() {
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const [rawMode, setRawMode] = useState<Record<string, boolean>>({});
   const [showCopyOptions, setShowCopyOptions] = useState<string | null>(null);
+  const geminiApiKey = useAppStore((state) => state.geminiApiKey);
+  const isGuest = useAppStore((state) => state.isGuest);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -122,7 +125,10 @@ export default function SageHero() {
     try {
       const res = await fetch("/api/sage", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-gemini-api-key": geminiApiKey
+        },
         body: JSON.stringify(payload),
       });
 
@@ -436,7 +442,7 @@ export default function SageHero() {
                                 </AnimatePresence>
                               </div>
                               
-                              {msg.role === 'sage' && (msg.content.includes("```yaml") || msg.content.includes("---")) && (
+                              {msg.role === 'sage' && (msg.content.includes("```yaml") || msg.content.includes("---")) && !isGuest && (
                                 <button 
                                   onClick={async () => {
                                     setIsSaving(prev => ({ ...prev, [msg.id]: true }));

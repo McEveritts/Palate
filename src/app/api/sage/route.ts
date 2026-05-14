@@ -4,6 +4,7 @@ import { getAllRecipes } from "@/lib/vault";
 export async function POST(req: Request) {
   try {
     const { prompt, image } = await req.json();
+    const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
 
     // Gather context from the vault to ground the AI
     const recipes = getAllRecipes();
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
       .map(r => `Recipe: ${r.frontmatter.title}\nTags: ${r.frontmatter.tags?.join(', ')}\nMacros: ${JSON.stringify(r.frontmatter.macros)}`)
       .join('\n\n');
 
-    const stream = streamSage(prompt, vaultContext, false, image);
+    const stream = streamSage(prompt, vaultContext, false, image, clientApiKey);
 
     // Convert the Gemini stream to a standard Web ReadableStream
     const readableStream = new ReadableStream({

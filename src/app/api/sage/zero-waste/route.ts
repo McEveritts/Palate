@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(req: Request) {
-  const apiKey = process.env.GEMINI_API_KEY || "";
+  const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+  const apiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   
   if (!apiKey) {
     return new Response(JSON.stringify({ error: "Internal Server Error: API key is not configured." }), {

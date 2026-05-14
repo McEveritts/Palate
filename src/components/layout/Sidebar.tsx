@@ -3,10 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, Zap, Leaf, Droplets, Settings } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+  
+  if (pathname === '/login') {
+    return null;
+  }
+
+  // Only show restricted links if the user is fully authenticated via NextAuth
+  const showRestricted = status === "authenticated";
 
   const getLinkClass = (path: string, exact: boolean = false) => {
     const isActive = exact 
@@ -35,29 +44,36 @@ export function Sidebar() {
           <Link href="/" className={getLinkClass('/', true)}>
             <Sparkles size={18} suppressHydrationWarning /> Ask Sage
           </Link>
-          <Link href="/plans" className={getLinkClass('/plans')}>
-            <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Curated By Sage</span>
-          </Link>
-          <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')}>
-            <Leaf size={18} suppressHydrationWarning /> Zero-Waste
-          </Link>
-          <Link href="/upload" className={getLinkClass('/upload')}>
-            <UploadCloud size={18} suppressHydrationWarning /> Upload Recipes
-          </Link>
-          <Link href="/vault" className={getLinkClass('/vault')}>
-            <LibraryBig size={18} suppressHydrationWarning /> Vault
-          </Link>
+          
+          {showRestricted && (
+            <>
+              <Link href="/plans" className={getLinkClass('/plans')}>
+                <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Curated By Sage</span>
+              </Link>
+              <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')}>
+                <Leaf size={18} suppressHydrationWarning /> Zero-Waste
+              </Link>
+              <Link href="/upload" className={getLinkClass('/upload')}>
+                <UploadCloud size={18} suppressHydrationWarning /> Upload Recipes
+              </Link>
+              <Link href="/vault" className={getLinkClass('/vault')}>
+                <LibraryBig size={18} suppressHydrationWarning /> Vault
+              </Link>
+            </>
+          )}
         </nav>
       </div>
 
-      <div className="mb-8">
-        <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
-        <nav className="flex flex-col gap-1">
-          <Link href="/collections/macro-optimized" className={getLinkClass('/collections/macro-optimized')}>
-            <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
-          </Link>
-        </nav>
-      </div>
+      {showRestricted && (
+        <div className="mb-8">
+          <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
+          <nav className="flex flex-col gap-1">
+            <Link href="/collections/macro-optimized" className={getLinkClass('/collections/macro-optimized')}>
+              <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
+            </Link>
+          </nav>
+        </div>
+      )}
 
       <div className="flex-grow"></div>
 
