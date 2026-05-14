@@ -50,7 +50,7 @@ export function Sidebar() {
       <div className="mb-8">
         <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
         <nav className="flex flex-col gap-1">
-          <Link href="/collections/macros" className={getLinkClass('/collections/macros')}>
+          <Link href="/collections/macro-optimized" className={getLinkClass('/collections/macro-optimized')}>
             <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
           </Link>
           <Link href="/collections/flash" className={getLinkClass('/collections/flash')}>
