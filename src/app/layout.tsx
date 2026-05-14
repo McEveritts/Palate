@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="flex flex-col lg:flex-row min-h-[100dvh] lg:h-[100dvh] w-full bg-slate-950 text-white lg:overflow-hidden" suppressHydrationWarning>
+      <body className="fixed inset-0 bg-slate-950 text-white overflow-hidden lg:flex lg:flex-row" suppressHydrationWarning>
         <AuthProvider>
           {/* Aurora Background to highlight Glassmorphism - respects existing glass physics */}
           <div className="fixed -top-[20%] -left-[10%] w-[80vw] h-[60vh] bg-[radial-gradient(ellipse,rgba(99,102,241,0.4)_0%,transparent_60%)] blur-[100px] z-0 pointer-events-none animate-aurora-1 opacity-80"></div>
@@ -33,7 +33,7 @@ export default function RootLayout({
           <Sidebar />
 
           {/* Middle Content Area (Chatbot) */}
-          <main className="flex-1 z-10 p-0 relative flex flex-col min-h-0 lg:overflow-y-auto">
+          <main className="absolute top-[65px] bottom-0 left-0 right-0 lg:static lg:flex-1 z-10 p-0 overflow-y-auto overflow-x-hidden flex flex-col">
             {children}
           </main>
         </AuthProvider>
