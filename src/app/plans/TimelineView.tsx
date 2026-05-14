@@ -65,7 +65,7 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
           <div key={`meal-${index}`} className="relative pl-8 md:pl-0">
             {/* Timeline Line (Hidden on mobile) */}
             <div className="hidden md:block absolute left-[-40px] top-0 bottom-[-64px] w-px bg-white/10" />
-            <div className="hidden md:flex absolute left-[-48px] top-8 w-4 h-4 rounded-full bg-indigo-500 border-4 border-slate-950 shadow-[0_0_15px_rgba(99,102,241,0.5)] items-center justify-center" />
+            <div className="hidden md:flex absolute left-[-39.5px] -translate-x-1/2 top-8 w-4 h-4 rounded-full bg-indigo-500 border-4 border-slate-950 shadow-[0_0_15px_rgba(99,102,241,0.5)] items-center justify-center" />
 
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white tracking-tight">Curated Meal: {heroRecipe?.title || `Meal #${meals.length - index}`}</h2>
