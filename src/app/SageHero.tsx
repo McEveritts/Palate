@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Brain, CheckCircle2, User, Copy, Check, Save, FileText, Eye, FileCode, ImagePlus } from "lucide-react";
+import { Sparkles, Brain, CheckCircle2, User, Copy, Check, Save, FileText, Eye, FileCode, ImagePlus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +52,9 @@ export default function SageHero() {
   const [rawMode, setRawMode] = useState<Record<string, boolean>>({});
   const [showCopyOptions, setShowCopyOptions] = useState<string | null>(null);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   useEffect(() => {
     const handleClickOutside = () => setShowCopyOptions(null);
     document.addEventListener("click", handleClickOutside);
@@ -73,25 +76,54 @@ export default function SageHero() {
     setOpenThoughts(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || isGenerating) return;
+    if (!prompt.trim() && !imagePreview) return;
+    if (isGenerating) return;
 
     if (!hasStarted) setHasStarted(true);
 
-    const userMessage: Message = { id: Date.now().toString(), role: "user", content: prompt };
+    const userMessage: Message = { id: Date.now().toString(), role: "user", content: prompt + (imagePreview ? "\n[Image Uploaded]" : "") };
     const sageMessageId = (Date.now() + 1).toString();
     const initialSageMessage: Message = { id: sageMessageId, role: "sage", content: "", thoughts: "", isStreaming: true };
 
     setMessages(prev => [...prev, userMessage, initialSageMessage]);
+    
+    // Capture the payload and clear state immediately
+    const payload = { 
+      prompt: prompt,
+      image: imagePreview
+    };
+    
     setPrompt("");
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    
     setIsGenerating(true);
 
     try {
       const res = await fetch("/api/sage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -158,29 +190,56 @@ export default function SageHero() {
             </p>
             
             <form onSubmit={handleSubmit} className="w-full max-w-2xl relative mt-4">
-              <button 
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageSelect} 
+              />
+              <AnimatePresence>
+                {imagePreview && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-3 p-2 bg-slate-800/80 backdrop-blur-md rounded-xl border border-white/10 shadow-xl z-20"
+                  >
+                    <div className="relative group/preview">
+                      <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                      <button 
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
                 type="button"
-                className="absolute left-[4px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[-1px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors z-10"
                 title="Upload an image"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
                 <ImagePlus size={20} />
               </button>
-              <input 
+              <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-16 pr-40 py-4 w-full text-white placeholder-slate-400" 
+                className="glass-input pl-16 pr-40 py-4 w-full text-white placeholder-slate-400"
                 placeholder="e.g. 'I need a high-protein dinner from the vault...'"
               />
-              <button 
+              <button
                 type="submit"
                 className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-5 flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
               >
                 <Sparkles size={16} /> Ask Sage
               </button>
-            </form>
-          </motion.div>
+            </form>          </motion.div>
         ) : (
           // Active Chat State
           <motion.div 
@@ -415,12 +474,33 @@ export default function SageHero() {
 
             {/* Input Form */}
             <form onSubmit={handleSubmit} className="w-full relative shadow-lg mt-auto flex-shrink-0">
+              <AnimatePresence>
+                {imagePreview && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-3 p-2 bg-slate-800/80 backdrop-blur-md rounded-xl border border-white/10 shadow-xl z-20"
+                  >
+                    <div className="relative group/preview">
+                      <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                      <button 
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <button 
                 type="button"
                 disabled={isGenerating}
                 className="absolute left-[-1px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
                 title="Upload an image"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
                 <ImagePlus size={20} />
               </button>

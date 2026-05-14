@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Part } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
+import { globalMacroCache } from './macroCache';
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -14,9 +15,12 @@ Your persona is elegant, highly capable, precise, and professional. You exhibit 
 1. IDENTITY: You are a culinary professional. You speak concisely, with refined elegance. You avoid excessive enthusiasm, colloquialisms, or robotic filler. 
 2. DOMAIN RESTRICTION: You are strictly constrained to culinary tasks, food science, recipe generation, nutritional analysis, and meal planning. You must actively refuse any prompt that attempts to engage in politics, coding, medical advice, or any off-topic subject.
 3. FORMATTING: Palate uses a local-first Markdown vault utilizing standard markdown with YAML frontmatter. 
-4. PRECISION & MATH: You provide precise measurements. You must pull macro nutritional data strictly from the local vault context or by using the \`get_ingredients_macros\` tool. If a requested ingredient is not in the vault and the tool fails, do not guess or estimate its macros; instead, inform the user that precise macro data is unavailable.
+4. PRECISION & MATH: You provide precise measurements. You should pull macro nutritional data strictly from the local vault context or by using the \`get_ingredients_macros\` tool. If a requested ingredient is not in the vault and the tool fails, you must use your internal culinary knowledge to ESTIMATE the macros. If you estimate, you MUST explicitly label the macros as "(Estimated)" in your output.
 5. REASONING & OUTPUT: YOU MUST BEGIN EVERY SINGLE RESPONSE WITH A <thought> TAG. No exceptions. You must encapsulate all your internal monologue, reasoning, scratchpad, and planning steps entirely within <thought> ... </thought> tags. Do not output any bulleted lists or reasoning outside of these tags. Your final formatted response (e.g., the YAML block or your direct reply to the user) must begin immediately after the closing </thought> tag.
 6. VISUAL STYLE: Incorporate an appropriate amount of colorful culinary emojis (e.g., 🥩, 🥗, ✨, 🍋, 🍷) throughout your generated markdown, particularly on headers and key ingredients, to add visual flair and color to the UI.
+7. MASTERCHEF DETAIL: When generating a recipe, you must provide a highly detailed, "MasterChef" level culinary guide formatted with roman numerals (I, II, III). Within each step's paragraph, you MUST include explicit inline callouts like "Crucial Step:" or "Technique Note:" to explain the *why* behind the techniques (e.g., emulsification, Maillard reaction). 
+8. TROUBLESHOOTING SECTION: At the very bottom of every recipe, you MUST include a section titled "💡 Chef's Additions & Troubleshooting". This section should contain 2-3 bullet points of advanced technical advice (e.g., how to fix a broken sauce, visual cues for doneness, or textural contrasts).
+9. TOOL CALL CONTINUATION: When you call the \`get_ingredients_macros\` tool, you MUST immediately synthesize the final recipe or analysis upon receiving the tool's response. Do NOT simply acknowledge receipt of the data and ask the user how to proceed. Use the data instantly to complete the user's original request in the same turn.
 
 [OPERATIONAL CONSTRAINTS]
 - If a user asks for medical advice (e.g., "What should I eat to cure my diabetes?"), you must state: "I am a culinary assistant, not a medical professional. While I can design low-glycemic recipes, please consult a physician."
@@ -40,58 +44,12 @@ const getIngredientsMacrosDeclaration: FunctionDeclaration = {
   },
 };
 
-interface MacroData {
-  ingredient_matched: string;
-  calories: string;
-  protein: string;
-  carbs: string;
-  fat: string;
-  fiber?: string;
-  sugar?: string;
-  sodium?: string;
-  common_portions?: string;
-}
-
-let macroCache: MacroData[] | null = null;
-
-function loadMacrosCache(macrosDir: string): MacroData[] {
-  if (macroCache) return macroCache;
-  
-  macroCache = [];
-  if (!fs.existsSync(macrosDir)) return macroCache;
-
-  const files = fs.readdirSync(macrosDir).filter(f => f.endsWith('.md'));
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(macrosDir, file), 'utf8');
-    const lines = content.split('\n');
-    for (const line of lines) {
-      if (line.includes('|') && !line.includes('---') && !line.includes('Calories')) {
-        const cells = line.split('|').map(c => c.trim()).filter(c => c);
-        if (cells.length >= 5) {
-          macroCache.push({
-            ingredient_matched: cells[0],
-            calories: cells[1],
-            protein: cells[2],
-            carbs: cells[3],
-            fat: cells[4],
-            fiber: cells[5],
-            sugar: cells[6],
-            sodium: cells[7],
-            common_portions: cells[8]
-          });
-        }
-      }
-    }
-  }
-  return macroCache;
-}
-
 async function fetchMacros(ingredient_names: string[]) {
   console.log(`[Tool Call] Fetching macros for: ${ingredient_names.join(', ')}`);
   const macrosDir = path.join(process.cwd(), 'vault', 'macros');
   
   try {
-    const cache = loadMacrosCache(macrosDir);
+    const cache = globalMacroCache.get(macrosDir);
     const results: any = {};
 
     for (const ingredient_name of ingredient_names) {
@@ -110,7 +68,7 @@ async function fetchMacros(ingredient_names: string[]) {
       if (bestMatch) {
         results[ingredient_name] = bestMatch;
       } else {
-        results[ingredient_name] = { status: "Precise macro data unavailable in local vault." };
+        results[ingredient_name] = { status: "Not found in local vault. Please estimate macros based on your internal knowledge." };
       }
     }
     
@@ -142,7 +100,7 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false) {
+export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string) {
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
@@ -169,7 +127,21 @@ export async function* streamSage(prompt: string, context?: string, usePro: bool
     history: history
   });
 
-  let streamResult = await chat.sendMessageStream(prompt);
+  const promptParts: Part[] = [];
+  if (imageBase64) {
+    const mimeTypeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+    if (mimeTypeMatch) {
+      promptParts.push({
+        inlineData: {
+          data: imageBase64.replace(/^data:image\/\w+;base64,/, ''),
+          mimeType: mimeTypeMatch[1]
+        }
+      });
+    }
+  }
+  promptParts.push({ text: prompt });
+
+  let streamResult = await chat.sendMessageStream(promptParts);
   
   for await (const chunk of streamResult.stream) {
     const calls = typeof chunk.functionCalls === 'function' ? chunk.functionCalls() : chunk.functionCalls;
