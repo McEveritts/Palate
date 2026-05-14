@@ -56,6 +56,7 @@ export default function ZeroWastePage() {
             key="hero"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             className="glass-panel p-10 lg:p-14 flex flex-col items-center text-center gap-6 w-full rounded-3xl"
           >
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-2">
@@ -97,7 +98,14 @@ export default function ZeroWastePage() {
             <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20">
                <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2"><Leaf className="text-emerald-400"/> Rescued Recipe</h3>
                <div className="prose prose-invert max-w-none whitespace-pre-wrap">
-                 {response}
+                 {isGenerating && response === "" ? (
+                   <div className="flex items-center gap-3 text-emerald-400">
+                     <Loader2 className="animate-spin" size={20} />
+                     <span className="text-lg">Formulating zero-waste recipe...</span>
+                   </div>
+                 ) : (
+                   response
+                 )}
                </div>
             </div>
           </motion.div>
