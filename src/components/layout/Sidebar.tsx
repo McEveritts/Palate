@@ -36,7 +36,7 @@ export function Sidebar() {
             <Sparkles size={18} suppressHydrationWarning /> Ask Sage
           </Link>
           <Link href="/plans" className={getLinkClass('/plans')}>
-            <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Currated By Sage</span>
+            <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Curated By Sage</span>
           </Link>
           <Link href="/vault" className={getLinkClass('/vault')}>
             <LibraryBig size={18} suppressHydrationWarning /> Vault
