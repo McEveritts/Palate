@@ -182,20 +182,20 @@ export default function SageHero() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -40, filter: "blur(10px)" }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-panel glass-hero p-10 lg:p-14 flex flex-col items-center text-center gap-6 w-full"
+            className="glass-panel glass-hero p-10 lg:p-14 3xl:p-20 4xl:p-28 flex flex-col items-center text-center gap-6 3xl:gap-10 4xl:gap-14 w-full"
           >
-            <div className="w-16 h-16 rounded-full glass-icon-wrapper flex items-center justify-center text-3xl">
+            <div className="w-16 h-16 3xl:w-24 3xl:h-24 4xl:w-32 4xl:h-32 rounded-full glass-icon-wrapper flex items-center justify-center text-3xl 3xl:text-5xl 4xl:text-7xl">
               🌿
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] m-0">
+            <h1 className="text-4xl md:text-5xl 3xl:text-7xl 4xl:text-8xl font-bold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] m-0">
               Sage is Ready.
             </h1>
-            <p className="text-lg text-slate-300 max-w-xl m-0 leading-relaxed">
+            <p className="text-lg md:text-xl 3xl:text-3xl 4xl:text-4xl text-slate-300 max-w-xl 3xl:max-w-3xl 4xl:max-w-5xl m-0 leading-relaxed">
               Transform pantry chaos, dietary constraints, or fleeting desires into a masterpiece. Share your starting point, and allow Sage to curate your next dining experience.
             </p>
             
-            <form onSubmit={handleSubmit} className="w-full max-w-2xl relative mt-4">
+            <form onSubmit={handleSubmit} className="w-full max-w-2xl 3xl:max-w-4xl 4xl:max-w-6xl relative mt-4 3xl:mt-8 4xl:mt-12">
               <input 
                 type="file" 
                 ref={fileInputRef} 
