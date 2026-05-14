@@ -1,22 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Leaf, Sparkles, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Leaf, Sparkles, Loader2, ImagePlus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 
 export default function ZeroWastePage() {
   const [prompt, setPrompt] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || isGenerating) return;
+    if ((!prompt.trim() && !imagePreview) || isGenerating) return;
 
     setIsGenerating(true);
     setResponse("");
+
+    const payload = { 
+      prompt: prompt,
+      image: imagePreview
+    };
 
     try {
       const res = await fetch("/api/sage/zero-waste", {
@@ -25,7 +50,7 @@ export default function ZeroWastePage() {
           "Content-Type": "application/json",
           "x-gemini-api-key": geminiApiKey
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -76,16 +101,52 @@ export default function ZeroWastePage() {
             </p>
             
             <form onSubmit={handleSubmit} className="w-full max-w-2xl relative mt-4">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageSelect} 
+              />
+              <AnimatePresence>
+                {imagePreview && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-3 p-2 bg-slate-800/80 backdrop-blur-md rounded-xl border border-white/10 shadow-xl z-20"
+                  >
+                    <div className="relative group/preview">
+                      <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                      <button 
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                className="absolute left-[2px] top-[2px] bottom-[2px] w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-emerald-400 transition-colors z-10"
+                title="Upload an image"
+                onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
+              >
+                <ImagePlus size={20} />
+              </button>
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-6 pr-32 py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl"
+                className="glass-input pl-16 pr-32 py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl"
                 placeholder="e.g. 'I have half an onion, heavy cream, and wilted spinach...'"
               />
               <button
                 type="submit"
-                disabled={!prompt.trim() || isGenerating}
+                disabled={(!prompt.trim() && !imagePreview) || isGenerating}
                 className="absolute right-3 top-3 bottom-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-6 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
