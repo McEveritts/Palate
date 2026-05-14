@@ -5,6 +5,7 @@ import { Sparkles, Brain, CheckCircle2, User, Copy, Check, Save, FileText, Eye, 
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { parseSageStream } from "../lib/parser";
 
 interface Message {
   id: string;
@@ -159,7 +160,7 @@ export default function SageHero() {
             <form onSubmit={handleSubmit} className="w-full max-w-2xl relative mt-4">
               <button 
                 type="button"
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[4px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors z-10"
                 title="Upload an image"
                 onClick={(e) => e.preventDefault()}
               >
@@ -169,7 +170,7 @@ export default function SageHero() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-12 pr-40 py-4 w-full text-white placeholder-slate-400" 
+                className="glass-input pl-16 pr-40 py-4 w-full text-white placeholder-slate-400" 
                 placeholder="e.g. 'I need a high-protein dinner from the vault...'"
               />
               <button 
@@ -417,7 +418,7 @@ export default function SageHero() {
               <button 
                 type="button"
                 disabled={isGenerating}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
+                className="absolute left-[4px] top-[4px] bottom-[4px] w-[50px] flex items-center justify-center bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-l-[1.25rem] text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
                 title="Upload an image"
                 onClick={(e) => e.preventDefault()}
               >
@@ -428,7 +429,7 @@ export default function SageHero() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
-                className="glass-input pl-12 pr-32 py-4 w-full text-white disabled:opacity-50" 
+                className="glass-input pl-16 pr-32 py-4 w-full text-white disabled:opacity-50" 
                 placeholder="Ask a follow up..."
               />
               <button 
