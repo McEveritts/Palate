@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { VaultRecipe } from '@/lib/vaultParser';
-import { VaultGrid } from '@/components/vault/VaultGrid';
+import { TimelineView } from './TimelineView';
 import { EditorialView } from './EditorialView';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -67,7 +67,7 @@ export default function CuratedClientView({ currentRecipes, archiveRecipes }: Cu
         ) : view === 'editorial' ? (
           <EditorialView initialRecipes={displayedRecipes} onSaveAction={handleSave} />
         ) : (
-          <VaultGrid initialRecipes={displayedRecipes} onSaveAction={handleSave} />
+          <TimelineView initialRecipes={displayedRecipes} onSaveAction={handleSave} />
         )}
       </div>
     </div>
