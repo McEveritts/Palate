@@ -1,12 +1,18 @@
-import Link from "next/link";
 import { getVaultRecipes } from "../../../lib/vaultParser";
+import { MacroGrid } from "../../../components/collections/MacroGrid";
 
 function extractMacros(macroString: string) {
   const calMatch = macroString.match(/Calories:\s*([\d.]+)/i);
   const proMatch = macroString.match(/Protein:\s*([\d.]+)g/i);
+  const carbMatch = macroString.match(/Carbs:\s*([\d.]+)g/i);
+  const fatMatch = macroString.match(/Fat:\s*([\d.]+)g/i);
+  
   const calories = calMatch ? parseFloat(calMatch[1]) : 0;
   const protein = proMatch ? parseFloat(proMatch[1]) : 0;
-  return { calories, protein };
+  const carbs = carbMatch ? parseFloat(carbMatch[1]) : 0;
+  const fat = fatMatch ? parseFloat(fatMatch[1]) : 0;
+  
+  return { calories, protein, carbs, fat };
 }
 
 export default async function MacroOptimizedPage() {
@@ -14,9 +20,9 @@ export default async function MacroOptimizedPage() {
   
   const optimizedRecipes = allRecipes
     .map(recipe => {
-      const { calories, protein } = extractMacros(recipe.macros || '');
+      const { calories, protein, carbs, fat } = extractMacros(recipe.macros || '');
       const density = calories > 0 ? protein / calories : 0;
-      return { ...recipe, calories, protein, density };
+      return { ...recipe, calories, protein, carbs, fat, density };
     })
     .filter(r => r.density > 0)
     .sort((a, b) => b.density - a.density);
@@ -33,24 +39,7 @@ export default async function MacroOptimizedPage() {
           No macro-tracked recipes found in your vault.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {optimizedRecipes.map((recipe) => (
-            <Link key={recipe.id} href="/vault" className="glass-panel p-6 rounded-3xl flex flex-col gap-4 border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent hover:bg-white/[0.05] transition-colors">
-              <h3 className="text-xl font-bold text-white line-clamp-1">{recipe.title}</h3>
-              
-              <div className="flex items-end justify-between mt-auto">
-                <div className="flex flex-col">
-                  <span className="text-4xl font-black text-emerald-400">{recipe.protein}g</span>
-                  <span className="text-sm text-emerald-400/70 font-medium uppercase tracking-wider">Protein</span>
-                </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-2xl font-bold text-slate-300">{recipe.calories}</span>
-                  <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Calories</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <MacroGrid recipes={optimizedRecipes} />
       )}
     </div>
   );

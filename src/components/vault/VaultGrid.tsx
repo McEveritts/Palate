@@ -94,30 +94,6 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
               </motion.h3>
                 
               <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
-                <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
-                  <div className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
-                    {recipe.tags.map(tag => (
-                      <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-
-                {/* Hover Macros */}
-                <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
-                  {recipe.macros ? (
-                    recipe.macros.split('|').map((macro, idx) => (
-                      <span key={idx} className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
-                        {macro.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
-                      Macros not calculated
-                    </span>
-                  )}
-                </div>
               </div>
             </motion.div>
           ))}

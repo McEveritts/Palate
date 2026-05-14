@@ -38,11 +38,14 @@ export function Sidebar() {
           <Link href="/plans" className={getLinkClass('/plans')}>
             <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Curated By Sage</span>
           </Link>
-          <Link href="/vault" className={getLinkClass('/vault')}>
-            <LibraryBig size={18} suppressHydrationWarning /> Vault
+          <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')}>
+            <Leaf size={18} suppressHydrationWarning /> Zero-Waste
           </Link>
           <Link href="/upload" className={getLinkClass('/upload')}>
             <UploadCloud size={18} suppressHydrationWarning /> Upload Recipes
+          </Link>
+          <Link href="/vault" className={getLinkClass('/vault')}>
+            <LibraryBig size={18} suppressHydrationWarning /> Vault
           </Link>
         </nav>
       </div>
@@ -52,12 +55,6 @@ export function Sidebar() {
         <nav className="flex flex-col gap-1">
           <Link href="/collections/macro-optimized" className={getLinkClass('/collections/macro-optimized')}>
             <Dumbbell size={18} suppressHydrationWarning /> Macro-Optimized
-          </Link>
-          <Link href="/collections/flash" className={getLinkClass('/collections/flash')}>
-            <Zap size={18} suppressHydrationWarning /> Flash Synthesize
-          </Link>
-          <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')}>
-            <Leaf size={18} suppressHydrationWarning /> Zero-Waste
           </Link>
           <Link href="/collections/flavor-profile" className={getLinkClass('/collections/flavor-profile')}>
             <Droplets size={18} suppressHydrationWarning /> Flavor Profiles

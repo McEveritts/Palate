@@ -9,10 +9,10 @@
 - [x] Refactor the regex logic to be more robust against malformed LLM outputs.
 
 ### Phase 2: In-Memory Cache Optimization
-- [ ] Audit the current in-memory cache implementation for the USDA macros (`vault/macros/`).
-- [ ] Implement robust cache invalidation logic (e.g., TTL, explicit eviction).
-- [ ] Add unit tests to verify cache hits, misses, and invalidation triggers.
+- [x] Audit the current in-memory cache implementation for the USDA macros (`vault/macros/`).
+- [x] Implement robust cache invalidation logic (e.g., TTL, explicit eviction).
+- [x] Add unit tests to verify cache hits, misses, and invalidation triggers.
 
 ### Phase 3: Core Interface Polish
-- [ ] Review UI components for minor glitches reported during the code review.
-- [ ] Ensure AetherFlow design system rules (Glassmorphism, aurora) are consistently applied across the hero section.
+- [x] Review UI components for minor glitches reported during the code review.
+- [x] Ensure AetherFlow design system rules (Glassmorphism, aurora) are consistently applied across the hero section.

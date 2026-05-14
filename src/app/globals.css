@@ -157,4 +157,30 @@ body {
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
   }
+
+  /* Aurora Background Animations */
+  @keyframes aurora-1 {
+    0% { transform: translate(0, 0) rotate(-12deg); }
+    33% { transform: translate(5%, 5%) rotate(-8deg) scale(1.05); }
+    66% { transform: translate(-5%, 5%) rotate(-15deg) scale(0.95); }
+    100% { transform: translate(0, 0) rotate(-12deg); }
+  }
+
+  @keyframes aurora-2 {
+    0% { transform: translate(0, 0) rotate(12deg); }
+    33% { transform: translate(-5%, -5%) rotate(8deg) scale(0.95); }
+    66% { transform: translate(5%, -5%) rotate(15deg) scale(1.05); }
+    100% { transform: translate(0, 0) rotate(12deg); }
+  }
+
+  @keyframes aurora-3 {
+    0% { transform: translate(0, 0) rotate(-15deg); }
+    33% { transform: translate(5%, -5%) rotate(-10deg) scale(1.05); }
+    66% { transform: translate(-5%, 5%) rotate(-20deg) scale(0.95); }
+    100% { transform: translate(0, 0) rotate(-15deg); }
+  }
+
+  .animate-aurora-1 { animation: aurora-1 20s ease-in-out infinite alternate; }
+  .animate-aurora-2 { animation: aurora-2 25s ease-in-out infinite alternate; }
+  .animate-aurora-3 { animation: aurora-3 30s ease-in-out infinite alternate; }
 }

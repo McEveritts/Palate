@@ -44,4 +44,23 @@ describe('parseSageStream', () => {
     expect(thoughts).toBe('Just a regular');
     expect(content).toBe('');
   });
+
+  it('should handle multiple thought blocks', () => {
+    const input = `<thought>\nFirst thought.\n</thought>\n<thought>\nSecond thought.\n</thought>\n---\nrecipe: 'Test'\n---`;
+    const { thoughts, content } = parseSageStream(input, true);
+    expect(thoughts).toContain('First thought.');
+    expect(thoughts).toContain('Second thought.');
+    expect(content).toBe("---\nrecipe: 'Test'\n---");
+  });
+
+  it('should fallback to content if stream is done and content is empty but thoughts exist', () => {
+    // This happens if the model outputs an unclosed thought tag and no delimiters,
+    // causing the parser to think the entire response is a thought.
+    const input = `<thought>\nThis is just a response disguised as a thought because I forgot the closing tag.`;
+    const { thoughts, content } = parseSageStream(input, true);
+    
+    // Safety net should kick in
+    expect(thoughts).toBe('');
+    expect(content).toBe('This is just a response disguised as a thought because I forgot the closing tag.');
+  });
 });
