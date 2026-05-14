@@ -22,12 +22,12 @@ export function Sidebar() {
 
   return (
     <aside className="w-72 flex flex-col z-10 p-6 glass-panel border-y-0 border-l-0 rounded-none border-r border-white/5 relative shrink-0">
-      <div className="flex items-center gap-3 mb-10">
-        <div className="w-9 h-9 drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]">
+      <Link href="/" className="flex items-center gap-3 mb-10 group transition-opacity hover:opacity-80">
+        <div className="w-9 h-9 drop-shadow-[0_0_8px_rgba(99,102,241,0.6)] group-hover:drop-shadow-[0_0_12px_rgba(99,102,241,0.8)] transition-all">
           <Image src="/assets/logos/palate-logo.svg" alt="Palate Logo" width={36} height={36} suppressHydrationWarning />
         </div>
         <div className="text-2xl font-bold tracking-tight text-white">Palate</div>
-      </div>
+      </Link>
 
       <div className="mb-8">
         <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Intelligence</div>
