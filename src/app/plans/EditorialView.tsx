@@ -135,9 +135,17 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
           >
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500"></div>
             
-            <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl md:text-3xl font-bold text-white mb-6 z-10 relative leading-snug">
-              {recipe.title}
-            </motion.h3>
+            <div className="z-10 relative">
+              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl md:text-3xl font-bold text-white mb-4 leading-snug">
+                {recipe.title}
+              </motion.h3>
+              
+              <div className="text-slate-400 text-sm line-clamp-3 mb-6 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {recipe.content.split('\n\n').filter(p => p.trim().length > 30 && !p.match(/^[IVX]+\./) && !p.trim().startsWith('#')).slice(0, 1).join('\n\n')}
+                </ReactMarkdown>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 grid-rows-1 z-10 mt-auto">
               <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
