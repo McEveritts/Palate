@@ -59,7 +59,7 @@ export function Sidebar() {
           <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')}>
             <Leaf size={18} suppressHydrationWarning /> Zero-Waste
           </Link>
-          <Link href="/collections/flavor" className={getLinkClass('/collections/flavor')}>
+          <Link href="/collections/flavor-profile" className={getLinkClass('/collections/flavor-profile')}>
             <Droplets size={18} suppressHydrationWarning /> Flavor Profiles
           </Link>
         </nav>
