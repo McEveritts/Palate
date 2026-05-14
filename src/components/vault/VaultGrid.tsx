@@ -84,7 +84,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl p-6 shadow-xl transition-all duration-300"
+              className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-6 transition-all duration-300 hover:bg-slate-900/20 hover:shadow-[0_0_30px_rgba(99,102,241,0.2),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:backdrop-saturate-[2]"
             >
               {/* Abstract Background Element */}
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
@@ -136,7 +136,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
             
             <motion.div
               layoutId={`card-${selectedId}`}
-              className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900/80 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto relative z-10 overflow-hidden"
+              className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2] border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.2)] pointer-events-auto relative z-10 overflow-hidden"
             >
               {/* Top action bar: Close Button + Optional Save Button */}
               <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">

@@ -59,7 +59,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: selectedId ? 0.3 : 1, y: 0, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
           transition={{ duration: 0.3 }}
-          className="md:col-span-2 min-h-[450px] cursor-pointer group relative overflow-hidden rounded-3xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl p-8 md:p-12 flex flex-col justify-end shadow-2xl transition-all duration-500 hover:shadow-[0_0_40px_rgba(139,92,246,0.2)]"
+          className="md:col-span-2 min-h-[450px] cursor-pointer group relative overflow-hidden rounded-3xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] p-8 md:p-12 flex flex-col justify-end transition-all duration-500 hover:bg-slate-900/20 hover:shadow-[0_0_40px_rgba(139,92,246,0.2),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:backdrop-saturate-[2]"
         >
           {/* Enhanced Aurora Background for Hero */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent z-0"></div>
@@ -129,7 +129,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: selectedId ? 0.3 : 1, y: 0, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl p-8 shadow-xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] flex flex-col justify-between min-h-[250px]"
+            className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-8 transition-all duration-300 hover:bg-slate-900/20 hover:shadow-[0_0_30px_rgba(99,102,241,0.2),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:backdrop-saturate-[2] flex flex-col justify-between min-h-[250px]"
           >
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-500"></div>
             
@@ -181,7 +181,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
             
             <motion.div
               layoutId={`card-${selectedId}`}
-              className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900/90 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.6)] pointer-events-auto relative z-10 overflow-hidden"
+              className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2] border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.2)] pointer-events-auto relative z-10 overflow-hidden"
             >
               {/* Top action bar: Close Button + Optional Save Button */}
               <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">
