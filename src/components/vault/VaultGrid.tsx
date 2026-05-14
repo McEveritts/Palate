@@ -83,8 +83,18 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               </motion.div>
 
               {/* Hover Macros */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-slate-950/95 backdrop-blur-xl border-t border-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20">
-                <p className="text-sm text-fuchsia-200/80 font-medium line-clamp-2">{recipe.macros || "Macros not calculated"}</p>
+              <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-wrap gap-2 translate-y-[150%] group-hover:translate-y-0 transition-transform duration-300 z-20 pointer-events-none">
+                {recipe.macros ? (
+                  recipe.macros.split('|').map((macro, idx) => (
+                    <span key={idx} className="px-2 py-1 text-xs font-medium rounded bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                      {macro.trim()}
+                    </span>
+                  ))
+                ) : (
+                  <span className="px-2 py-1 text-xs font-medium rounded bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                    Macros not calculated
+                  </span>
+                )}
               </div>
             </motion.div>
           ))}
