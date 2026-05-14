@@ -63,7 +63,10 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
+                onClick={() => {
+                  useAppStore.getState().setGuest(false);
+                  signOut({ callbackUrl: '/login' });
+                }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium"
               >
                 <LogOut className="w-4 h-4" />

@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getVaultRecipes } from './vaultParser';
 import fs from 'fs/promises';
 
-vi.mock('fs/promises');
+vi.mock('fs/promises', () => ({
+  default: {
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+  }
+}));
 
 describe('vaultParser', () => {
   beforeEach(() => {
@@ -10,14 +15,14 @@ describe('vaultParser', () => {
   });
 
   it('should parse recipes from mains and sides directories', async () => {
-    vi.mocked(fs.readdir).mockImplementation(async (dir) => {
-      if (dir.toString().includes('mains')) return ['test-main.md'] as any;
-      if (dir.toString().includes('sides')) return ['test-side.md'] as any;
+    (fs.readdir as any).mockImplementation(async (dir: string) => {
+      if (dir.includes('mains')) return ['test-main.md'];
+      if (dir.includes('sides')) return ['test-side.md'];
       return [];
     });
     
-    vi.mocked(fs.readFile).mockImplementation(async (filePath) => {
-      if (filePath.toString().includes('test-main.md')) {
+    (fs.readFile as any).mockImplementation(async (filePath: string) => {
+      if (filePath.includes('test-main.md')) {
         return `---\nrecipe: 'Main Dish'\ntags: ['dinner']\nmacros: 'Calories: 500'\n---\n# Content`;
       }
       return `---\nrecipe: 'Side Dish'\ntags: ['lunch']\nmacros: 'Calories: 200'\n---\n# Content`;

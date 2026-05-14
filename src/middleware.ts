@@ -3,15 +3,20 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
+    const { pathname } = req.nextUrl;
+    
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/ask_sage", req.url));
+    }
+    
     return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ req, token }) => {
-        // If there is a token, the user is authenticated
-        if (token) return true;
-        // Otherwise, they must be redirected to /login
-        return false;
+        // Require authentication for all protected routes.
+        // Unauthenticated users will be automatically redirected to /login.
+        return !!token;
       },
     },
     pages: {
@@ -22,10 +27,11 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    "/",
+    "/ask_sage",
     "/plans/:path*",
     "/vault/:path*",
     "/collections/:path*",
-    "/upload/:path*",
-    "/settings/:path*"
+    "/upload/:path*"
   ],
 };

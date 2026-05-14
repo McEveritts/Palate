@@ -14,8 +14,8 @@ export function Sidebar() {
     return null;
   }
 
-  // Only show restricted links if the user is fully authenticated via NextAuth
   const showRestricted = status === "authenticated";
+  const isLoading = status === "loading";
 
   const getLinkClass = (path: string, exact: boolean = false) => {
     const isActive = exact 
@@ -41,11 +41,18 @@ export function Sidebar() {
       <div className="mb-8">
         <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Intelligence</div>
         <nav className="flex flex-col gap-1">
-          <Link href="/" className={getLinkClass('/', true)}>
+          <Link href="/ask_sage" className={getLinkClass('/ask_sage')}>
             <Sparkles size={18} suppressHydrationWarning /> Ask Sage
           </Link>
           
-          {showRestricted && (
+          {isLoading ? (
+            <div className="flex flex-col gap-1 animate-pulse">
+              <div className="h-10 bg-white/5 rounded-lg w-full"></div>
+              <div className="h-10 bg-white/5 rounded-lg w-full"></div>
+              <div className="h-10 bg-white/5 rounded-lg w-full"></div>
+              <div className="h-10 bg-white/5 rounded-lg w-full"></div>
+            </div>
+          ) : showRestricted ? (
             <>
               <Link href="/plans" className={getLinkClass('/plans')}>
                 <BrainCircuit size={18} suppressHydrationWarning /> <span className="font-bold">Curated By Sage</span>
@@ -60,11 +67,16 @@ export function Sidebar() {
                 <LibraryBig size={18} suppressHydrationWarning /> Vault
               </Link>
             </>
-          )}
+          ) : null}
         </nav>
       </div>
 
-      {showRestricted && (
+      {isLoading ? (
+        <div className="mb-8 animate-pulse">
+          <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
+          <div className="h-10 bg-white/5 rounded-lg w-full"></div>
+        </div>
+      ) : showRestricted ? (
         <div className="mb-8">
           <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Smart Collections</div>
           <nav className="flex flex-col gap-1">
@@ -73,7 +85,7 @@ export function Sidebar() {
             </Link>
           </nav>
         </div>
-      )}
+      ) : null}
 
       <div className="flex-grow"></div>
 
