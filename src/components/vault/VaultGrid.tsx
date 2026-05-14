@@ -4,18 +4,21 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VaultFilters } from './VaultFilters';
 import { VaultRecipe } from '@/lib/vaultParser';
-import { X } from 'lucide-react';
+import { X, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
+  onSaveAction?: (id: string) => Promise<void>;
+  layoutType?: 'masonry' | 'editorial';
 }
 
-export function VaultGrid({ initialRecipes }: VaultGridProps) {
+export function VaultGrid({ initialRecipes, onSaveAction, layoutType = 'masonry' }: VaultGridProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (selectedId) {
@@ -30,7 +33,16 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
 
   const filteredRecipes = useMemo(() => {
     return initialRecipes.filter(recipe => {
-      const matchesCategory = activeCategory === 'all' || recipe.category === activeCategory;
+      let matchesCategory = false;
+      if (activeCategory === 'all') {
+        matchesCategory = true;
+      } else if (recipe.category.startsWith('curated')) {
+        const isSide = recipe.tags.some(t => t.toLowerCase().includes('side'));
+        matchesCategory = activeCategory === 'sides' ? isSide : !isSide;
+      } else {
+        matchesCategory = recipe.category === activeCategory;
+      }
+
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || 
         recipe.title.toLowerCase().includes(searchLower) ||
@@ -42,66 +54,97 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
 
   const selectedRecipe = initialRecipes.find(r => r.id === selectedId);
 
+  const handleSaveClick = async () => {
+    if (!selectedId || !onSaveAction) return;
+    setIsSaving(true);
+    await onSaveAction(selectedId);
+    setIsSaving(false);
+    setSelectedId(null);
+  };
+
+  const gridClass = layoutType === 'editorial'
+    ? "grid grid-cols-1 md:grid-cols-2 gap-8"
+    : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+
   return (
     <div className="w-full relative">
-      <VaultFilters 
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-      />
+      {layoutType === 'masonry' && (
+        <VaultFilters 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+        />
+      )}
 
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className={gridClass}
         animate={{ opacity: selectedId ? 0.3 : 1, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
         transition={{ duration: 0.3 }}
       >
         <AnimatePresence>
-          {filteredRecipes.map((recipe) => (
-            <motion.div
-              layoutId={`card-${recipe.id}`}
-              key={recipe.id}
-              onClick={() => setSelectedId(recipe.id)}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl p-6 shadow-xl hover:shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all duration-300"
-            >
-              {/* Abstract Background Element */}
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
-              
-              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 z-10 relative">
-                {recipe.title}
-              </motion.h3>
-              
-              <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
-                <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1">
-                  <div className="flex flex-wrap items-start content-start gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
-                    {recipe.tags.map(tag => (
-                      <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
+          {filteredRecipes.map((recipe, index) => {
+            const isHero = layoutType === 'editorial' && index === 0;
 
-                {/* Hover Macros */}
-                <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
-                  {recipe.macros ? (
-                    recipe.macros.split('|').map((macro, idx) => (
-                      <span key={idx} className="px-2 py-1 text-xs font-medium rounded bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                        {macro.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="px-2 py-1 text-xs font-medium rounded bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                      Macros not calculated
+            return (
+              <motion.div
+                layoutId={`card-${recipe.id}`}
+                key={recipe.id}
+                onClick={() => setSelectedId(recipe.id)}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={`cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 border border-white/10 backdrop-blur-2xl shadow-xl transition-all duration-300 ${
+                  isHero ? 'md:col-span-2 min-h-[350px] p-8 md:p-12 flex flex-col justify-end' : 'p-6'
+                }`}
+              >
+                {/* Abstract Background Element */}
+                <div className={`absolute -top-20 -right-20 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500 ${isHero ? 'w-96 h-96' : 'w-40 h-40'}`}></div>
+                
+                {isHero && (
+                  <div className="absolute top-8 left-8">
+                    <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-300 bg-indigo-900/40 rounded-full border border-indigo-500/30">
+                      Recipe of the Week
                     </span>
-                  )}
+                  </div>
+                )}
+
+                <motion.h3 
+                  layoutId={`title-${recipe.id}`} 
+                  className={`font-bold text-white mb-2 z-10 relative ${isHero ? 'text-4xl md:text-5xl mt-12' : 'text-2xl'}`}
+                >
+                  {recipe.title}
+                </motion.h3>
+                
+                <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
+                  <motion.div layoutId={`tags-${recipe.id}`} className="col-start-1 row-start-1 flex flex-wrap items-start content-start">
+                    <div className="flex flex-wrap gap-2 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-4">
+                      {recipe.tags.map(tag => (
+                        <span key={tag} className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  {/* Hover Macros */}
+                  <div className="col-start-1 row-start-1 flex flex-wrap items-start content-start gap-2 opacity-0 translate-y-4 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
+                    {recipe.macros ? (
+                      recipe.macros.split('|').map((macro, idx) => (
+                        <span key={idx} className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
+                          {macro.trim()}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-fuchsia-500/80 text-white shadow-lg backdrop-blur-md">
+                        Macros not calculated
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </motion.div>
 
@@ -119,8 +162,18 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               layoutId={`card-${selectedId}`}
               className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900/80 border border-white/20 backdrop-blur-3xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto relative z-10 overflow-hidden"
             >
-              {/* Close Button - fixed to top right of modal, outside scroll container */}
-              <div className="absolute top-0 right-0 p-6 z-20 bg-gradient-to-bl from-slate-900/80 to-transparent rounded-tr-3xl pointer-events-none">
+              {/* Top action bar: Close Button + Optional Save Button */}
+              <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">
+                {onSaveAction && (
+                  <button 
+                    onClick={handleSaveClick}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 rounded-full text-indigo-100 transition-colors pointer-events-auto disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span className="text-sm font-medium">{isSaving ? 'Saving...' : 'Save to Vault'}</span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setSelectedId(null)}
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors pointer-events-auto"
@@ -132,7 +185,7 @@ export function VaultGrid({ initialRecipes }: VaultGridProps) {
               <div className="p-8 md:p-12 relative overflow-y-auto custom-scrollbar flex-1">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-64 bg-gradient-to-b from-indigo-500/20 to-transparent rounded-full blur-3xl pointer-events-none"></div>
                 
-                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 pr-12 relative z-10">
+                <motion.h3 layoutId={`title-${selectedId}`} className="text-4xl md:text-5xl font-bold text-white mb-4 pr-32 relative z-10">
                   {selectedRecipe.title}
                 </motion.h3>
                 
