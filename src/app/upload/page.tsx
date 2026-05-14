@@ -7,6 +7,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { saveParsedRecipe } from "../actions";
 
+import { parseMessageContent } from "../lib/parser";
+
 export default function UploadPage() {
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
@@ -252,10 +254,53 @@ export default function UploadPage() {
 
             <div className="glass-panel p-8 md:p-12 rounded-3xl flex-1 overflow-y-auto custom-scrollbar border border-white/10 relative">
               <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-              <div className="prose prose-invert prose-lg prose-indigo max-w-none relative z-10">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {parsedData.markdown}
-                </ReactMarkdown>
+              
+              <div className="flex flex-col gap-4 relative z-10 w-full">
+                {(() => {
+                  const { frontmatter, markdown } = parseMessageContent(parsedData.markdown);
+                  
+                  return (
+                    <>
+                      {frontmatter && (
+                        <div className="flex flex-col gap-3 p-6 rounded-2xl glass-panel border border-white/10 mb-4 bg-gradient-to-br from-indigo-900/20 to-fuchsia-900/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                          {frontmatter.recipe && <h3 className="text-xl font-bold text-white drop-shadow-sm m-0 relative z-10">{frontmatter.recipe}</h3>}
+                          
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 relative z-10">
+                            {frontmatter.macros && frontmatter.macros.toLowerCase() !== 'unavailable' && (
+                              <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                                <span className="text-sm text-emerald-200 font-mono tracking-wide">{frontmatter.macros}</span>
+                              </div>
+                            )}
+                            {frontmatter.macros && frontmatter.macros.toLowerCase() === 'unavailable' && (
+                              <div className="flex items-center gap-1.5 bg-slate-500/10 border border-slate-500/20 px-2.5 py-1 rounded-md">
+                                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                                <span className="text-sm text-slate-300 font-mono tracking-wide">Macros: Unavailable</span>
+                              </div>
+                            )}
+                            
+                            {frontmatter.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {frontmatter.tags.map((tag: string) => (
+                                  <span key={tag} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-slate-200 text-sm font-medium tracking-wide">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="prose prose-invert prose-lg prose-indigo max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {markdown}
+                        </ReactMarkdown>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </motion.div>
