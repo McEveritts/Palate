@@ -59,6 +59,9 @@ export function Sidebar() {
       {/* Main Sidebar */}
       <aside className={`fixed lg:relative top-0 left-0 h-full w-72 flex flex-col z-50 p-6 glass-panel border-y-0 border-l-0 rounded-none border-r border-white/5 shrink-0 transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         
+        {/* Mobile-only additional opacity layer (+12%) */}
+        <div className="lg:hidden absolute inset-0 bg-black/[0.12] pointer-events-none -z-10"></div>
+
         {/* Mobile Close Button */}
         <button onClick={closeSidebar} className="lg:hidden absolute top-5 right-5 text-slate-400 hover:text-white transition-colors">
           <X size={24} />
