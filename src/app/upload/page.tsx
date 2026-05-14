@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { saveParsedRecipe } from "../actions";
 
-import { parseMessageContent } from "../lib/parser";
+import { parseMessageContent } from "../../lib/parser";
 
 export default function UploadPage() {
   const [input, setInput] = useState("");
