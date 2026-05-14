@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function POST(req: Request) {
   try {
-    const { input } = await req.json();
+    const { input, image } = await req.json();
 
-    if (!input || typeof input !== 'string') {
-      return NextResponse.json({ success: false, error: 'Input is required' }, { status: 400 });
+    if ((!input || typeof input !== 'string') && !image) {
+      return NextResponse.json({ success: false, error: 'Input text or an image is required' }, { status: 400 });
     }
 
-    let textToParse = input;
+    let textToParse = input || "Extract recipe from the provided image.";
 
     // Check if input is a URL
-    if (input.trim().startsWith('http://') || input.trim().startsWith('https://')) {
+    if (input && (input.trim().startsWith('http://') || input.trim().startsWith('https://'))) {
       try {
         const response = await fetch(input.trim());
         if (!response.ok) {
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const extractionPrompt = `
 You are an expert culinary AI for 'Palate', a local-first recipe application.
-Your task is to extract a recipe from the provided text or raw HTML and format it strictly according to Palate's Markdown standards.
+Your task is to extract a recipe from the provided text, raw HTML, or image, and format it strictly according to Palate's Markdown standards.
 
 [EXTRACTION RULES]
 1. Ignore all blog narratives, advertisements, comments, and life stories.
@@ -56,11 +56,25 @@ or
 [CATEGORY: side]
 Choose the most appropriate category based on the dish.
 
-[INPUT TEXT TO PARSE]
+[INPUT TO PARSE]
 ${textToParse}
 `;
 
-    const result = await model.generateContent(extractionPrompt);
+    const promptParts: Part[] = [];
+    if (image) {
+      const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
+      if (mimeTypeMatch) {
+        promptParts.push({
+          inlineData: {
+            data: image.replace(/^data:image\/\w+;base64,/, ''),
+            mimeType: mimeTypeMatch[1]
+          }
+        });
+      }
+    }
+    promptParts.push({ text: extractionPrompt });
+
+    const result = await model.generateContent(promptParts);
     const generatedText = result.response.text();
 
     // Extract the category block

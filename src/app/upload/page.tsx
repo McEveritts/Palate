@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, Brain, Check, RefreshCcw, Save } from "lucide-react";
+import { useState, useRef } from "react";
+import { Sparkles, Brain, Check, RefreshCcw, Save, ImagePlus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,9 +15,30 @@ export default function UploadPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleParse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isParsing) return;
+    if ((!input.trim() && !imagePreview) || isParsing) return;
 
     setIsParsing(true);
     setError(null);
@@ -26,7 +47,7 @@ export default function UploadPage() {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input })
+        body: JSON.stringify({ input, image: imagePreview })
       });
 
       const data = await res.json();
@@ -99,20 +120,58 @@ export default function UploadPage() {
               Upload a Recipe
             </h1>
             <p className="text-lg text-slate-400 max-w-xl m-0 leading-relaxed">
-              Paste a URL from any food blog or raw text below. Sage will strip the filler, normalize the measurements, and extract the pure culinary essence.
+              Paste a URL from any food blog, raw text, or upload an image of a physical recipe. Sage will strip the filler, normalize the measurements, and extract the pure culinary essence.
             </p>
             
             <form onSubmit={handleParse} className="w-full relative mt-6">
               <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageSelect} 
+              />
+              <AnimatePresence>
+                {imagePreview && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="absolute bottom-full left-0 mb-4 p-2 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl z-20"
+                  >
+                    <div className="relative group/preview">
+                      <img src={imagePreview} alt="Preview" className="h-32 w-auto rounded-xl object-cover" />
+                      <button 
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-3 -right-3 bg-slate-900 text-white rounded-full p-1.5 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <button
+                type="button"
+                className="absolute left-[6px] top-[6px] bottom-[6px] w-[50px] flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                title="Upload an image"
+                onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
+              >
+                <ImagePlus size={22} />
+              </button>
+              
+              <input 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="glass-input pl-6 pr-40 py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl" 
-                placeholder="Paste URL or text here..."
+                className="glass-input pl-[68px] pr-40 py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl" 
+                placeholder="Paste URL, text, or upload an image..."
               />
               <button 
                 type="submit"
-                disabled={!input.trim()}
+                disabled={(!input.trim() && !imagePreview)}
                 className="absolute right-3 top-3 bottom-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-6 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
               >
                 Extract
