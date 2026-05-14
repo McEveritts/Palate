@@ -5,9 +5,9 @@ import { describe, it, expect, vi } from 'vitest';
 import FlavorProfilePage from '../../../../src/app/collections/flavor-profile/page';
 
 vi.mock('../../../../src/lib/vaultParser', () => ({
-  getAllVaultRecipes: vi.fn(() => [
-    { title: 'Chili', category: 'mains', markdown: '', frontmatter: { recipe: 'Chili', tags: ['spicy', 'beef'] }, slug: 'chili' },
-    { title: 'Salad', category: 'sides', markdown: '', frontmatter: { recipe: 'Salad', tags: ['fresh', 'light'] }, slug: 'salad' }
+  getVaultRecipes: vi.fn(() => [
+    { id: 'chili', title: 'Chili', category: 'mains', tags: ['spicy', 'beef'], macros: '', content: '' },
+    { id: 'salad', title: 'Salad', category: 'sides', tags: ['fresh', 'light'], macros: '', content: '' }
   ])
 }));
 
