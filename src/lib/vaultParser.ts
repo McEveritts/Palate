@@ -21,8 +21,8 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
     const dirPath = path.join(process.cwd(), 'vault', category);
     try {
       const files = await fs.readdir(dirPath);
-      for (const file of files) {
-        if (!file.endsWith('.md')) continue;
+      const recipePromises = files.map(async (file) => {
+        if (!file.endsWith('.md')) return null;
         
         const filePath = path.join(dirPath, file);
         const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -40,16 +40,21 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
           macrosStr = String(data.macros);
         }
 
-        allRecipes.push({
+        return {
           id: `${category}-${file.replace('.md', '')}`,
           title: data.recipe || data.title || file.replace('.md', ''),
           category,
           tags,
           macros: macrosStr,
           content: content.trim()
-        });
+        };
+      });
+
+      const results = await Promise.all(recipePromises);
+      for (const res of results) {
+        if (res) allRecipes.push(res);
       }
-    } catch (error) {
+    } catch (_error) {
       console.warn(`Could not read directory ${dirPath}`);
     }
   }
@@ -64,8 +69,8 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
 
   try {
     const files = await fs.readdir(dirPath);
-    for (const file of files) {
-      if (!file.endsWith('.md')) continue;
+    const curatedPromises = files.map(async (file) => {
+      if (!file.endsWith('.md')) return null;
 
       const filePath = path.join(dirPath, file);
       const stat = await fs.stat(filePath);
@@ -84,7 +89,7 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
         macrosStr = String(data.macros);
       }
 
-      allCurated.push({
+      return {
         id: `${categoryName}-${file.replace('.md', '')}`,
         title: data.recipe || data.title || file.replace('.md', ''),
         category: categoryName,
@@ -92,14 +97,19 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
         macros: macrosStr,
         content: content.trim(),
         mtimeMs: stat.mtimeMs
-      });
+      };
+    });
+
+    const curatedResults = await Promise.all(curatedPromises);
+    for (const res of curatedResults) {
+      if (res) allCurated.push(res);
     }
-  } catch (error) {
+  } catch (_error) {
     console.warn(`Could not read directory ${dirPath}`);
   }
 
   // Sort by modification time ascending so the first generated recipe is always first
   allCurated.sort((a, b) => a.mtimeMs - b.mtimeMs);
 
-  return allCurated.map(({ mtimeMs, ...recipe }) => recipe);
+  return allCurated.map(({ mtimeMs: _mtimeMs, ...recipe }) => recipe);
 }
