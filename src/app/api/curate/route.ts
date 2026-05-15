@@ -17,12 +17,12 @@ export async function POST(req: Request) {
     // 1. Move all current files to archive
     try {
       const currentFiles = await fs.readdir(currentDir);
-      for (const file of currentFiles) {
-        if (!file.endsWith('.md')) continue;
+      await Promise.all(currentFiles.map(async (file) => {
+        if (!file.endsWith('.md')) return;
         const oldPath = path.join(currentDir, file);
         const newPath = path.join(archiveDir, file);
         await fs.rename(oldPath, newPath);
-      }
+      }));
     } catch (e) {
       console.warn("Could not move current to archive (might be empty).", e);
     }
