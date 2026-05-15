@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function POST(req: Request) {
+export async function POST(_req: Request) {
   try {
     const currentDir = path.join(process.cwd(), 'vault', 'curated', 'current');
     const archiveDir = path.join(process.cwd(), 'vault', 'curated', 'archive');
@@ -85,6 +85,8 @@ II. **[Step Title]**
     const recipes = text.split("|||RECIPE_SPLIT|||");
     let savedCount = 0;
 
+    const writePromises: Promise<void>[] = [];
+
     for (const rawRecipe of recipes) {
       let cleanContent = rawRecipe.trim();
       if (!cleanContent) continue;
@@ -103,8 +105,12 @@ II. **[Step Title]**
       const filename = `${slug}.md`;
 
       const filePath = path.join(currentDir, filename);
-      await fs.writeFile(filePath, cleanContent.trim(), "utf-8");
+      writePromises.push(fs.writeFile(filePath, cleanContent.trim(), "utf-8"));
       savedCount++;
+    }
+
+    if (writePromises.length > 0) {
+      await Promise.all(writePromises);
     }
 
     return NextResponse.json({ success: true, message: `Archived old recipes and generated ${savedCount} new curated recipes.` });
