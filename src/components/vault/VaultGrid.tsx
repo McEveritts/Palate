@@ -4,11 +4,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VaultFilters } from './VaultFilters';
 import { VaultRecipe } from '@/lib/vaultParser';
-import { X, Save } from 'lucide-react';
+import { X, Save, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { RecipeNutritionDetails } from './RecipeNutritionDetails';
+import { VaultCockpit } from './VaultCockpit';
+import { deleteRecipeFromVault } from '@/app/actions';
 
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
@@ -16,10 +18,17 @@ interface VaultGridProps {
 }
 
 export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
+  const [recipes, setRecipes] = useState<VaultRecipe[]>(initialRecipes);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setRecipes(initialRecipes);
+  }, [initialRecipes]);
 
   useEffect(() => {
     if (selectedId) {
@@ -33,7 +42,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   }, [selectedId]);
 
   const filteredRecipes = useMemo(() => {
-    return initialRecipes.filter(recipe => {
+    return recipes.filter(recipe => {
       let matchesCategory = false;
       if (activeCategory === 'all') {
         matchesCategory = true;
@@ -51,9 +60,9 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       
       return matchesCategory && matchesSearch;
     });
-  }, [initialRecipes, searchQuery, activeCategory]);
+  }, [recipes, searchQuery, activeCategory]);
 
-  const selectedRecipe = initialRecipes.find(r => r.id === selectedId);
+  const selectedRecipe = recipes.find(r => r.id === selectedId);
 
   const handleSaveClick = async () => {
     if (!selectedId || !onSaveAction) return;
@@ -63,6 +72,39 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
     setSelectedId(null);
   };
 
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    
+    const previousRecipes = recipes;
+    // Optimistic Update
+    setRecipes(recipes.filter(r => r.id !== id));
+    
+    if (selectedId === id) {
+      setSelectedId(null);
+    }
+    
+    setIsDeleting(id);
+    
+    try {
+      const result = await deleteRecipeFromVault(id);
+      if (!result.success) {
+        // Rollback state
+        setRecipes(previousRecipes);
+        alert(`Failed to delete recipe: ${result.error}`);
+      }
+    } catch (err) {
+      setRecipes(previousRecipes);
+      alert("An unexpected error occurred while deleting the recipe.");
+    } finally {
+      setIsDeleting(null);
+      setConfirmDeleteId(null);
+    }
+  };
+
+
   return (
     <div className="w-full relative">
       <VaultFilters 
@@ -71,6 +113,8 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
         activeCategory={activeCategory}
         setActiveCategory={setActiveCategory}
       />
+
+      <VaultCockpit recipes={recipes} />
 
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -83,6 +127,11 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
               layoutId={`card-${recipe.id}`}
               key={recipe.id}
               onClick={() => setSelectedId(recipe.id)}
+              onMouseLeave={() => {
+                if (confirmDeleteId === recipe.id) {
+                  setConfirmDeleteId(null);
+                }
+              }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -91,11 +140,40 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
               {/* Abstract Background Element */}
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
               
-              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 z-10 relative">
+              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 pr-12 z-10 relative">
                 {recipe.title}
               </motion.h3>
                 
               <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
+              </div>
+
+              {/* Secure Hover-Triggered Glassmorphic Trashcan Icon with confirmation */}
+              <div className="absolute bottom-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (confirmDeleteId === recipe.id) {
+                      handleDelete(recipe.id, e);
+                    } else {
+                      setConfirmDeleteId(recipe.id);
+                    }
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  className={`flex items-center gap-1.5 p-2.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
+                    confirmDeleteId === recipe.id
+                      ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
+                      : 'bg-white/5 border-white/10 hover:bg-rose-500/20 hover:border-rose-500/35 text-slate-400 hover:text-rose-200'
+                  }`}
+                  disabled={isDeleting === recipe.id}
+                  title="Delete recipe"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {confirmDeleteId === recipe.id && (
+                    <span className="text-xs font-semibold select-none pr-1">Confirm?</span>
+                  )}
+                </button>
               </div>
             </motion.div>
           ))}
@@ -109,15 +187,40 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
             {/* Click-away backdrop */}
             <div 
               className="absolute inset-0 pointer-events-auto" 
-              onClick={() => setSelectedId(null)}
+              onClick={() => {
+                setSelectedId(null);
+                setConfirmDeleteId(null);
+              }}
             />
             
             <motion.div
               layoutId={`card-${selectedId}`}
               className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2] border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.2)] pointer-events-auto relative z-10 overflow-hidden"
             >
-              {/* Top action bar: Close Button + Optional Save Button */}
-              <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">
+              {/* Top action bar: Close Button + Optional Save Button + Delete Button */}
+              <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none items-center">
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirmDeleteId === selectedId) {
+                      handleDelete(selectedId);
+                    } else {
+                      setConfirmDeleteId(selectedId);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm font-medium transition-all duration-300 pointer-events-auto ${
+                    confirmDeleteId === selectedId
+                      ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300 hover:text-rose-100'
+                  }`}
+                  disabled={isDeleting === selectedId}
+                  title="Delete recipe"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {confirmDeleteId === selectedId ? 'Confirm Delete?' : 'Delete'}
+                </button>
+
                 {onSaveAction && (
                   <button 
                     onClick={handleSaveClick}
@@ -129,7 +232,10 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                   </button>
                 )}
                 <button 
-                  onClick={() => setSelectedId(null)}
+                  onClick={() => {
+                    setSelectedId(null);
+                    setConfirmDeleteId(null);
+                  }}
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors pointer-events-auto"
                 >
                   <X className="w-5 h-5" />

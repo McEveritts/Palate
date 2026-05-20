@@ -1,7 +1,6 @@
 import React from 'react';
 import { getVaultRecipes } from '@/lib/vaultParser';
 import { VaultGrid } from '@/components/vault/VaultGrid';
-import { VaultCockpit } from '@/components/vault/VaultCockpit';
 
 export default async function VaultPage() {
   const recipes = await getVaultRecipes();
@@ -21,8 +20,6 @@ export default async function VaultPage() {
             Your personal collection of synthesized culinary compositions.
           </p>
         </header>
-
-        <VaultCockpit recipes={recipes} />
 
         <VaultGrid initialRecipes={recipes} />
       </div>

@@ -123,3 +123,41 @@ export async function saveCuratedToVault(id: string) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
+
+export async function deleteRecipeFromVault(id: string) {
+  try {
+    let category: string;
+    let slug: string;
+    
+    if (id.startsWith('curated-current-')) {
+      category = 'curated/current';
+      slug = id.substring('curated-current-'.length);
+    } else if (id.startsWith('curated-archive-')) {
+      category = 'curated/archive';
+      slug = id.substring('curated-archive-'.length);
+    } else if (id.startsWith('mains-')) {
+      category = 'mains';
+      slug = id.substring('mains-'.length);
+    } else if (id.startsWith('sides-')) {
+      category = 'sides';
+      slug = id.substring('sides-'.length);
+    } else {
+      throw new Error(`Invalid recipe ID format: ${id}`);
+    }
+    
+    const filename = `${slug}.md`;
+    const filePath = path.join(process.cwd(), 'vault', category, filename);
+    
+    // Check if the file exists before attempting deletion
+    await fs.access(filePath);
+    await fs.unlink(filePath);
+    
+    revalidatePath('/vault');
+    revalidatePath('/plans');
+    return { success: true, message: `Recipe successfully deleted from vault/${category}` };
+  } catch (error: unknown) {
+    console.error("Delete error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+

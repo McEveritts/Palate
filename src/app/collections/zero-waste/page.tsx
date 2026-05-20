@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale, Copy, Check } from "lucide-react";
+import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale, Copy, Check, Brain, CheckCircle2, Eye, FileCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { parseSageStream, parseMessageContent } from "@/lib/parser";
 
 export default function ZeroWastePage() {
   const [prompt, setPrompt] = useState("");
@@ -11,10 +14,15 @@ export default function ZeroWastePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [openThoughts, setOpenThoughts] = useState(true);
+  const [rawMode, setRawMode] = useState(false);
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { thoughts, content } = parseSageStream(response || "", !isGenerating);
+  const { frontmatter, markdown } = parseMessageContent(content);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,6 +48,8 @@ export default function ZeroWastePage() {
 
     setIsGenerating(true);
     setResponse("");
+    setOpenThoughts(true);
+    setRawMode(false);
 
     const payload = { 
       prompt: prompt,
@@ -166,45 +176,131 @@ export default function ZeroWastePage() {
             className="w-full flex flex-col gap-6 flex-1 pb-8"
           >
             <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 flex flex-col gap-6 relative group">
-               {/* Hover Actions in top-right */}
+               {/* Hover Actions in bottom-right, vertically stacked with Scale (Toggle) at the top */}
                {!isGenerating && response && (
-                 <div className="opacity-0 group-hover:opacity-100 absolute top-6 right-6 flex items-center gap-2 transition-all">
+                 <div className="opacity-0 group-hover:opacity-100 absolute bottom-6 right-6 flex flex-col gap-2 transition-all z-20">
                    <button
+                     type="button"
                      onClick={() => setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric')}
-                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 border border-white/5 rounded-lg flex items-center justify-center shadow-lg"
                      title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
                    >
                      <Scale size={16} className={measurementSystem === 'metric' ? 'text-emerald-400' : 'text-fuchsia-400'} />
                    </button>
                    
                    <button
+                     type="button"
+                     onClick={() => setRawMode(!rawMode)}
+                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 border border-white/5 rounded-lg flex items-center justify-center shadow-lg"
+                     title={rawMode ? "Show Rendered" : "Show Raw Markdown"}
+                   >
+                     {rawMode ? <Eye size={16} /> : <FileCode size={16} />}
+                   </button>
+
+                   <button
+                     type="button"
                      onClick={() => {
-                       navigator.clipboard.writeText(response);
+                       navigator.clipboard.writeText(markdown);
                        setCopied(true);
                        setTimeout(() => setCopied(false), 2000);
                      }}
-                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 border border-white/5 rounded-lg flex items-center justify-center shadow-lg"
                      title="Copy recipe text"
                    >
                      {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
                    </button>
                  </div>
                )}
-               <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2"><Leaf className="text-emerald-400"/> Rescued Recipe</h3>
-               <div className="prose prose-invert max-w-none whitespace-pre-wrap">
-                 {isGenerating && response === "" ? (
-                   <div className="flex items-center gap-3 text-emerald-400">
-                     <Loader2 className="animate-spin" size={20} />
-                     <span className="text-lg">Formulating zero-waste recipe...</span>
-                   </div>
-                 ) : (
-                   response
-                 )}
-               </div>
+               
+               <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                 <Leaf className="text-emerald-400" /> Rescued Recipe
+               </h3>
+               
+               {isGenerating && (!response || response === "") ? (
+                 <div className="flex items-center gap-3 text-emerald-400 my-4">
+                   <Loader2 className="animate-spin" size={20} />
+                   <span className="text-lg">Formulating zero-waste recipe...</span>
+                 </div>
+               ) : (
+                 <div className="flex flex-col gap-4">
+                   {/* Render thoughts block if any thoughts exist */}
+                   {thoughts && (
+                     <div className="w-full border border-white/5 rounded-xl bg-black/20 overflow-hidden shadow-sm">
+                       <button
+                         type="button"
+                         onClick={() => setOpenThoughts(!openThoughts)}
+                         className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                       >
+                         <div className="flex items-center gap-2">
+                           {isGenerating && !content ? (
+                             <Brain size={16} className="text-emerald-400 animate-pulse" />
+                           ) : (
+                             <CheckCircle2 size={16} className="text-emerald-400" />
+                           )}
+                           <span>{isGenerating && !content ? "Thinking" : "Thoughts"}</span>
+                         </div>
+                         <span className="text-xs font-mono">{openThoughts ? "HIDE" : "SHOW"}</span>
+                       </button>
+                       {openThoughts && (
+                         <div className="px-4 py-4 text-xs font-mono text-slate-500 border-t border-white/5 whitespace-pre-wrap">
+                           {thoughts}
+                         </div>
+                       )}
+                     </div>
+                   )}
+
+                   {/* Render frontmatter details block if they exist */}
+                   {frontmatter && (
+                     <div className="flex flex-col gap-3 p-5 rounded-2xl glass-panel border border-white/10 bg-gradient-to-br from-emerald-950/20 to-teal-950/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                       {frontmatter.recipe && (
+                         <h4 className="text-lg font-bold text-white drop-shadow-sm m-0 relative z-10">
+                           {frontmatter.recipe}
+                         </h4>
+                       )}
+                       
+                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 relative z-10">
+                         {frontmatter.macros && frontmatter.macros.toLowerCase() !== 'unavailable' && (
+                           <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md">
+                             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                             <span className="text-xs text-emerald-200 font-mono tracking-wide">{frontmatter.macros}</span>
+                           </div>
+                         )}
+                         
+                         {frontmatter.tags && frontmatter.tags.length > 0 && (
+                           <div className="flex flex-wrap gap-1.5">
+                             {frontmatter.tags.map(tag => (
+                               <span key={tag} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-slate-200 text-xs font-medium tracking-wide">
+                                 #{tag}
+                               </span>
+                             ))}
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Render final markdown content */}
+                   {content && (
+                     <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/10 prose-headings:text-indigo-50 prose-a:text-emerald-400 hover:prose-a:text-emerald-300 prose-strong:text-indigo-100 mt-2">
+                       {rawMode ? (
+                         <div className="whitespace-pre-wrap font-mono text-[13px] text-slate-300">
+                           {markdown}
+                         </div>
+                       ) : (
+                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                           {markdown}
+                         </ReactMarkdown>
+                       )}
+                     </div>
+                   )}
+                 </div>
+               )}
                
                {!isGenerating && response !== "" && (
-                 <div className="flex justify-end border-t border-white/5 pt-4 mt-2">
+                 <div className="flex justify-end border-t border-white/5 pt-4 mt-2 pr-12">
                    <button
+                     type="button"
                      onClick={() => setResponse(null)}
                      className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl text-sm transition-all cursor-pointer shadow-inner relative overflow-hidden group"
                    >
