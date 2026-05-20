@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import path from 'path';
 
 vi.mock('fs/promises', () => ({
   default: {
@@ -52,7 +53,7 @@ describe('actions - deleteRecipeFromVault', () => {
     
     expect(result.success).toBe(true);
     expect(fs.access).toHaveBeenCalled();
-    expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('vault\\mains\\test-recipe.md'));
+    expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining(path.join('vault', 'mains', 'test-recipe.md')));
     expect(revalidatePath).toHaveBeenCalledWith('/vault');
     expect(revalidatePath).toHaveBeenCalledWith('/plans');
   });
@@ -65,7 +66,7 @@ describe('actions - deleteRecipeFromVault', () => {
     
     expect(result.success).toBe(true);
     expect(fs.access).toHaveBeenCalled();
-    expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('vault\\curated\\current\\test-curated.md'));
+    expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining(path.join('vault', 'curated', 'current', 'test-curated.md')));
     expect(revalidatePath).toHaveBeenCalledWith('/vault');
     expect(revalidatePath).toHaveBeenCalledWith('/plans');
   });
@@ -120,7 +121,7 @@ describe('actions - saveRecipeToVault', () => {
 
     expect(result.success).toBe(true);
     expect(fs.writeFile).toHaveBeenCalledWith(
-      expect.stringContaining('sides\\honey-carrots.md'),
+      expect.stringContaining(path.join('sides', 'honey-carrots.md')),
       expect.stringContaining('title: Honey Carrots'),
       'utf-8'
     );
