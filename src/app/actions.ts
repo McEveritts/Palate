@@ -3,6 +3,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
+import { sanitizeRecipeContent } from "../lib/parser";
 
 export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 'md') {
   try {
@@ -10,23 +11,24 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
       throw new Error('Invalid format. Must be md or txt.');
     }
 
-    // 1. Clean the content to ensure standard YAML frontmatter (---) instead of ```yaml
-    let cleanContent = content.trim();
-    if (cleanContent.startsWith("```yaml")) {
-      cleanContent = cleanContent.replace(/^```yaml/, "---");
-      cleanContent = cleanContent.replace(/```/, "---");
-    }
+    // 1. Clean the content to strip thought tags, preambles, and code blocks, and reconstruct cleanly
+    const { data, fileContent: sanitizedFileContent } = sanitizeRecipeContent(content);
 
     // 2. Extract title from frontmatter for the filename
-    const titleMatch = cleanContent.match(/title:\s*["']?([^"'\n]+)["']?/i) || cleanContent.match(/Recipe:\s*["']?([^"'\n]+)["']?/i);
-    const title = titleMatch ? titleMatch[1].trim() : "Generated Recipe";
+    const titleMatch = sanitizedFileContent.match(/title:\s*["']?([^"'\n]+)["']?/i) || sanitizedFileContent.match(/Recipe:\s*["']?([^"'\n]+)["']?/i);
+    const title = data.recipe || data.title || (titleMatch ? titleMatch[1].trim() : "Generated Recipe");
     
     // 3. Slugify
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const filename = `${slug}.${format}`;
     
     // 4. Determine category based on tags (default to mains)
-    const isSide = cleanContent.toLowerCase().includes("tags:") && cleanContent.toLowerCase().includes("side");
+    const tags = Array.isArray(data.tags)
+      ? data.tags
+      : typeof data.tags === 'string'
+        ? data.tags.split(',').map((t: string) => t.trim())
+        : [];
+    const isSide = tags.some((t: string) => t.toLowerCase().includes('side')) || sanitizedFileContent.toLowerCase().includes("side");
     const category = isSide ? "sides" : "mains";
     
     // 5. Write file to the correct vault directory
@@ -34,7 +36,7 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     await fs.mkdir(vaultPath, { recursive: true });
     
     const filePath = path.join(vaultPath, filename);
-    await fs.writeFile(filePath, cleanContent, "utf-8");
+    await fs.writeFile(filePath, sanitizedFileContent, "utf-8");
     
     revalidatePath('/vault');
     return { success: true, message: `Recipe saved to vault/${category} as ${filename}` };

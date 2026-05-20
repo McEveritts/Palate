@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { sanitizeRecipeContent } from './parser';
 
 const VAULT_DIR = path.join(process.cwd(), 'vault');
 
@@ -40,14 +41,28 @@ export function getAllRecipes(): Recipe[] {
 
       const filePath = path.join(categoryPath, file);
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      const { data, content } = matter(fileContent);
 
-      recipes.push({
-        slug: file.replace(/\.md$/, ''),
-        category,
-        frontmatter: data as RecipeFrontmatter,
-        content
-      });
+      if (/<thought>/i.test(fileContent)) {
+        const { data: sanitizedData, content: sanitizedBody, fileContent: sanitizedFileContent } = sanitizeRecipeContent(fileContent);
+        
+        // Synchronously overwrite the file on disk (self-heal!)
+        fs.writeFileSync(filePath, sanitizedFileContent, 'utf8');
+
+        recipes.push({
+          slug: file.replace(/\.md$/, ''),
+          category,
+          frontmatter: sanitizedData as unknown as RecipeFrontmatter,
+          content: sanitizedBody
+        });
+      } else {
+        const { data, content } = matter(fileContent);
+        recipes.push({
+          slug: file.replace(/\.md$/, ''),
+          category,
+          frontmatter: data as RecipeFrontmatter,
+          content
+        });
+      }
     });
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSageStream } from './parser';
+import { parseSageStream, sanitizeRecipeContent } from './parser';
 
 describe('parseSageStream', () => {
   it('should parse perfectly formed thought and content', () => {
@@ -62,5 +62,49 @@ describe('parseSageStream', () => {
     // Safety net should kick in
     expect(thoughts).toBe('');
     expect(content).toBe('This is just a response disguised as a thought because I forgot the closing tag.');
+  });
+});
+
+describe('sanitizeRecipeContent', () => {
+  it('should cleanly strip thought tags and output clean frontmatter and markdown body', () => {
+    const input = `<thought>\nI should make a good soup.\n</thought>\n---\ntitle: Tomato Soup\ntags: [warm, dinner]\n---\nSteps to make soup...`;
+    
+    const { data, content, fileContent } = sanitizeRecipeContent(input);
+    expect(data.title).toBe('Tomato Soup');
+    expect(data.tags).toEqual(['warm', 'dinner']);
+    expect(content).toBe('Steps to make soup...');
+    expect(fileContent).toContain('title: Tomato Soup');
+    expect(fileContent).not.toContain('<thought>');
+    expect(fileContent).not.toContain('I should make a good soup.');
+  });
+
+  it('should handle unclosed thought blocks and reconstruct the markdown cleanly', () => {
+    const input = `<thought>\nThinking...\n---\ntitle: Lemon Salad\ntags: [salad]\n---\nSalad instructions...`;
+
+    const { data, content, fileContent } = sanitizeRecipeContent(input);
+    expect(data.title).toBe('Lemon Salad');
+    expect(content).toBe('Salad instructions...');
+    expect(fileContent).not.toContain('<thought>');
+    expect(fileContent).not.toContain('Thinking...');
+  });
+
+  it('should strip markdown code block wrapping and parse frontmatter', () => {
+    const input = `\`\`\`markdown\n---\ntitle: Baked Cod\n---\nEnjoy the cod.\n\`\`\``;
+
+    const { data, content, fileContent } = sanitizeRecipeContent(input);
+    expect(data.title).toBe('Baked Cod');
+    expect(content).toBe('Enjoy the cod.');
+    expect(fileContent).toContain('title: Baked Cod');
+    expect(fileContent).not.toContain('```markdown');
+  });
+
+  it('should handle yaml code block frontmatter and convert to standard ---', () => {
+    const input = `\`\`\`yaml\ntitle: Grilled Cheese\n\`\`\`\nMelt the cheese.`;
+
+    const { data, content, fileContent } = sanitizeRecipeContent(input);
+    expect(data.title).toBe('Grilled Cheese');
+    expect(content).toBe('Melt the cheese.');
+    expect(fileContent).toContain('title: Grilled Cheese');
+    expect(fileContent).not.toContain('```yaml');
   });
 });

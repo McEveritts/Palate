@@ -1,3 +1,5 @@
+import matter from 'gray-matter';
+
 export function parseSageStream(fullText: string, isDone: boolean): { thoughts: string, content: string } {
   let thoughts = "";
   let content = fullText;
@@ -112,5 +114,83 @@ export function parseMessageContent(content: string) {
       tags: tagsMatch ? tagsMatch[1].split(',').map((t: string) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [],
       macros: macrosMatch ? macrosMatch[1].trim() : ''
     }
+  };
+}
+
+export interface CleanedFrontmatter {
+  title?: string;
+  recipe?: string;
+  tags?: string[] | string;
+  macros?: unknown;
+  time?: unknown;
+  [key: string]: unknown;
+}
+
+export function sanitizeRecipeContent(rawContent: string): { data: CleanedFrontmatter; content: string; fileContent: string } {
+  let cleaned = rawContent.trim();
+  
+  // 1. Strip outer code block wrappers from the raw content if they wrap the entire content
+  if (cleaned.startsWith('```markdown')) {
+    cleaned = cleaned.replace(/^```markdown\n?/, '').replace(/\n?```$/, '').trim();
+  } else if (cleaned.startsWith('```yaml')) {
+    // Note: don't strip if it's just the yaml frontmatter itself (handled in step 3),
+    // but if it has a closing ``` at the end of the entire string, it's a wrapper.
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.replace(/^```yaml\n?/, '').replace(/\n?```$/, '').trim();
+    }
+  }
+
+  // 2. Strip thoughts using parseSageStream
+  let { content: contentWithoutThoughts } = parseSageStream(cleaned, true);
+  contentWithoutThoughts = contentWithoutThoughts.trim();
+
+  // 3. Strip code block wrappers again in case they were inside/after the thought block
+  if (contentWithoutThoughts.startsWith('```markdown')) {
+    contentWithoutThoughts = contentWithoutThoughts.replace(/^```markdown\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  // 4. Handle frontmatter wrapped in ```yaml instead of ---
+  if (contentWithoutThoughts.startsWith('```yaml')) {
+    const firstLines = contentWithoutThoughts.split('\n');
+    let closingIndex = -1;
+    for (let i = 1; i < firstLines.length; i++) {
+      if (firstLines[i].trim() === '```') {
+        closingIndex = i;
+        break;
+      }
+    }
+    if (closingIndex !== -1) {
+      firstLines[0] = '---';
+      firstLines[closingIndex] = '---';
+      contentWithoutThoughts = firstLines.join('\n');
+    }
+  }
+
+  // Also handle cases where the file starts with `---` but has ```` at the end of frontmatter
+  if (contentWithoutThoughts.startsWith('---')) {
+    const lines = contentWithoutThoughts.split('\n');
+    let closingIndex = -1;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === '```' || lines[i].trim() === '---') {
+        closingIndex = i;
+        break;
+      }
+    }
+    if (closingIndex !== -1) {
+      lines[closingIndex] = '---';
+      contentWithoutThoughts = lines.join('\n');
+    }
+  }
+
+  // Parse with gray-matter
+  const { data, content: bodyContent } = matter(contentWithoutThoughts);
+
+  // Reconstruct cleanly
+  const reconstructed = matter.stringify(bodyContent.trim(), data).trim();
+
+  return {
+    data,
+    content: bodyContent.trim(),
+    fileContent: reconstructed
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale, Copy, Check, Brain, CheckCircle2, Eye, FileCode } from "lucide-react";
+import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale, Copy, Check, Brain, CheckCircle2, Eye, FileCode, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import ReactMarkdown from "react-markdown";
@@ -19,7 +19,11 @@ export default function ZeroWastePage() {
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
+  const isGuest = useAppStore((state) => state.isGuest);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const { thoughts, content } = parseSageStream(response || "", !isGenerating);
   const { frontmatter, markdown } = parseMessageContent(content);
@@ -209,6 +213,69 @@ export default function ZeroWastePage() {
                    >
                      {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
                    </button>
+
+                   {!isGuest && (response.includes("---") || response.includes("```yaml")) && (
+                      <motion.button
+                        type="button"
+                        disabled={isSaving}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={async () => {
+                          setIsSaving(true);
+                          try {
+                            const { saveRecipeToVault } = await import("@/app/actions");
+                            const res = await saveRecipeToVault(response, 'md');
+                            if (res.success) {
+                              setSaved(true);
+                              setTimeout(() => setSaved(false), 2000);
+                            }
+                          } catch (err) {
+                            console.error("Failed to save to vault", err);
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-black/20 hover:bg-black/40 border border-white/5 rounded-lg flex items-center justify-center shadow-lg backdrop-blur-md cursor-pointer relative overflow-hidden"
+                        title="Save to vault"
+                      >
+                        <AnimatePresence mode="wait">
+                          {isSaving ? (
+                            <motion.div
+                              key="saving"
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.8, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex items-center justify-center"
+                            >
+                              <Loader2 size={16} className="animate-spin text-emerald-400" />
+                            </motion.div>
+                          ) : saved ? (
+                            <motion.div
+                              key="saved"
+                              initial={{ scale: 0.5, rotate: -45, opacity: 0 }}
+                              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                              exit={{ scale: 0.5, opacity: 0 }}
+                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                              className="flex items-center justify-center"
+                            >
+                              <Check size={16} className="text-emerald-400 stroke-[3]" />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="save"
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.8, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex items-center justify-center"
+                            >
+                              <Save size={16} className="text-slate-400 hover:text-emerald-300 transition-colors" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
+                    )}
                  </div>
                )}
                

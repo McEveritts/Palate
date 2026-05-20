@@ -226,9 +226,6 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
         <div className="flex items-center gap-3 relative z-10">
           <Activity className="text-indigo-400 animate-pulse w-5 h-5" />
           <span>AetherFlow Visual Analytics Cockpit</span>
-          <span className="bg-gradient-to-r from-indigo-500/20 to-fuchsia-500/20 border border-indigo-500/30 text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-indigo-200">
-            Phase 6 Enabled
-          </span>
         </div>
         <span className="text-indigo-400 group-hover:text-indigo-300 font-mono text-sm relative z-10 transition-colors">
           {isOpen ? "CLOSE COCKPIT ▲" : "EXPAND COCKPIT ▼"}
