@@ -8,6 +8,8 @@ import { X, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { RecipeNutritionDetails } from './RecipeNutritionDetails';
+
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
   onSaveAction?: (id: string) => Promise<void>;
@@ -141,16 +143,21 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                   {selectedRecipe.title}
                 </motion.h3>
                 
-                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap items-center gap-2 mb-8 relative z-10">
+                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap items-center gap-2 mb-6 relative z-10">
                   {selectedRecipe.tags.map(tag => (
                     <span key={tag} className="px-3 py-1 text-sm rounded-full bg-indigo-500/30 text-indigo-100 border border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                       {tag}
                     </span>
                   ))}
-                  <span className="px-3 py-1 text-sm rounded-full bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 font-medium w-full sm:w-auto mt-2 sm:mt-0">
-                    {selectedRecipe.macros}
-                  </span>
                 </motion.div>
+
+                <div className="mb-8 relative z-10">
+                  <RecipeNutritionDetails 
+                    recipeId={selectedRecipe.id}
+                    recipeTitle={selectedRecipe.title}
+                    initialMacros={selectedRecipe.macros}
+                  />
+                </div>
 
                 <div className="prose prose-invert prose-indigo max-w-none relative z-10 mt-8">
                   <div className="bg-black/30 p-6 rounded-xl border border-white/5">

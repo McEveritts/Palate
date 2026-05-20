@@ -6,6 +6,7 @@ import { VaultRecipe } from '@/lib/vaultParser';
 import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { RecipeNutritionDetails } from '../vault/RecipeNutritionDetails';
 
 interface MacroRecipe extends VaultRecipe {
   calories: number;
@@ -106,19 +107,12 @@ export function MacroGrid({ recipes }: MacroGridProps) {
                   {selectedRecipe.title}
                 </motion.h3>
                 
-                <div className="flex flex-wrap items-center gap-2 mb-8 relative z-10">
-                  <span className="px-3 py-1 text-sm rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-bold">
-                    {selectedRecipe.protein}g Protein
-                  </span>
-                  <span className="px-3 py-1 text-sm rounded-full bg-sky-500/20 text-sky-200 border border-sky-500/30">
-                    {selectedRecipe.carbs}g Carbs
-                  </span>
-                  <span className="px-3 py-1 text-sm rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">
-                    {selectedRecipe.fat}g Fat
-                  </span>
-                  <span className="px-3 py-1 text-sm rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/30 ml-auto">
-                    {selectedRecipe.calories} Calories
-                  </span>
+                <div className="mb-8 relative z-10">
+                  <RecipeNutritionDetails 
+                    recipeId={selectedRecipe.id}
+                    recipeTitle={selectedRecipe.title}
+                    initialMacros={`Protein: ${selectedRecipe.protein}g | Carbs: ${selectedRecipe.carbs}g | Fat: ${selectedRecipe.fat}g | Calories: ${selectedRecipe.calories}`}
+                  />
                 </div>
 
                 <div className="prose prose-invert prose-indigo max-w-none relative z-10 mt-8">

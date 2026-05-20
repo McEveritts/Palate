@@ -2,6 +2,7 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { revalidatePath } from "next/cache";
 
 export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 'md') {
   try {
@@ -35,6 +36,7 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     const filePath = path.join(vaultPath, filename);
     await fs.writeFile(filePath, cleanContent, "utf-8");
     
+    revalidatePath('/vault');
     return { success: true, message: `Recipe saved to vault/${category} as ${filename}` };
   } catch (error: unknown) {
     console.error("Save error:", error);
@@ -71,6 +73,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
     
     await fs.writeFile(filePath, cleanContent, "utf-8");
     
+    revalidatePath('/vault');
     return { success: true, message: `Recipe saved to vault/${category} as ${path.basename(filePath)}` };
   } catch (error: unknown) {
     console.error("Save parsed recipe error:", error);
@@ -112,10 +115,11 @@ export async function saveCuratedToVault(id: string) {
     // Move the file
     await fs.rename(curatedPath, targetPath);
     
+    revalidatePath('/vault');
+    revalidatePath('/plans');
     return { success: true };
   } catch (error: unknown) {
     console.error("Error moving curated recipe:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
-
