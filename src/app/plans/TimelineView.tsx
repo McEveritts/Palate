@@ -47,72 +47,86 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
     );
   }
 
-  // Chunk recipes into meals of 3 (1 Hero + 2 Sides)
-  // Since they are sorted ascending by mtime, we chunk them sequentially, then reverse so the newest meal is at the top.
-  const meals: VaultRecipe[][] = [];
-  for (let i = 0; i < initialRecipes.length; i += 3) {
-    meals.push(initialRecipes.slice(i, i + 3));
-  }
-  meals.reverse();
+  // Sort descending by date (newest first)
+  const sortedRecipes = [...initialRecipes].sort((a, b) => {
+    if (a.date && b.date) {
+      return b.date.localeCompare(a.date);
+    }
+    return 0; // Fallback
+  });
 
   return (
-    <div className="w-full flex flex-col gap-16 relative">
-      {meals.map((meal, index) => {
-        const heroRecipe = meal[0];
-        const gridRecipes = meal.slice(1);
+    <div className="w-full flex flex-col gap-12 relative pl-8 md:pl-12">
+      {/* Central continuous vertical timeline line */}
+      <div className="absolute left-3.5 md:left-5 top-2 bottom-2 w-px bg-gradient-to-b from-indigo-500 via-fuchsia-500 to-indigo-950/20" />
+      
+      {sortedRecipes.map((recipe) => {
+        // Date formatting
+        let formattedDate = "";
+        if (recipe.date) {
+          const dateObj = new Date(recipe.date + "T12:00:00"); // Avoid timezone shift
+          formattedDate = dateObj.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        }
+
+        // Determine if it's a Side or Main based on tags
+        const isSide = recipe.tags.some(tag => tag.toLowerCase().includes('side'));
         
         return (
-          <div key={`meal-${index}`} className="relative pl-8 md:pl-0">
-            {/* Timeline Line (Hidden on mobile) */}
-            <div className="hidden md:block absolute left-[-40px] top-0 bottom-[-64px] w-px bg-white/10" />
-            <div className="hidden md:flex absolute left-[-39.5px] -translate-x-1/2 top-8 w-4 h-4 rounded-full bg-indigo-500 border-4 border-slate-950 shadow-[0_0_15px_rgba(99,102,241,0.5)] items-center justify-center" />
+          <div key={recipe.id} className="relative group">
+            {/* Timeline Node Orb */}
+            <div className="absolute left-[-26px] md:left-[-36px] top-6 -translate-x-1/2 w-5 h-5 rounded-full bg-slate-950 border-[3px] border-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.6)] group-hover:scale-125 group-hover:border-fuchsia-400 group-hover:shadow-[0_0_20px_rgba(240,171,252,0.8)] transition-all duration-300 z-10 flex items-center justify-center" />
+            
+            <div className="flex flex-col gap-3">
+              {/* Date Header Node */}
+              <div className="flex items-center gap-2 pl-1">
+                <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-400 group-hover:text-fuchsia-300 transition-colors">
+                  {formattedDate || recipe.date || "Past Curation"}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded border ${
+                  isSide 
+                    ? 'text-indigo-300 bg-indigo-500/10 border-indigo-500/20' 
+                    : 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/20'
+                }`}>
+                  {isSide ? 'Side Dish' : 'Main Dish'}
+                </span>
+              </div>
 
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white tracking-tight">Curated Meal: {heroRecipe?.title || `Meal #${meals.length - index}`}</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/20 p-6 md:p-8 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-sm">
-              
-              {/* HERO CARD */}
-              {heroRecipe && (
-                <motion.div
-                  layoutId={`archive-card-${heroRecipe.id}`}
-                  onClick={() => setSelectedId(heroRecipe.id)}
-                  className="md:col-span-2 min-h-[300px] cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] p-8 flex flex-col justify-end transition-all duration-300 hover:bg-slate-900/30 hover:shadow-[0_0_40px_rgba(139,92,246,0.2)] hover:backdrop-saturate-[2]"
-                >
-                  <div className="absolute -top-32 -right-32 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(217,70,239,0.1)_0%,transparent_70%)] rounded-full blur-3xl group-hover:bg-[radial-gradient(circle,rgba(217,70,239,0.2)_0%,transparent_70%)] transition-all duration-500 z-0"></div>
-                  
-                  <div className="relative z-10 w-full">
-                    <span className="px-3 py-1 mb-4 inline-block text-[10px] font-bold uppercase tracking-widest text-fuchsia-300 bg-fuchsia-900/30 rounded-full border border-fuchsia-500/30">
-                      Main Dish
-                    </span>
-                    <motion.h3 layoutId={`archive-title-${heroRecipe.id}`} className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
-                      {heroRecipe.title}
-                    </motion.h3>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* SIDE CARDS */}
-              {gridRecipes.map((recipe) => (
-                <motion.div
-                  layoutId={`archive-card-${recipe.id}`}
-                  key={recipe.id}
-                  onClick={() => setSelectedId(recipe.id)}
-                  className="cursor-pointer group relative overflow-hidden rounded-xl bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/5 shadow-lg p-6 transition-all duration-300 hover:bg-slate-900/30 hover:shadow-[0_0_30px_rgba(99,102,241,0.15)] flex flex-col min-h-[200px]"
-                >
-                  <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-all duration-500"></div>
-                  
-                  <div className="z-10 relative flex-1 flex flex-col">
-                    <span className="px-2 py-1 mb-3 self-start text-[10px] font-bold uppercase tracking-widest text-indigo-300 bg-indigo-900/30 rounded-full border border-indigo-500/30">
-                      Side Dish
-                    </span>
-                    <motion.h3 layoutId={`archive-title-${recipe.id}`} className="text-xl md:text-2xl font-bold text-white mb-auto leading-snug">
+              {/* CARD COMPONENT */}
+              <motion.div
+                layoutId={`archive-card-${recipe.id}`}
+                onClick={() => setSelectedId(recipe.id)}
+                className="cursor-pointer relative overflow-hidden rounded-2xl bg-slate-900/30 hover:bg-slate-900/20 backdrop-blur-3xl border border-white/5 hover:border-white/10 hover:shadow-[0_0_40px_rgba(99,102,241,0.1)] transition-all duration-300 p-6 md:p-8 flex flex-col justify-between min-h-[140px]"
+              >
+                {/* Specular glows inside cards */}
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-[radial-gradient(circle,rgba(99,102,241,0.06)_0%,transparent_70%)] rounded-full blur-2xl group-hover:bg-[radial-gradient(circle,rgba(240,171,252,0.08)_0%,transparent_70%)] transition-all duration-500 pointer-events-none" />
+                
+                <div className="relative z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <motion.h3 
+                      layoutId={`archive-title-${recipe.id}`} 
+                      className="text-xl md:text-2xl font-black text-white group-hover:text-indigo-300 transition-colors tracking-tight leading-snug"
+                    >
                       {recipe.title}
                     </motion.h3>
+                    <p className="text-slate-400 text-xs mt-2 line-clamp-2 md:line-clamp-1 max-w-3xl font-medium">
+                      {recipe.content.replace(/^#\s+.*$/m, '').replace(/^[*\-#\s[\]x]*\s*/gm, ' ').slice(0, 140).trim()}...
+                    </p>
                   </div>
-                </motion.div>
-              ))}
+                  
+                  {/* Macros Badge */}
+                  <div className="shrink-0 flex items-center">
+                    <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-slate-950/60 text-slate-300 border border-white/5 group-hover:border-white/10 group-hover:text-white transition-all shadow-inner">
+                      {recipe.macros}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         );

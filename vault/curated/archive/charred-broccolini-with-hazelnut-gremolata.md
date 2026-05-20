@@ -2,6 +2,7 @@
 title: "Charred Broccolini with Hazelnut Gremolata"
 tags: ["Vegetable", "Side Dish", "Curated By Sage"]
 macros: "Calories: 180 | Protein: 5g | Carbs: 11g | Fat: 15g"
+date: "2026-05-20"
 ---
 
 # 🥦 Charred Broccolini with Hazelnut Gremolata 🥦

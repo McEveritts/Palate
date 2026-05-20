@@ -2,6 +2,7 @@
 title: "Cider-Braised Pork Shoulder with Caramelized Fennel"
 tags: ["French Technique", "Braised Hero", "Curated By Sage"]
 macros: "Calories: 640 | Protein: 42g | Carbs: 18g | Fat: 41g"
+date: "2026-05-15"
 ---
 
 # 🍎 Cider-Braised Pork Shoulder with Caramelized Fennel 🐖

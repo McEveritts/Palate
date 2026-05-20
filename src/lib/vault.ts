@@ -1,7 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import yaml from 'js-yaml';
 import { sanitizeRecipeContent } from './parser';
+
+const SAFE_MATTER_OPTIONS = {
+  engines: { yaml: (s: string) => yaml.load(s, { schema: yaml.FAILSAFE_SCHEMA }) as Record<string, unknown> }
+};
 
 const VAULT_DIR = path.join(process.cwd(), 'vault');
 
@@ -55,7 +60,7 @@ export function getAllRecipes(): Recipe[] {
           content: sanitizedBody
         });
       } else {
-        const { data, content } = matter(fileContent);
+        const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
         recipes.push({
           slug: file.replace(/\.md$/, ''),
           category,

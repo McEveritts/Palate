@@ -2,6 +2,7 @@
 title: "Espresso-Braised Beef Short Ribs with Ancho & Dark Chocolate"
 tags: ["Beef", "Braising", "Curated By Sage"]
 macros: "Calories: 820 | Protein: 45g | Carbs: 18g | Fat: 62g"
+date: "2026-05-08"
 ---
 
 # 🥩 Espresso-Braised Beef Short Ribs with Ancho & Dark Chocolate 🥩

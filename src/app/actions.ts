@@ -9,15 +9,60 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
 import matter from "gray-matter";
 import { getAllRecipes } from "../lib/vault";
+import { z } from 'zod/v4';
+import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
 
 async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
   try {
     const session = await getServerSession(authOptions);
-    return session?.user ? (session.user as any).id : null;
+    return session?.user ? session.user.id : null;
   } catch (error) {
     return null;
   }
+}
+
+/**
+ * Security helper: Re-slugify user-controlled strings to strip path traversal
+ * characters (../, ./, etc.) and validate the resolved path stays within the
+ * target directory. Throws on any escape attempt.
+ */
+function safeVaultPath(baseDir: string, rawSlug: string): string {
+  const safeSlug = rawSlug.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+  if (!safeSlug) throw new Error('Invalid recipe identifier.');
+  const filename = `${safeSlug}.md`;
+  const resolvedBase = path.resolve(baseDir);
+  const resolvedPath = path.resolve(baseDir, filename);
+  if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+    throw new Error('Security Error: Invalid file path detected.');
+  }
+  return resolvedPath;
+}
+
+// M6 Fix: Input validation schemas to prevent oversized payloads and invalid data
+const MAX_CONTENT_LENGTH = 50_000; // 50KB max recipe content
+const MAX_ID_LENGTH = 200;
+const VALID_MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
+
+function validateContentLength(content: string): void {
+  if (content.length > MAX_CONTENT_LENGTH) {
+    throw new Error(`Content too large (${content.length} chars). Maximum is ${MAX_CONTENT_LENGTH}.`);
+  }
+}
+
+function validateId(id: string): void {
+  if (!id || id.length > MAX_ID_LENGTH) {
+    throw new Error('Invalid recipe identifier.');
+  }
+}
+
+// M9 Fix: Strict ISO 8601 date validation
+function validateDateStr(dateStr: string): Date {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid date format: "${dateStr}". Expected ISO 8601.`);
+  }
+  return date;
 }
 
 export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 'md') {
@@ -25,6 +70,8 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     if (format !== 'md' && format !== 'txt') {
       throw new Error('Invalid format. Must be md or txt.');
     }
+
+    validateContentLength(content);
 
     const userId = await getCurrentUserId();
 
@@ -104,6 +151,8 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
       throw new Error('Invalid category. Must be mains or sides.');
     }
 
+    validateContentLength(markdown);
+
     const userId = await getCurrentUserId();
 
     if (userId) {
@@ -168,6 +217,8 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
 
 export async function saveCuratedToVault(id: string) {
   try {
+    validateId(id);
+
     const userId = await getCurrentUserId();
 
     if (userId) {
@@ -220,8 +271,9 @@ export async function saveCuratedToVault(id: string) {
       throw new Error('Invalid curated type. Must be current or archive.');
     }
 
-    const filename = filenameParts.join('-') + '.md';
-    const curatedPath = path.join(process.cwd(), 'vault', 'curated', type, filename);
+    const rawSlug = filenameParts.join('-');
+    const curatedBaseDir = path.join(process.cwd(), 'vault', 'curated', type);
+    const curatedPath = safeVaultPath(curatedBaseDir, rawSlug);
     
     const fileContent = await fs.readFile(curatedPath, 'utf-8');
     
@@ -229,16 +281,18 @@ export async function saveCuratedToVault(id: string) {
     const isSide = fileContent.toLowerCase().includes("tags:") && fileContent.toLowerCase().includes("side");
     const targetCategory = isSide ? "sides" : "mains";
     
-    let targetPath = path.join(process.cwd(), 'vault', targetCategory, filename);
+    const safeFilename = path.basename(curatedPath);
+    const targetBaseDir = path.join(process.cwd(), 'vault', targetCategory);
+    let targetPath = path.join(targetBaseDir, safeFilename);
     
     // Prevent overwrite
     try {
       await fs.access(targetPath);
       // File exists, append timestamp
-      const ext = path.extname(filename);
-      const base = path.basename(filename, ext);
+      const ext = path.extname(safeFilename);
+      const base = path.basename(safeFilename, ext);
       const newFilename = `${base}-${Date.now()}${ext}`;
-      targetPath = path.join(process.cwd(), 'vault', targetCategory, newFilename);
+      targetPath = path.join(targetBaseDir, newFilename);
     } catch {
       // File does not exist, safe to move
     }
@@ -257,6 +311,8 @@ export async function saveCuratedToVault(id: string) {
 
 export async function deleteRecipeFromVault(id: string) {
   try {
+    validateId(id);
+
     const userId = await getCurrentUserId();
 
     if (userId) {
@@ -309,8 +365,8 @@ export async function deleteRecipeFromVault(id: string) {
       throw new Error(`Invalid recipe ID format: ${id}`);
     }
     
-    const filename = `${slug}.md`;
-    const filePath = path.join(process.cwd(), 'vault', category, filename);
+    const vaultPath = path.join(process.cwd(), 'vault', category);
+    const filePath = safeVaultPath(vaultPath, slug);
     
     // Check if the file exists before attempting deletion
     await fs.access(filePath);
@@ -350,7 +406,7 @@ export async function scheduleMeal(
 ) {
   try {
     const userId = await getCurrentUserId();
-    const date = new Date(dateStr);
+    const date = validateDateStr(dateStr);
 
     if (userId) {
       // Authenticated mode: find or import recipe
@@ -402,6 +458,18 @@ export async function scheduleMeal(
         }
       });
 
+      // Synchronize to Google Calendar if sync is enabled
+      try {
+        const config = await prisma.userConfig.findUnique({
+          where: { userId },
+        });
+        if (config?.googleCalendarSyncEnabled) {
+          await syncMealToGoogle(userId, meal.id);
+        }
+      } catch (err) {
+        console.error("Failed to sync new scheduled meal to Google Calendar:", err);
+      }
+
       revalidatePath('/calendar');
       revalidatePath('/plans');
       return { success: true, meal };
@@ -436,8 +504,8 @@ export async function scheduleMeal(
 export async function getScheduledMeals(startDateStr: string, endDateStr: string) {
   try {
     const userId = await getCurrentUserId();
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
+    const start = validateDateStr(startDateStr);
+    const end = validateDateStr(endDateStr);
 
     if (userId) {
       const dbMeals = await prisma.scheduledMeal.findMany({
@@ -502,7 +570,7 @@ export async function getScheduledMeals(startDateStr: string, endDateStr: string
 export async function moveScheduledMeal(mealId: string, newDateStr: string, newMealType: string) {
   try {
     const userId = await getCurrentUserId();
-    const newDate = new Date(newDateStr);
+    const newDate = validateDateStr(newDateStr);
 
     if (userId) {
       const updated = await prisma.scheduledMeal.update({
@@ -515,6 +583,19 @@ export async function moveScheduledMeal(mealId: string, newDateStr: string, newM
           recipe: true,
         },
       });
+
+      // Synchronize updated schedule to Google Calendar if sync is enabled
+      try {
+        const config = await prisma.userConfig.findUnique({
+          where: { userId },
+        });
+        if (config?.googleCalendarSyncEnabled) {
+          await syncMealToGoogle(userId, mealId);
+        }
+      } catch (err) {
+        console.error("Failed to sync updated scheduled meal to Google Calendar:", err);
+      }
+
       revalidatePath('/calendar');
       revalidatePath('/plans');
       return { success: true, meal: updated };
@@ -543,6 +624,23 @@ export async function cancelScheduledMeal(mealId: string) {
     const userId = await getCurrentUserId();
 
     if (userId) {
+      // Find meal first to get googleEventId if synced
+      try {
+        const meal = await prisma.scheduledMeal.findUnique({
+          where: { id: mealId, userId },
+        });
+        if (meal) {
+          const config = await prisma.userConfig.findUnique({
+            where: { userId },
+          });
+          if (config?.googleCalendarSyncEnabled && meal.googleEventId) {
+            await deleteMealFromGoogle(userId, meal.googleEventId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to delete scheduled meal from Google Calendar:", err);
+      }
+
       await prisma.scheduledMeal.delete({
         where: { id: mealId, userId },
       });

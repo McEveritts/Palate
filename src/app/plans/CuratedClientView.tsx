@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { VaultRecipe } from '@/lib/vaultParser';
 import { TimelineView } from './TimelineView';
 import { EditorialView } from './EditorialView';
-import { CalendarView } from './CalendarView';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { saveCuratedToVault } from '@/app/actions';
@@ -16,7 +15,7 @@ interface CuratedClientViewProps {
 }
 
 export default function CuratedClientView({ currentRecipes, archiveRecipes, vaultRecipes }: CuratedClientViewProps) {
-  const [view, setView] = useState<'editorial' | 'timeline' | 'calendar'>('editorial');
+  const [view, setView] = useState<'editorial' | 'timeline'>('editorial');
   const router = useRouter();
 
   const handleSave = async (id: string) => {
@@ -60,32 +59,10 @@ export default function CuratedClientView({ currentRecipes, archiveRecipes, vaul
           )}
           <span className="relative z-10">Timeline Archive</span>
         </button>
-
-        <button
-          onClick={() => setView('calendar')}
-          className={`relative px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-            view === 'calendar' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {view === 'calendar' && (
-            <motion.div
-              layoutId="active-pill"
-              className="absolute inset-0 bg-indigo-500/30 border border-indigo-400/50 rounded-full"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">📅 Weekly Calendar</span>
-        </button>
       </div>
 
       <div className="w-full">
-        {view === 'calendar' ? (
-          <CalendarView 
-            vaultRecipes={vaultRecipes} 
-            currentRecipes={currentRecipes} 
-            archiveRecipes={archiveRecipes} 
-          />
-        ) : displayedRecipes.length === 0 ? (
+        {displayedRecipes.length === 0 ? (
           <div className="text-center py-20 text-slate-500 italic">
             No curated recipes found for this view.
           </div>

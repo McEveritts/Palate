@@ -2,6 +2,7 @@
 title: "Blistered Asparagus with Preserved Lemon & Caper Vinaigrette"
 tags: ["Side Dish", "Vegetables", "Curated By Sage"]
 macros: "Calories: 140 | Protein: 3g | Carbs: 6g | Fat: 12g"
+date: "2026-05-06"
 ---
 
 # 🌿 Blistered Asparagus with Preserved Lemon & Caper Vinaigrette 🌿

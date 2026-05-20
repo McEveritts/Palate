@@ -73,6 +73,10 @@ model UserConfig {
   iv                String?  // Initialization Vector
   
   metricSystem      Boolean  @default(true)
+
+  // Google Calendar Integration
+  googleCalendarId  String?
+  googleCalendarSyncEnabled Boolean @default(false)
 }
 
 model Recipe {
@@ -109,6 +113,9 @@ model ScheduledMeal {
   parentMealId  String?
   parentMeal    ScheduledMeal?   @relation("MealDAG", fields: [parentMealId], references: [id], onDelete: Cascade)
   childMeals    ScheduledMeal[]  @relation("MealDAG")
+
+  // Google Calendar integration
+  googleEventId String?
 }
 
 model ChatSession {

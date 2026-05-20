@@ -3,9 +3,14 @@
 import fs from 'fs/promises';
 import path from 'path';
 import matter from 'gray-matter';
+import yaml from 'js-yaml';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
+
+const SAFE_MATTER_OPTIONS = {
+  engines: { yaml: (s: string) => yaml.load(s, { schema: yaml.FAILSAFE_SCHEMA }) as Record<string, unknown> }
+};
 
 export interface VaultRecipe {
   id: string;
@@ -15,6 +20,7 @@ export interface VaultRecipe {
   tags: string[];
   macros: string;
   content: string;
+  date?: string;
 }
 
 function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
@@ -41,7 +47,8 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
     category: category as any,
     tags,
     macros: macrosStr,
-    content: r.markdown
+    content: r.markdown,
+    date: data.date ? String(data.date) : undefined
   };
 }
 
@@ -56,7 +63,7 @@ async function seedRecipesForUser(userId: string) {
         if (!file.endsWith('.md')) continue;
         const filePath = path.join(dirPath, file);
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        const { data, content } = matter(fileContent);
+        const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
         const slug = file.replace('.md', '');
         const title = data.recipe || data.title || slug;
         
@@ -104,7 +111,7 @@ async function seedRecipesForUser(userId: string) {
         const filePath = path.join(dirPath, file);
         const stat = await fs.stat(filePath);
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        const { data, content } = matter(fileContent);
+        const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
         const slug = file.replace('.md', '');
         const title = data.recipe || data.title || slug;
 
@@ -147,7 +154,7 @@ async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
   try {
     const session = await getServerSession(authOptions);
-    return session?.user ? (session.user as any).id : null;
+    return session?.user ? session.user.id : null;
   } catch (error) {
     return null;
   }
@@ -186,7 +193,7 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
         
         const filePath = path.join(dirPath, file);
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        const { data, content } = matter(fileContent);
+        const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
         
         let tags: string[] = [];
         if (data.tags) {
@@ -223,19 +230,30 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
 
   if (userId) {
     const count = await prisma.recipe.count({ where: { userId } });
-    if (count === 0) {
-      await seedRecipesForUser(userId);
-    }
-
-    const recipes = await prisma.recipe.findMany({
+    let recipes = await prisma.recipe.findMany({
       where: { userId }
     });
+
+    const currentCuratedCount = recipes.filter(r => (r.frontmatter as any)?.category === 'curated-current').length;
+    if (count === 0 || currentCuratedCount !== 1) {
+      await seedRecipesForUser(userId);
+      recipes = await prisma.recipe.findMany({
+        where: { userId }
+      });
+    }
 
     const categoryName = `curated-${type}`;
     const curated = recipes.filter(r => (r.frontmatter as any)?.category === categoryName);
     
-    // Sort by createdAt ascending (same chronological order concept)
-    curated.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    // Sort by date ascending (chronological order) with createdAt as fallback
+    curated.sort((a, b) => {
+      const dateA = (a.frontmatter as any)?.date;
+      const dateB = (b.frontmatter as any)?.date;
+      if (dateA && dateB) {
+        return String(dateA).localeCompare(String(dateB));
+      }
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
 
     return curated.map(r => mapDbRecipeToVaultRecipe(r));
   }
@@ -252,7 +270,7 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
       const filePath = path.join(dirPath, file);
       const stat = await fs.stat(filePath);
       const fileContent = await fs.readFile(filePath, 'utf-8');
-      const { data, content } = matter(fileContent);
+      const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
 
       let tags: string[] = [];
       if (data.tags) {
@@ -274,6 +292,7 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
         tags,
         macros: macrosStr,
         content: content.trim(),
+        date: data.date ? String(data.date) : undefined,
         mtimeMs: stat.mtimeMs
       });
     }
@@ -281,8 +300,13 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
     console.warn(`Could not read directory ${dirPath}`);
   }
 
-  // Sort by modification time ascending so the first generated recipe is always first
-  allCurated.sort((a, b) => a.mtimeMs - b.mtimeMs);
+  // Sort by date ascending (chronological order) with mtimeMs as fallback
+  allCurated.sort((a, b) => {
+    if (a.date && b.date) {
+      return a.date.localeCompare(b.date);
+    }
+    return a.mtimeMs - b.mtimeMs;
+  });
 
   return allCurated.map(({ mtimeMs, ...recipe }) => recipe);
 }

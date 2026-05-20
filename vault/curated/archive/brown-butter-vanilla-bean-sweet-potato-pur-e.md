@@ -2,6 +2,7 @@
 title: "Brown Butter Vanilla Bean Sweet Potato Purée"
 tags: ["Side Dish", "Vegetables", "Curated By Sage"]
 macros: "Calories: 210 | Protein: 2g | Carbs: 26g | Fat: 11g"
+date: "2026-05-11"
 ---
 
 # 🍠 Brown Butter Vanilla Bean Sweet Potato Purée 🍠

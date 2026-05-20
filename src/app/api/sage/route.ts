@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     // Retrieve NextAuth session
     const session = await getServerSession(authOptions).catch(() => null);
-    const userId = session?.user ? (session.user as any).id : null;
+    const userId = session?.user ? session.user.id : null;
 
     let recipes;
     let vaultContext = "";

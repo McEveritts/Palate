@@ -1,7 +1,7 @@
 import { getCuratedRecipes, getVaultRecipes } from '@/lib/vaultParser';
-import CuratedClientView from './CuratedClientView';
+import { CalendarView } from '@/app/plans/CalendarView';
 
-export default async function CuratedPage() {
+export default async function CalendarPage() {
   const currentRecipes = await getCuratedRecipes('current');
   const archiveRecipes = await getCuratedRecipes('archive');
   const vaultRecipes = await getVaultRecipes();
@@ -11,14 +11,14 @@ export default async function CuratedPage() {
       <div className="max-w-7xl mx-auto relative z-10 pt-8">
         <header className="mb-12 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-200 to-indigo-300 mb-4">
-            Curated By Sage
+            Culinary Calendar
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto font-medium">
-            A tri-weekly release of perfected culinary concepts, updated every Monday, Wednesday, and Friday, synthesized specifically for your goals and vault context.
+            Schedule your curated and vault recipes, manage leftover storage decay, and dynamically scale portions.
           </p>
         </header>
 
-        <CuratedClientView 
+        <CalendarView 
           currentRecipes={currentRecipes} 
           archiveRecipes={archiveRecipes} 
           vaultRecipes={vaultRecipes}

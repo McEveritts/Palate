@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface AppState {
   isGuest: boolean;
@@ -21,7 +21,10 @@ export const useAppStore = create<AppState>()(
       setMeasurementSystem: (system) => set({ measurementSystem: system }),
     }),
     {
-      name: 'palate-storage', // unique name
+      name: 'palate-storage',
+      // H3 Fix: Use sessionStorage instead of localStorage.
+      // Keys are wiped when the tab closes, preventing persistent XSS extraction.
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );

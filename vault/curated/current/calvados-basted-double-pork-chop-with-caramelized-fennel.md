@@ -2,6 +2,7 @@
 title: "Calvados-Basted Double Pork Chop with Caramelized Fennel"
 tags: ["Pork", "French Bistro", "Curated By Sage"]
 macros: "Calories: 680 | Protein: 54g | Carbs: 12g | Fat: 42g"
+date: "2026-05-22"
 ---
 
 # 🥩 Calvados-Basted Double Pork Chop with Caramelized Fennel 🥩

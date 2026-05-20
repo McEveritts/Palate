@@ -2,6 +2,7 @@
 title: "Roasted Garlic & Brown Butter Pommes Purée"
 tags: ["Side Dish", "Refined Technique", "Curated By Sage"]
 macros: "Calories: 320 | Protein: 5g | Carbs: 30g | Fat: 22g"
+date: "2026-05-04"
 ---
 
 # 🥔 Roasted Garlic & Brown Butter Pommes Purée 🧄

@@ -2,6 +2,7 @@
 title: "Skillet-Pressed Pommes Anna"
 tags: ["Potatoes", "Side Dish", "Curated By Sage"]
 macros: "Calories: 310 | Protein: 4g | Carbs: 35g | Fat: 18g"
+date: "2026-05-18"
 ---
 
 # 🥔 Skillet-Pressed Pommes Anna 🥔

@@ -2,6 +2,7 @@
 title: "Charred Heirloom Carrots with Pistachio Gremolata"
 tags: ["Side Dish", "Acid & Crunch", "Curated By Sage"]
 macros: "Calories: 210 | Protein: 6g | Carbs: 18g | Fat: 14g"
+date: "2026-05-13"
 ---
 
 # 🥕 Charred Heirloom Carrots with Pistachio Gremolata 🍋

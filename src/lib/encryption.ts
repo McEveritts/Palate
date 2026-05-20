@@ -8,9 +8,14 @@ const ALGORITHM = "aes-256-gcm";
  */
 const getEncryptionKey = (): Buffer => {
   const secret = process.env.PALATE_ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET;
+
   if (!secret) {
-    throw new Error('Encryption secret is missing. Set PALATE_ENCRYPTION_SECRET or NEXTAUTH_SECRET in environment.');
+    throw new Error(
+      "FATAL: Secure encryption secret is missing. " +
+      "Set PALATE_ENCRYPTION_SECRET in your environment."
+    );
   }
+
   return crypto.createHash('sha256').update(secret).digest();
 };
 

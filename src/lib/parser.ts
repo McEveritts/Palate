@@ -1,4 +1,5 @@
 import matter from 'gray-matter';
+import yaml from 'js-yaml';
 
 export function parseSageStream(fullText: string, isDone: boolean): { thoughts: string, content: string } {
   let thoughts = "";
@@ -238,7 +239,9 @@ export function sanitizeRecipeContent(rawContent: string): { data: CleanedFrontm
   }
 
   // Parse with gray-matter
-  const { data, content: bodyContent } = matter(contentWithoutThoughts);
+  const { data, content: bodyContent } = matter(contentWithoutThoughts, {
+    engines: { yaml: (s: string) => yaml.load(s, { schema: yaml.FAILSAFE_SCHEMA }) as Record<string, unknown> }
+  });
 
   // Reconstruct cleanly
   const reconstructed = matter.stringify(bodyContent.trim(), data).trim();
