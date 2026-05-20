@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
+import { extractMacrosFromString } from '../../lib/parser';
 
 interface RecipeNutritionDetailsProps {
   recipeId: string;
@@ -20,20 +21,11 @@ interface MacroProfile {
 
 function parseMacros(macroStr: string): MacroProfile | null {
   if (!macroStr) return null;
-  const calMatch = macroStr.match(/Calories:\s*([\d.]+)/i) || macroStr.match(/([\d.]+)\s*Calories/i);
-  const proMatch = macroStr.match(/Protein:\s*([\d.]+)g/i) || macroStr.match(/([\d.]+)g\s*Protein/i);
-  const carbMatch = macroStr.match(/Carbs:\s*([\d.]+)g/i) || macroStr.match(/([\d.]+)g\s*Carbs/i);
-  const fatMatch = macroStr.match(/Fat:\s*([\d.]+)g/i) || macroStr.match(/([\d.]+)g\s*Fat/i);
-
-  if (!calMatch && !proMatch && !carbMatch && !fatMatch) return null;
-
-  return {
-    calories: calMatch ? Math.round(parseFloat(calMatch[1])) : 0,
-    protein: proMatch ? Math.round(parseFloat(proMatch[1])) : 0,
-    carbs: carbMatch ? Math.round(parseFloat(carbMatch[1])) : 0,
-    fat: fatMatch ? Math.round(parseFloat(fatMatch[1])) : 0,
-    isEstimated: macroStr.toLowerCase().includes('estimated')
-  };
+  const parsed = extractMacrosFromString(macroStr);
+  if (parsed.calories === 0 && parsed.protein === 0 && parsed.carbs === 0 && parsed.fat === 0) {
+    return null;
+  }
+  return parsed;
 }
 
 export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }: RecipeNutritionDetailsProps) {

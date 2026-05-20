@@ -103,9 +103,9 @@ export function parseMessageContent(content: string) {
   const yaml = match[1];
   const markdown = cleanContent.slice(match.index! + match[0].length).trim();
   
-  const recipeMatch = yaml.match(/(?:recipe|title):\s*(.*)/);
-  const tagsMatch = yaml.match(/tags:\s*\[?(.*?)\]?(?:\n|$)/);
-  const macrosMatch = yaml.match(/macros:\s*(.*)/);
+  const recipeMatch = yaml.match(/(?:recipe|title):\s*(.*)/i);
+  const tagsMatch = yaml.match(/tags?:\s*\[?(.*?)\]?(?:\n|$)/i);
+  const macrosMatch = yaml.match(/macros?:\s*(.*)/i);
   
   return {
     markdown,
@@ -115,6 +115,61 @@ export function parseMessageContent(content: string) {
       macros: macrosMatch ? macrosMatch[1].trim() : ''
     }
   };
+}
+
+export interface ParsedMacros {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isEstimated: boolean;
+}
+
+export function extractMacrosFromString(macroStr: string): ParsedMacros {
+  if (!macroStr) {
+    return { calories: 0, protein: 0, carbs: 0, fat: 0, isEstimated: false };
+  }
+
+  // Support flexible, case-insensitive, fuzzy patterns:
+  // e.g., "Protein: 24g", "24g Protein", "Protein - 24g", "24 grams of protein", etc.
+  
+  // 1. Calories Matcher
+  const calMatch = 
+    macroStr.match(/(?:calories?|cal|kcal):\s*([\d.]+)/i) || 
+    macroStr.match(/([\d.]+)\s*(?:calories?|cal|kcal)/i) ||
+    macroStr.match(/(?:calories?|cal|kcal)\s*-\s*([\d.]+)/i);
+
+  // 2. Protein Matcher
+  const proMatch = 
+    macroStr.match(/protein:\s*([\d.]+)g?/i) || 
+    macroStr.match(/([\d.]+)g?\s*protein/i) ||
+    macroStr.match(/protein\s*-\s*([\d.]+)g?/i) ||
+    macroStr.match(/([\d.]+)g?\s*of\s*protein/i) ||
+    macroStr.match(/([\d.]+)\s*grams?\s*of\s*protein/i);
+
+  // 3. Carbohydrates Matcher
+  const carbMatch = 
+    macroStr.match(/(?:carbs?|carbohydrates?):\s*([\d.]+)g?/i) || 
+    macroStr.match(/([\d.]+)g?\s*(?:carbs?|carbohydrates?)/i) ||
+    macroStr.match(/(?:carbs?|carbohydrates?)\s*-\s*([\d.]+)g?/i) ||
+    macroStr.match(/([\d.]+)g?\s*of\s*(?:carbs?|carbohydrates?)/i) ||
+    macroStr.match(/([\d.]+)\s*grams?\s*of\s*(?:carbs?|carbohydrates?)/i);
+
+  // 4. Fat Matcher
+  const fatMatch = 
+    macroStr.match(/fat:\s*([\d.]+)g?/i) || 
+    macroStr.match(/([\d.]+)g?\s*fat/i) ||
+    macroStr.match(/fat\s*-\s*([\d.]+)g?/i) ||
+    macroStr.match(/([\d.]+)g?\s*of\s*fat/i) ||
+    macroStr.match(/([\d.]+)\s*grams?\s*of\s*fat/i);
+
+  const calories = calMatch ? Math.round(parseFloat(calMatch[1])) : 0;
+  const protein = proMatch ? Math.round(parseFloat(proMatch[1])) : 0;
+  const carbs = carbMatch ? Math.round(parseFloat(carbMatch[1])) : 0;
+  const fat = fatMatch ? Math.round(parseFloat(fatMatch[1])) : 0;
+  const isEstimated = macroStr.toLowerCase().includes('estimated');
+
+  return { calories, protein, carbs, fat, isEstimated };
 }
 
 export interface CleanedFrontmatter {

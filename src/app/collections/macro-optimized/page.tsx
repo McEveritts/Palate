@@ -1,18 +1,9 @@
 import { getVaultRecipes } from "../../../lib/vaultParser";
 import { MacroGrid } from "../../../components/collections/MacroGrid";
+import { extractMacrosFromString } from "../../../lib/parser";
 
 function extractMacros(macroString: string) {
-  const calMatch = macroString.match(/Calories:\s*([\d.]+)/i);
-  const proMatch = macroString.match(/Protein:\s*([\d.]+)g/i);
-  const carbMatch = macroString.match(/Carbs:\s*([\d.]+)g/i);
-  const fatMatch = macroString.match(/Fat:\s*([\d.]+)g/i);
-  
-  const calories = calMatch ? parseFloat(calMatch[1]) : 0;
-  const protein = proMatch ? parseFloat(proMatch[1]) : 0;
-  const carbs = carbMatch ? parseFloat(carbMatch[1]) : 0;
-  const fat = fatMatch ? parseFloat(fatMatch[1]) : 0;
-  
-  return { calories, protein, carbs, fat };
+  return extractMacrosFromString(macroString);
 }
 
 export default async function MacroOptimizedPage() {

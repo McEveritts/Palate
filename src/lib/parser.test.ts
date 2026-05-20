@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSageStream, sanitizeRecipeContent } from './parser';
+import { parseSageStream, sanitizeRecipeContent, extractMacrosFromString } from './parser';
 
 describe('parseSageStream', () => {
   it('should parse perfectly formed thought and content', () => {
@@ -106,5 +106,54 @@ describe('sanitizeRecipeContent', () => {
     expect(content).toBe('Melt the cheese.');
     expect(fileContent).toContain('title: Grilled Cheese');
     expect(fileContent).not.toContain('```yaml');
+  });
+});
+
+describe('extractMacrosFromString', () => {
+  it('should parse standard pipe-delimited macro headers', () => {
+    const input = 'Calories: 350 | Protein: 24g | Carbs: 45g | Fat: 12g';
+    const result = extractMacrosFromString(input);
+    expect(result.calories).toBe(350);
+    expect(result.protein).toBe(24);
+    expect(result.carbs).toBe(45);
+    expect(result.fat).toBe(12);
+    expect(result.isEstimated).toBe(false);
+  });
+
+  it('should support case-insensitive and hyphenated structures', () => {
+    const input = 'cal - 420 | PROTEIN - 30 | carbs - 50g | fat - 15g';
+    const result = extractMacrosFromString(input);
+    expect(result.calories).toBe(420);
+    expect(result.protein).toBe(30);
+    expect(result.carbs).toBe(50);
+    expect(result.fat).toBe(15);
+  });
+
+  it('should support inverted unit formats', () => {
+    const input = '350 Calories, 24g Protein, 45g Carbs, 12g Fat (Estimated)';
+    const result = extractMacrosFromString(input);
+    expect(result.calories).toBe(350);
+    expect(result.protein).toBe(24);
+    expect(result.carbs).toBe(45);
+    expect(result.fat).toBe(12);
+    expect(result.isEstimated).toBe(true);
+  });
+
+  it('should support sentence-based macro descriptions', () => {
+    const input = 'This recipe has 24 grams of protein, 45 grams of carbohydrates, 12g of fat, and 350 kcal';
+    const result = extractMacrosFromString(input);
+    expect(result.calories).toBe(350);
+    expect(result.protein).toBe(24);
+    expect(result.carbs).toBe(45);
+    expect(result.fat).toBe(12);
+  });
+
+  it('should gracefully handle empty or invalid strings', () => {
+    const result = extractMacrosFromString('');
+    expect(result.calories).toBe(0);
+    expect(result.protein).toBe(0);
+    expect(result.carbs).toBe(0);
+    expect(result.fat).toBe(0);
+    expect(result.isEstimated).toBe(false);
   });
 });

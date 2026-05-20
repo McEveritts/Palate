@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { VaultRecipe } from '@/lib/vaultParser';
 import { Scale, Sparkles, Brain, Check, TrendingUp, Layers, Activity, Info, Network, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
+import { extractMacrosFromString } from '@/lib/parser';
 
 interface VaultCockpitProps {
   recipes: VaultRecipe[];
@@ -86,10 +87,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
     const recipeBreakdown = recipes.map(recipe => {
       const macrosStr = recipe.macros || '';
       
-      const protein = parseInt(macrosStr.match(/protein:\s*(\d+)/i)?.[1] || "0");
-      const carbs = parseInt(macrosStr.match(/carbs?:\s*(\d+)/i)?.[1] || macrosStr.match(/carbohydrates?:\s*(\d+)/i)?.[1] || "0");
-      const fat = parseInt(macrosStr.match(/fat:\s*(\d+)/i)?.[1] || "0");
-      const calories = parseInt(macrosStr.match(/calories?:\s*(\d+)/i)?.[1] || macrosStr.match(/cal?:\s*(\d+)/i)?.[1] || "0");
+      const { protein, carbs, fat, calories } = extractMacrosFromString(macrosStr);
 
       totalProtein += protein;
       totalCarbs += carbs;
@@ -139,8 +137,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
     recipes.forEach(recipe => {
       const tags = recipe.tags.map(t => t.toLowerCase());
       const macrosStr = recipe.macros || '';
-      const protein = parseInt(macrosStr.match(/protein:\s*(\d+)/i)?.[1] || "0");
-      const carbs = parseInt(macrosStr.match(/carbs?:\s*(\d+)/i)?.[1] || macrosStr.match(/carbohydrates?:\s*(\d+)/i)?.[1] || "0");
+      const { protein, carbs } = extractMacrosFromString(macrosStr);
 
       // 1. Plant-Based
       if (tags.some(t => ['vegan', 'vegetarian', 'plant-based', 'salad', 'vegetables', 'veg', 'greens'].includes(t))) {
