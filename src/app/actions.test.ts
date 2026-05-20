@@ -1,7 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { deleteRecipeFromVault, saveRecipeToVault } from './actions';
-import fs from 'fs/promises';
-import { revalidatePath } from 'next/cache';
 
 vi.mock('fs/promises', () => ({
   default: {
@@ -18,9 +15,33 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    recipe: {
+      count: vi.fn().mockResolvedValue(0),
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+      update: vi.fn(),
+    }
+  }
+}));
+
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn().mockResolvedValue(null), // defaults to guest mode
+}));
+
+import { deleteRecipeFromVault, saveRecipeToVault } from './actions';
+import fs from 'fs/promises';
+import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth/next';
+
 describe('actions - deleteRecipeFromVault', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getServerSession).mockResolvedValue(null);
   });
 
   it('should successfully delete a main recipe file', async () => {
@@ -64,6 +85,7 @@ describe('actions - deleteRecipeFromVault', () => {
 describe('actions - saveRecipeToVault', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getServerSession).mockResolvedValue(null);
   });
 
   it('should save a main recipe and cleanly strip thought tags, preambles, and code block formatting', async () => {

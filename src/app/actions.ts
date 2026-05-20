@@ -4,6 +4,21 @@ import fs from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { sanitizeRecipeContent } from "../lib/parser";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/db";
+import matter from "gray-matter";
+import { getAllRecipes } from "../lib/vault";
+
+async function getCurrentUserId(): Promise<string | null> {
+  if (typeof getServerSession !== 'function') return null;
+  try {
+    const session = await getServerSession(authOptions);
+    return session?.user ? (session.user as any).id : null;
+  } catch (error) {
+    return null;
+  }
+}
 
 export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 'md') {
   try {
@@ -11,16 +26,17 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
       throw new Error('Invalid format. Must be md or txt.');
     }
 
+    const userId = await getCurrentUserId();
+
     // 1. Clean the content to strip thought tags, preambles, and code blocks, and reconstruct cleanly
     const { data, fileContent: sanitizedFileContent } = sanitizeRecipeContent(content);
 
-    // 2. Extract title from frontmatter for the filename
+    // 2. Extract title from frontmatter
     const titleMatch = sanitizedFileContent.match(/title:\s*["']?([^"'\n]+)["']?/i) || sanitizedFileContent.match(/Recipe:\s*["']?([^"'\n]+)["']?/i);
     const title = data.recipe || data.title || (titleMatch ? titleMatch[1].trim() : "Generated Recipe");
     
     // 3. Slugify
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const filename = `${slug}.${format}`;
     
     // 4. Determine category based on tags (default to mains)
     const tags = Array.isArray(data.tags)
@@ -30,6 +46,42 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
         : [];
     const isSide = tags.some((t: string) => t.toLowerCase().includes('side')) || sanitizedFileContent.toLowerCase().includes("side");
     const category = isSide ? "sides" : "mains";
+
+    if (userId) {
+      const { data: frontmatterData, content: bodyContent } = matter(sanitizedFileContent);
+      
+      await prisma.recipe.upsert({
+        where: {
+          userId_slug: {
+            userId,
+            slug,
+          }
+        },
+        create: {
+          userId,
+          slug,
+          title,
+          markdown: bodyContent.trim(),
+          frontmatter: {
+            ...frontmatterData,
+            category,
+          }
+        },
+        update: {
+          title,
+          markdown: bodyContent.trim(),
+          frontmatter: {
+            ...frontmatterData,
+            category,
+          }
+        }
+      });
+
+      revalidatePath('/vault');
+      return { success: true, message: `Recipe saved to database as ${slug}` };
+    }
+    
+    const filename = `${slug}.${format}`;
     
     // 5. Write file to the correct vault directory
     const vaultPath = path.join(process.cwd(), "vault", category);
@@ -50,6 +102,37 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
   try {
     if (category !== 'mains' && category !== 'sides') {
       throw new Error('Invalid category. Must be mains or sides.');
+    }
+
+    const userId = await getCurrentUserId();
+
+    if (userId) {
+      const { data, content } = matter(markdown);
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      
+      let finalSlug = slug;
+      const existing = await prisma.recipe.findUnique({
+        where: { userId_slug: { userId, slug: finalSlug } }
+      });
+      if (existing) {
+        finalSlug = `${slug}-${Date.now()}`;
+      }
+
+      await prisma.recipe.create({
+        data: {
+          userId,
+          slug: finalSlug,
+          title,
+          markdown: content.trim(),
+          frontmatter: {
+            ...data,
+            category,
+          }
+        }
+      });
+
+      revalidatePath('/vault');
+      return { success: true, message: `Recipe saved to database as ${finalSlug}` };
     }
 
     const cleanContent = markdown.trim();
@@ -85,6 +168,52 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
 
 export async function saveCuratedToVault(id: string) {
   try {
+    const userId = await getCurrentUserId();
+
+    if (userId) {
+      let slug: string;
+      if (id.startsWith('curated-current-')) {
+        slug = id.substring('curated-current-'.length);
+      } else if (id.startsWith('curated-archive-')) {
+        slug = id.substring('curated-archive-'.length);
+      } else {
+        throw new Error(`Invalid recipe ID format for curated recipe: ${id}`);
+      }
+
+      const recipe = await prisma.recipe.findUnique({
+        where: { userId_slug: { userId, slug } }
+      });
+
+      if (!recipe) {
+        throw new Error(`Recipe with slug ${slug} not found in database.`);
+      }
+
+      const frontmatter = (recipe.frontmatter as any) || {};
+      const fileContentLower = (recipe.markdown || '').toLowerCase();
+      const tags = Array.isArray(frontmatter.tags)
+        ? frontmatter.tags
+        : typeof frontmatter.tags === 'string'
+          ? frontmatter.tags.split(',').map((t: string) => t.trim())
+          : [];
+      
+      const isSide = tags.some((t: string) => t.toLowerCase().includes('side')) || fileContentLower.includes("side");
+      const targetCategory = isSide ? "sides" : "mains";
+
+      await prisma.recipe.update({
+        where: { id: recipe.id },
+        data: {
+          frontmatter: {
+            ...frontmatter,
+            category: targetCategory
+          }
+        }
+      });
+
+      revalidatePath('/vault');
+      revalidatePath('/plans');
+      return { success: true };
+    }
+
     const [_, type, ...filenameParts] = id.split('-');
     
     if (type !== 'current' && type !== 'archive') {
@@ -128,6 +257,39 @@ export async function saveCuratedToVault(id: string) {
 
 export async function deleteRecipeFromVault(id: string) {
   try {
+    const userId = await getCurrentUserId();
+
+    if (userId) {
+      let slug: string;
+      if (id.startsWith('curated-current-')) {
+        slug = id.substring('curated-current-'.length);
+      } else if (id.startsWith('curated-archive-')) {
+        slug = id.substring('curated-archive-'.length);
+      } else if (id.startsWith('mains-')) {
+        slug = id.substring('mains-'.length);
+      } else if (id.startsWith('sides-')) {
+        slug = id.substring('sides-'.length);
+      } else {
+        throw new Error(`Invalid recipe ID format: ${id}`);
+      }
+
+      const existing = await prisma.recipe.findUnique({
+        where: { userId_slug: { userId, slug } }
+      });
+
+      if (!existing) {
+        throw new Error(`Recipe not found in database: ${slug}`);
+      }
+
+      await prisma.recipe.delete({
+        where: { id: existing.id }
+      });
+
+      revalidatePath('/vault');
+      revalidatePath('/plans');
+      return { success: true, message: `Recipe successfully deleted from database` };
+    }
+
     let category: string;
     let slug: string;
     
@@ -162,4 +324,247 @@ export async function deleteRecipeFromVault(id: string) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
+
+const GUEST_MEALS_FILE = path.join(process.cwd(), "vault", "scheduled_meals.json");
+
+async function readGuestMeals(): Promise<any[]> {
+  try {
+    const data = await fs.readFile(GUEST_MEALS_FILE, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    return [];
+  }
+}
+
+async function writeGuestMeals(meals: any[]): Promise<void> {
+  await fs.mkdir(path.dirname(GUEST_MEALS_FILE), { recursive: true });
+  await fs.writeFile(GUEST_MEALS_FILE, JSON.stringify(meals, null, 2), "utf-8");
+}
+
+export async function scheduleMeal(
+  recipeId: string,
+  dateStr: string,
+  mealType: string,
+  plannedYield: number = 1.0,
+  parentMealId?: string
+) {
+  try {
+    const userId = await getCurrentUserId();
+    const date = new Date(dateStr);
+
+    if (userId) {
+      // Authenticated mode: find or import recipe
+      let dbRecipe = await prisma.recipe.findFirst({
+        where: {
+          userId,
+          OR: [
+            { id: recipeId },
+            { slug: recipeId },
+            { slug: recipeId.replace(/^(mains-|sides-|curated-current-|curated-archive-)/, "") }
+          ]
+        }
+      });
+
+      if (!dbRecipe) {
+        // Try importing from local vault
+        const cleanSlug = recipeId.replace(/^(mains-|sides-|curated-current-|curated-archive-)/, "");
+        const localRecipes = getAllRecipes();
+        const localRecipe = localRecipes.find(r => r.slug === cleanSlug || r.slug === recipeId);
+        
+        if (localRecipe) {
+          dbRecipe = await prisma.recipe.create({
+            data: {
+              userId,
+              slug: localRecipe.slug,
+              title: localRecipe.frontmatter.title || localRecipe.slug,
+              markdown: localRecipe.content,
+              frontmatter: localRecipe.frontmatter as any,
+            }
+          });
+        }
+      }
+
+      if (!dbRecipe) {
+        throw new Error(`Recipe not found in database or local vault: ${recipeId}`);
+      }
+
+      const meal = await prisma.scheduledMeal.create({
+        data: {
+          userId,
+          recipeId: dbRecipe.id,
+          date,
+          mealType,
+          plannedYield,
+          parentMealId: parentMealId || null,
+        },
+        include: {
+          recipe: true,
+        }
+      });
+
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true, meal };
+    } else {
+      // Guest mode
+      const meals = await readGuestMeals();
+      const id = `guest-meal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const newMeal = {
+        id,
+        userId: "guest",
+        recipeId,
+        date: date.toISOString(),
+        mealType,
+        plannedYield,
+        parentMealId: parentMealId || null,
+      };
+
+      meals.push(newMeal);
+      await writeGuestMeals(meals);
+
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true, meal: newMeal };
+    }
+  } catch (error) {
+    console.error("scheduleMeal error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function getScheduledMeals(startDateStr: string, endDateStr: string) {
+  try {
+    const userId = await getCurrentUserId();
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+
+    if (userId) {
+      const dbMeals = await prisma.scheduledMeal.findMany({
+        where: {
+          userId,
+          date: {
+            gte: start,
+            lte: end,
+          },
+        },
+        include: {
+          recipe: true,
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      });
+      return { success: true, meals: dbMeals };
+    } else {
+      // Guest mode
+      const allMeals = await readGuestMeals();
+      const guestMeals = allMeals.filter((meal: any) => {
+        const mealDate = new Date(meal.date);
+        return mealDate >= start && mealDate <= end;
+      });
+
+      const localRecipes = getAllRecipes();
+      const mealsWithRecipes = guestMeals.map((meal: any) => {
+        const cleanSlug = meal.recipeId.replace(/^(mains-|sides-|curated-current-|curated-archive-)/, "");
+        const recipe = localRecipes.find(
+          (r) => r.slug === cleanSlug || r.slug === meal.recipeId
+        );
+        
+        return {
+          ...meal,
+          recipe: recipe
+            ? {
+                id: meal.recipeId,
+                title: recipe.frontmatter?.title || recipe.slug,
+                slug: recipe.slug,
+                markdown: recipe.content,
+                frontmatter: recipe.frontmatter,
+              }
+            : {
+                id: meal.recipeId,
+                title: meal.recipeId.replace(/-/g, " "),
+                slug: meal.recipeId,
+                markdown: "",
+                frontmatter: {},
+              },
+        };
+      });
+
+      return { success: true, meals: mealsWithRecipes };
+    }
+  } catch (error) {
+    console.error("getScheduledMeals error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function moveScheduledMeal(mealId: string, newDateStr: string, newMealType: string) {
+  try {
+    const userId = await getCurrentUserId();
+    const newDate = new Date(newDateStr);
+
+    if (userId) {
+      const updated = await prisma.scheduledMeal.update({
+        where: { id: mealId, userId },
+        data: {
+          date: newDate,
+          mealType: newMealType,
+        },
+        include: {
+          recipe: true,
+        },
+      });
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true, meal: updated };
+    } else {
+      const meals = await readGuestMeals();
+      const index = meals.findIndex((m: any) => m.id === mealId);
+      if (index === -1) {
+        return { success: false, error: `Meal ${mealId} not found` };
+      }
+      meals[index].date = newDate.toISOString();
+      meals[index].mealType = newMealType;
+      await writeGuestMeals(meals);
+      
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true, meal: meals[index] };
+    }
+  } catch (error) {
+    console.error("moveScheduledMeal error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function cancelScheduledMeal(mealId: string) {
+  try {
+    const userId = await getCurrentUserId();
+
+    if (userId) {
+      await prisma.scheduledMeal.delete({
+        where: { id: mealId, userId },
+      });
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true };
+    } else {
+      const meals = await readGuestMeals();
+      const filtered = meals.filter((m: any) => m.id !== mealId);
+      if (filtered.length === meals.length) {
+        return { success: false, error: `Meal ${mealId} not found` };
+      }
+      await writeGuestMeals(filtered);
+      
+      revalidatePath('/calendar');
+      revalidatePath('/plans');
+      return { success: true };
+    }
+  } catch (error) {
+    console.error("cancelScheduledMeal error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 

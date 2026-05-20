@@ -14,17 +14,78 @@ export default function SettingsPage() {
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
   
-  // Local state for the input to prevent hydration mismatch with Zustand persist
   const [keyInput, setKeyInput] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setKeyInput(geminiApiKey);
-  }, [geminiApiKey]);
+    if (session?.user) {
+      fetch("/api/settings")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setMeasurementSystem(data.metricSystem ? "metric" : "imperial");
+            if (data.hasKey) {
+              setKeyInput("••••••••••••••••");
+            } else {
+              setKeyInput("");
+            }
+          }
+        })
+        .catch((err) => console.error("Failed to load user settings:", err));
+    } else {
+      setKeyInput(geminiApiKey);
+    }
+  }, [session, geminiApiKey, setMeasurementSystem]);
 
-  const handleSaveKey = () => {
-    setGeminiApiKey(keyInput);
+  const handleSaveKey = async () => {
+    if (session?.user) {
+      setSaving(true);
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            geminiApiKey: keyInput,
+            measurementSystem,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (data.hasKey) {
+            setKeyInput("••••••••••••••••");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to save settings to server:", err);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setGeminiApiKey(keyInput);
+    }
+  };
+
+  const handleToggleSystem = async (system: "metric" | "imperial") => {
+    setMeasurementSystem(system);
+    if (session?.user) {
+      try {
+        await fetch("/api/settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            measurementSystem: system,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to save system preference:", err);
+      }
+    }
   };
 
   if (!mounted) return null;
@@ -112,7 +173,7 @@ export default function SettingsPage() {
             {/* Sliding Toggle Control */}
             <div className="flex items-center gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
               <button
-                onClick={() => setMeasurementSystem('metric')}
+                onClick={() => handleToggleSystem('metric')}
                 className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
                   measurementSystem === 'metric' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -128,7 +189,7 @@ export default function SettingsPage() {
               </button>
               
               <button
-                onClick={() => setMeasurementSystem('imperial')}
+                onClick={() => handleToggleSystem('imperial')}
                 className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
                   measurementSystem === 'imperial' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                 }`}
@@ -156,7 +217,7 @@ export default function SettingsPage() {
           <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
             <p className="text-slate-400 mb-6 max-w-2xl">
               Palate requires a Google Gemini API Key to synthesize recipes and perform zero-waste analysis. 
-              This key is stored <strong className="text-white">securely in your browser's local storage</strong> and is never sent to our servers for storage.
+              This key is stored <strong className="text-white">securely in your encrypted cloud vault</strong> and is never exposed in plain text.
             </p>
 
             <div className="flex flex-col gap-3">
@@ -174,10 +235,10 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={handleSaveKey}
-                  disabled={keyInput === geminiApiKey}
+                  disabled={saving || (session?.user ? false : keyInput === geminiApiKey)}
                   className="px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
                 >
-                  {keyInput === geminiApiKey ? 'Saved' : 'Save Key'}
+                  {saving ? 'Saving...' : 'Save Key'}
                 </button>
               </div>
               <p className="text-xs text-slate-500 mt-2">
