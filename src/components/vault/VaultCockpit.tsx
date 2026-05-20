@@ -499,7 +499,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
                       {/* 4. Textual Labels */}
                       {radarDimensions.vertices.map((v, i) => {
                         const cos = Math.cos(v.angle);
-                        let textAnchor = "middle";
+                        let textAnchor: "inherit" | "end" | "middle" | "start" | undefined = "middle";
                         if (cos > 0.1) textAnchor = "start";
                         else if (cos < -0.1) textAnchor = "end";
 
