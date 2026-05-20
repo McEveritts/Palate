@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale } from "lucide-react";
+import { Leaf, Sparkles, Loader2, ImagePlus, X, Scale, Copy, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 
@@ -10,6 +10,7 @@ export default function ZeroWastePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
@@ -144,26 +145,9 @@ export default function ZeroWastePage() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-16 pr-[260px] py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl"
+                className="glass-input pl-16 pr-32 py-5 w-full text-white placeholder-slate-500 text-lg rounded-2xl"
                 placeholder="e.g. 'I have half an onion, heavy cream, and wilted spinach...'"
               />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric');
-                }}
-                className="absolute right-[145px] top-3 bottom-3 bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 text-xs font-semibold text-slate-300 rounded-xl px-3.5 flex items-center gap-1.5 cursor-pointer transition-all shadow-inner relative overflow-hidden group select-none"
-                title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                />
-                <Scale size={13} className="text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
-                <span className="capitalize tracking-wider font-mono text-[11px] relative z-10">
-                  {measurementSystem}
-                </span>
-              </button>
               <button
                 type="submit"
                 disabled={(!prompt.trim() && !imagePreview) || isGenerating}
@@ -181,7 +165,31 @@ export default function ZeroWastePage() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full flex flex-col gap-6 flex-1 pb-8"
           >
-            <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 flex flex-col gap-6">
+            <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 flex flex-col gap-6 relative group">
+               {/* Hover Actions in top-right */}
+               {!isGenerating && response && (
+                 <div className="opacity-0 group-hover:opacity-100 absolute top-6 right-6 flex items-center gap-2 transition-all">
+                   <button
+                     onClick={() => setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric')}
+                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                     title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
+                   >
+                     <Scale size={16} className={measurementSystem === 'metric' ? 'text-emerald-400' : 'text-fuchsia-400'} />
+                   </button>
+                   
+                   <button
+                     onClick={() => {
+                       navigator.clipboard.writeText(response);
+                       setCopied(true);
+                       setTimeout(() => setCopied(false), 2000);
+                     }}
+                     className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                     title="Copy recipe text"
+                   >
+                     {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                   </button>
+                 </div>
+               )}
                <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2"><Leaf className="text-emerald-400"/> Rescued Recipe</h3>
                <div className="prose prose-invert max-w-none whitespace-pre-wrap">
                  {isGenerating && response === "" ? (

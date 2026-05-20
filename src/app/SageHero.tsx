@@ -239,26 +239,9 @@ export default function SageHero() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-16 pr-[260px] py-4 w-full text-white placeholder-slate-400"
+                className="glass-input pl-16 pr-36 py-4 w-full text-white placeholder-slate-400"
                 placeholder="e.g. 'I need a high-protein dinner from the vault...'"
               />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric');
-                }}
-                className="absolute right-[145px] top-2 bottom-2 bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 text-xs font-semibold text-slate-300 rounded-full px-3.5 flex items-center gap-1.5 cursor-pointer transition-all shadow-inner relative overflow-hidden group select-none"
-                title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                />
-                <Scale size={13} className="text-indigo-400 group-hover:rotate-12 transition-transform duration-300" />
-                <span className="capitalize tracking-wider font-mono text-[11px] relative z-10">
-                  {measurementSystem}
-                </span>
-              </button>
               <button
                 type="submit"
                 className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-5 flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
@@ -400,6 +383,16 @@ export default function SageHero() {
                             <div className="opacity-0 group-hover:opacity-100 flex flex-col gap-2 mb-2 flex-shrink-0 transition-all relative">
                               {msg.role === 'sage' && (
                                 <button 
+                                  onClick={() => setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric')}
+                                  className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                                  title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
+                                >
+                                  <Scale size={16} className={measurementSystem === 'metric' ? 'text-indigo-400' : 'text-fuchsia-400'} />
+                                </button>
+                              )}
+
+                              {msg.role === 'sage' && (
+                                <button 
                                   onClick={() => setRawMode(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
                                   className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg"
                                   title={rawMode[msg.id] ? "Show Rendered" : "Show Raw Markdown"}
@@ -535,27 +528,9 @@ export default function SageHero() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
-                className="glass-input pl-16 pr-[200px] py-4 w-full text-white disabled:opacity-50" 
+                className="glass-input pl-16 pr-32 py-4 w-full text-white disabled:opacity-50" 
                 placeholder="Ask a follow up..."
               />
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric');
-                }}
-                className="absolute right-[84px] top-2 bottom-2 bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 text-xs font-semibold text-slate-300 rounded-full px-3.5 flex items-center gap-1.5 cursor-pointer transition-all shadow-inner relative overflow-hidden group select-none disabled:opacity-50"
-                title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                />
-                <Scale size={13} className="text-indigo-400 group-hover:rotate-12 transition-transform duration-300" />
-                <span className="capitalize tracking-wider font-mono text-[11px] relative z-10">
-                  {measurementSystem}
-                </span>
-              </button>
               <button 
                 type="submit"
                 disabled={isGenerating}
