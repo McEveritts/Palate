@@ -79,17 +79,21 @@ async function fetchMacros(ingredient_names: string[]) {
   }
 }
 
-export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string) {
+export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric') {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
   const genAI = new GoogleGenerativeAI(finalApiKey);
 
+  const systemInstruction = SYSTEM_PROMPT + (measurementSystem === 'imperial'
+    ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
+    : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
+
   const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it";
   const model = genAI.getGenerativeModel({ 
     model: modelName,
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: systemInstruction,
     generationConfig: { temperature: 0.7 },
     tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration] }]
   });
@@ -102,17 +106,21 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string) {
+export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric') {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
   const genAI = new GoogleGenerativeAI(finalApiKey);
 
+  const systemInstruction = SYSTEM_PROMPT + (measurementSystem === 'imperial'
+    ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
+    : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
+
   const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it"; // testing 26b for tool calling
   const model = genAI.getGenerativeModel({ 
     model: modelName,
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: systemInstruction,
     generationConfig: { temperature: 0.7 },
     tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration] }]
   });

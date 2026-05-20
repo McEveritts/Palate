@@ -2,14 +2,17 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
-import { User, Key, LogOut } from "lucide-react";
+import { User, Key, LogOut, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const setGeminiApiKey = useAppStore((state) => state.setGeminiApiKey);
+  const measurementSystem = useAppStore((state) => state.measurementSystem);
+  const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
   
   // Local state for the input to prevent hydration mismatch with Zustand persist
   const [keyInput, setKeyInput] = useState("");
@@ -87,6 +90,60 @@ export default function SettingsPage() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* Display & Units Section */}
+        <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles className="text-indigo-400 w-6 h-6 animate-pulse" />
+            <h2 className="text-2xl font-bold text-white">Display & Units</h2>
+          </div>
+
+          <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white">Measurement System</h3>
+              <p className="text-slate-400 mt-1 text-sm leading-relaxed">
+                Choose your default measurement format for recipe creation, scaling, and display.
+                Sage will default to metric (grams/ml) or imperial (cups, ounces, tablespoons, Fahrenheit).
+              </p>
+            </div>
+            
+            {/* Sliding Toggle Control */}
+            <div className="flex items-center gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
+              <button
+                onClick={() => setMeasurementSystem('metric')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                  measurementSystem === 'metric' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {measurementSystem === 'metric' && (
+                  <motion.div
+                    layoutId="active-unit-bg"
+                    className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-fuchsia-600/30 border border-indigo-500/30 rounded-xl shadow-lg shadow-indigo-500/10 animate-fade-in"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-20">Metric (g / ml)</span>
+              </button>
+              
+              <button
+                onClick={() => setMeasurementSystem('imperial')}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                  measurementSystem === 'imperial' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {measurementSystem === 'imperial' && (
+                  <motion.div
+                    layoutId="active-unit-bg"
+                    className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-fuchsia-600/30 border border-indigo-500/30 rounded-xl shadow-lg shadow-indigo-500/10 animate-fade-in"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-20">Imperial (oz / cups)</span>
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* SageAI Configuration Section */}

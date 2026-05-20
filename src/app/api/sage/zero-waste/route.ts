@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const { prompt, image } = body;
+  const { prompt, image, measurementSystem } = body;
 
   if (!prompt && !image) {
     return new Response(JSON.stringify({ error: "Bad Request: 'prompt' or 'image' is required." }), {
@@ -33,10 +33,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    const unitInstruction = (measurementSystem === 'imperial')
+      ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
+      : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`;
+
     const systemInstruction = `You are a Zero-Waste Culinary Specialist.
 The user will provide a list of random ingredients, or an image of ingredients in their fridge.
 Your goal is to synthesize a cohesive, delicious recipe that uses these specific ingredients to prevent food waste.
-Always wrap your reasoning in <thought> tags before answering. Output the final recipe in Palate's standard Markdown format with YAML frontmatter.`;
+Always wrap your reasoning in <thought> tags before answering. Output the final recipe in Palate's standard Markdown format with YAML frontmatter.${unitInstruction}`;
 
     const model = genAI.getGenerativeModel({
       model: "gemma-4-31b-it",

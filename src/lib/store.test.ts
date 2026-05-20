@@ -12,6 +12,7 @@ describe('useAppStore', () => {
     const state = useAppStore.getState();
     expect(state.isGuest).toBe(false);
     expect(state.geminiApiKey).toBe('');
+    expect(state.measurementSystem).toBe('metric');
   });
 
   it('should update isGuest state', () => {
@@ -29,6 +30,16 @@ describe('useAppStore', () => {
     
     setGeminiApiKey('test-key-123');
     expect(useAppStore.getState().geminiApiKey).toBe('test-key-123');
+  });
+
+  it('should update measurementSystem state', () => {
+    const { setMeasurementSystem } = useAppStore.getState();
+    
+    setMeasurementSystem('imperial');
+    expect(useAppStore.getState().measurementSystem).toBe('imperial');
+    
+    setMeasurementSystem('metric');
+    expect(useAppStore.getState().measurementSystem).toBe('metric');
   });
 });
 

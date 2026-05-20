@@ -69,6 +69,12 @@ export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }:
 
   const hasNoMacros = !macros || (macros.calories === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0);
 
+  React.useEffect(() => {
+    if (hasNoMacros && !isLoading && !error) {
+      fetchUSDANutrition();
+    }
+  }, [recipeId, recipeTitle]);
+
   return (
     <div className="w-full bg-slate-950/40 border border-white/5 rounded-2xl p-6 relative overflow-hidden backdrop-blur-xl">
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
