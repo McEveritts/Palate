@@ -7,8 +7,11 @@ const ALGORITHM = "aes-256-gcm";
  * using SHA-256. This ensures that any secret length can be safely used.
  */
 const getEncryptionKey = (): Buffer => {
-  const secret = process.env.PALATE_ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET || "fallback_palate_encryption_secret_must_be_32_bytes_long!";
-  return crypto.createHash("sha256").update(secret).digest();
+  const secret = process.env.PALATE_ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('Encryption secret is missing. Set PALATE_ENCRYPTION_SECRET or NEXTAUTH_SECRET in environment.');
+  }
+  return crypto.createHash('sha256').update(secret).digest();
 };
 
 export interface EncryptedData {
