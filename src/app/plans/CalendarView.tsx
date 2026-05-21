@@ -138,7 +138,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
   const handleAddMealSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
-    window.alert(`DEBUG: Handler fired!\nRecipe: "${newMealRecipeId}"\nDate: "${newMealDate}"\nType: "${newMealType}"`);
+
     setFormError(null);
 
     // Explicit validation with user-facing feedback
@@ -157,6 +157,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
     setIsSaving(true);
     try {
+      window.alert('DEBUG: About to call scheduleMeal...');
       const res = await scheduleMeal(
         newMealRecipeId,
         newMealDate,
@@ -164,6 +165,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
         newMealYield,
         newMealParentId || undefined
       );
+      window.alert(`DEBUG: scheduleMeal returned: ${JSON.stringify(res)}`);
 
       if (res.success) {
         // Reset form
@@ -178,8 +180,9 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       } else {
         setFormError(res.error || 'Failed to schedule meal. Please try again.');
       }
-    } catch (err) {
-      setFormError('Connection error while scheduling meal. Please try again.');
+    } catch (err: any) {
+      window.alert(`DEBUG ERROR: ${err?.message || String(err)}`);
+      setFormError(`Error: ${err?.message || 'Connection error while scheduling meal.'}`);
     } finally {
       setIsSaving(false);
     }
