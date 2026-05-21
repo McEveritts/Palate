@@ -738,4 +738,124 @@ export async function cancelScheduledMeal(mealId: string) {
   }
 }
 
+export async function getChatSessions() {
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const sessions = await prisma.chatSession.findMany({
+        where: { userId },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        }
+      });
+      return { success: true, sessions };
+    } else {
+      return { success: true, sessions: [] };
+    }
+  } catch (error) {
+    console.error("getChatSessions error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function getChatSession(sessionId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const session = await prisma.chatSession.findUnique({
+        where: { id: sessionId, userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        }
+      });
+      return { success: true, session };
+    } else {
+      return { success: true, session: null };
+    }
+  } catch (error) {
+    console.error("getChatSession error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function createChatSession(title: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const session = await prisma.chatSession.create({
+        data: {
+          userId,
+          title,
+        }
+      });
+      revalidatePath('/ask_sage');
+      return { success: true, session };
+    } else {
+      return { success: false, error: "Authentication required to create database sessions" };
+    }
+  } catch (error) {
+    console.error("createChatSession error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function saveChatMessage(sessionId: string, role: string, content: string, thought?: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const session = await prisma.chatSession.findUnique({
+        where: { id: sessionId, userId }
+      });
+      if (!session) {
+        throw new Error("Chat session not found or unauthorized.");
+      }
+
+      const message = await prisma.chatMessage.create({
+        data: {
+          sessionId,
+          role,
+          content,
+          thought: thought || null,
+        }
+      });
+
+      await prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { updatedAt: new Date() }
+      });
+
+      revalidatePath('/ask_sage');
+      return { success: true, message };
+    } else {
+      return { success: false, error: "Authentication required to save messages" };
+    }
+  } catch (error) {
+    console.error("saveChatMessage error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function deleteChatSession(sessionId: string) {
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      await prisma.chatSession.delete({
+        where: { id: sessionId, userId }
+      });
+      revalidatePath('/ask_sage');
+      return { success: true };
+    } else {
+      return { success: false, error: "Authentication required" };
+    }
+  } catch (error) {
+    console.error("deleteChatSession error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 

@@ -8,7 +8,7 @@ import { decryptKey } from "@/lib/encryption";
 
 export async function POST(req: Request) {
   try {
-    const { prompt, image, measurementSystem } = await req.json();
+    const { prompt, image, measurementSystem, history } = await req.json();
 
     // Retrieve NextAuth session
     const session = await getServerSession(authOptions).catch(() => null);
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = streamSage(prompt, vaultContext, false, image, clientApiKey, measurementSystem);
+    const stream = streamSage(prompt, vaultContext, false, image, clientApiKey, measurementSystem, history);
 
     // Discard key immediately after calling the stream function
     clientApiKey = undefined;

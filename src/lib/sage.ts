@@ -110,7 +110,7 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric') {
+export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: any[]) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -129,18 +129,32 @@ export async function* streamSage(prompt: string, context?: string, usePro: bool
     tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration] }]
   });
 
-  const history: any[] = [
+  const chatHistory: any[] = [
     { role: "user", parts: [{ text: "Create a simple salad recipe." }] },
     { role: "model", parts: [{ text: "<thought>\nThe user wants a simple salad. I don't need to call any tools for this basic request. I will construct a vibrant, elegant salad recipe with standard culinary measurements.\n</thought>\n---\nrecipe: 'Emerald Vinaigrette Greens'\ntags: ['vegan', 'quick', 'salad']\nmacros: 'Calories: 120 | Protein: 2g | Carbs: 5g | Fat: 10g'\n---\n\n# 🥗 Emerald Vinaigrette Greens\n\nAn elegant, crisp composition of fresh greens dressed in a vibrant citrus vinaigrette." }] }
   ];
 
   if (context) {
-    history.push({ role: "user", parts: [{ text: `[LOCAL VAULT CONTEXT]\n${context}` }] });
-    history.push({ role: "model", parts: [{ text: "<thought>\nI have successfully integrated the local vault context into my memory. I will refer to this specifically when fulfilling the user's next request.\n</thought>\nContext loaded successfully. I am ready to assist. ✨" }] });
+    chatHistory.push({ role: "user", parts: [{ text: `[LOCAL VAULT CONTEXT]\n${context}` }] });
+    chatHistory.push({ role: "model", parts: [{ text: "<thought>\nI have successfully integrated the local vault context into my memory. I will refer to this specifically when fulfilling the user's next request.\n</thought>\nContext loaded successfully. I am ready to assist. ✨" }] });
+  }
+
+  if (history && history.length > 0) {
+    for (const h of history) {
+      const isSage = h.role === 'sage' || h.role === 'model';
+      const role = isSage ? 'model' : 'user';
+      let text = h.content || "";
+      if (isSage && h.thought) {
+        text = `<thought>\n${h.thought}\n</thought>\n${text}`;
+      } else if (isSage && h.thoughts) {
+        text = `<thought>\n${h.thoughts}\n</thought>\n${text}`;
+      }
+      chatHistory.push({ role, parts: [{ text }] });
+    }
   }
 
   const chat = model.startChat({
-    history: history
+    history: chatHistory
   });
 
   const promptParts: Part[] = [];

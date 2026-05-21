@@ -1,16 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, Leaf, Settings, Menu, X, Calendar } from "lucide-react";
+import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, Leaf, Settings, Menu, X, Calendar, MessageSquare, History } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSessions() {
+      if (status === "loading") return;
+
+      if (status === "authenticated") {
+        const { getChatSessions } = await import("@/app/actions");
+        const res = await getChatSessions();
+        if (res.success && active) {
+          setSessions(res.sessions || []);
+        }
+      } else {
+        const stored = localStorage.getItem("palate_guest_sessions");
+        if (stored && active) {
+          try {
+            setSessions(JSON.parse(stored));
+          } catch (e) {
+            setSessions([]);
+          }
+        } else if (active) {
+          setSessions([]);
+        }
+      }
+    }
+
+    loadSessions();
+
+    const handleUpdate = () => {
+      loadSessions();
+    };
+
+    window.addEventListener("palate-chat-sessions-updated", handleUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("palate-chat-sessions-updated", handleUpdate);
+    };
+  }, [status]);
   
   if (pathname === '/login') {
     return null;
@@ -77,9 +117,44 @@ export function Sidebar() {
         <div className="mb-8">
           <div className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-400 mb-3 pl-3">Intelligence</div>
           <nav className="flex flex-col gap-1">
-            <Link href="/ask_sage" className={getLinkClass('/ask_sage')} onClick={closeSidebar}>
+            <Link href="/ask_sage" className={getLinkClass('/ask_sage', true)} onClick={closeSidebar}>
               <Sparkles size={18} suppressHydrationWarning /> Ask Sage
             </Link>
+            
+            <div className="flex flex-col gap-1 pl-4 mt-1 border-l border-white/5 ml-5">
+              {sessions.slice(0, 4).map((s) => {
+                const isActive = pathname === `/ask_sage/${s.id}`;
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/ask_sage/${s.id}`}
+                    onClick={closeSidebar}
+                    className={`px-3 py-1.5 rounded-md text-[13px] flex items-center gap-2 truncate transition-all duration-200 border ${
+                      isActive
+                        ? "text-white font-medium bg-white/5 border-white/10"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border-transparent"
+                    }`}
+                    title={s.title}
+                  >
+                    <MessageSquare size={13} className={isActive ? "text-indigo-400" : "text-slate-500"} suppressHydrationWarning />
+                    <span className="truncate">{s.title || "Untitled Conversation"}</span>
+                  </Link>
+                );
+              })}
+              
+              <Link
+                href="/ask_sage/history"
+                onClick={closeSidebar}
+                className={`px-3 py-1.5 rounded-md text-[13px] flex items-center gap-2 transition-all duration-200 border ${
+                  pathname === '/ask_sage/history'
+                    ? "text-white font-medium bg-white/5 border-white/10"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border-transparent"
+                }`}
+              >
+                <History size={13} className={pathname === '/ask_sage/history' ? "text-indigo-400" : "text-slate-500"} suppressHydrationWarning />
+                <span className="font-semibold">View More</span>
+              </Link>
+            </div>
             
             {isLoading ? (
               <div className="flex flex-col gap-1 animate-pulse mt-1">

@@ -8,6 +8,8 @@ import remarkGfm from "remark-gfm";
 import rehypeSanitize from 'rehype-sanitize';
 import { parseSageStream } from "../lib/parser";
 import { useAppStore } from "@/lib/store";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface Message {
   id: string;
@@ -43,7 +45,7 @@ const parseMessageContent = (content: string) => {
   };
 };
 
-export default function SageHero() {
+export default function SageHero({ sessionId }: { sessionId?: string }) {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -61,23 +63,68 @@ export default function SageHero() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  const { status } = useSession();
+  const router = useRouter();
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [openThoughts, setOpenThoughts] = useState<Record<string, boolean>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = () => setShowCopyOptions(null);
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
-  
-  // Keep track of which thought accordions are open by message ID
-  const [openThoughts, setOpenThoughts] = useState<Record<string, boolean>>({});
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    let active = true;
+    if (status === "loading") return;
 
+    async function loadHistory() {
+      if (!sessionId) {
+        setMessages([]);
+        setHasStarted(false);
+        return;
+      }
+
+      setLoadingHistory(true);
+      if (status === "authenticated") {
+        const { getChatSession } = await import("./actions");
+        const res = await getChatSession(sessionId);
+        if (res.success && res.session && active) {
+          const dbMsgs = res.session.messages.map((m: any) => ({
+            id: m.id,
+            role: m.role as "user" | "sage",
+            content: m.content,
+            thoughts: m.thought || undefined,
+            isStreaming: false
+          }));
+          setMessages(dbMsgs);
+          setHasStarted(true);
+        }
+      } else {
+        // Guest mode fallback
+        const stored = localStorage.getItem(`palate_guest_messages_${sessionId}`);
+        if (stored && active) {
+          try {
+            const parsed = JSON.parse(stored);
+            setMessages(parsed);
+            setHasStarted(true);
+          } catch (e) {
+            setMessages([]);
+          }
+        }
+      }
+      setLoadingHistory(false);
+    }
+
+    loadHistory();
+
+    return () => {
+      active = false;
+    };
+  }, [sessionId, status]);
+
+  // Keep track of which thoughts are open for dynamic rendering
   const toggleThoughts = (id: string) => {
     setOpenThoughts(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -100,31 +147,22 @@ export default function SageHero() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() && !imagePreview) return;
-    if (isGenerating) return;
+  const generateSageReply = async () => {
+    if (!sessionId) return;
+    setIsGenerating(true);
 
-    if (!hasStarted) setHasStarted(true);
+    const lastUserMessage = messages[messages.length - 1];
+    const userPrompt = lastUserMessage.content;
+    const historyPayload = messages.slice(0, messages.length - 1).map(m => ({
+      role: m.role,
+      content: m.content,
+      thoughts: m.thoughts
+    }));
 
-    const userMessage: Message = { id: Date.now().toString(), role: "user", content: prompt + (imagePreview ? "\n[Image Uploaded]" : "") };
     const sageMessageId = (Date.now() + 1).toString();
     const initialSageMessage: Message = { id: sageMessageId, role: "sage", content: "", thoughts: "", isStreaming: true };
 
-    setMessages(prev => [...prev, userMessage, initialSageMessage]);
-    
-    // Capture the payload and clear state immediately
-    const payload = { 
-      prompt: prompt,
-      image: imagePreview,
-      measurementSystem: measurementSystem
-    };
-    
-    setPrompt("");
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    
-    setIsGenerating(true);
+    setMessages(prev => [...prev, initialSageMessage]);
 
     try {
       const res = await fetch("/api/sage", {
@@ -133,7 +171,11 @@ export default function SageHero() {
           "Content-Type": "application/json",
           "x-gemini-api-key": geminiApiKey
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          prompt: userPrompt,
+          measurementSystem: measurementSystem,
+          history: historyPayload
+        }),
       });
 
       if (!res.ok) {
@@ -146,6 +188,8 @@ export default function SageHero() {
       const decoder = new TextDecoder();
       let done = false;
       let fullText = "";
+      let finalThoughts = "";
+      let finalContent = "";
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -153,15 +197,32 @@ export default function SageHero() {
         if (value) {
           fullText += decoder.decode(value, { stream: true });
           
+          const parsed = parseSageStream(fullText, done);
+          finalThoughts = parsed.thoughts;
+          finalContent = parsed.content;
+
           setMessages(prev => prev.map(msg => {
             if (msg.id !== sageMessageId) return msg;
-
-            const { thoughts, content } = parseSageStream(fullText, done);
-            
-            return { ...msg, thoughts, content };
+            return { ...msg, thoughts: finalThoughts, content: finalContent };
           }));
         }
       }
+
+      // Save assistant message to Database or localStorage
+      if (status === "authenticated") {
+        const { saveChatMessage } = await import("./actions");
+        await saveChatMessage(sessionId, "sage", finalContent, finalThoughts);
+      } else {
+        // Guest mode - get fresh state
+        const storedMsgs = localStorage.getItem(`palate_guest_messages_${sessionId}`);
+        const parsedMsgs = storedMsgs ? JSON.parse(storedMsgs) : [];
+        parsedMsgs.push({ id: sageMessageId, role: "sage", content: finalContent, thoughts: finalThoughts });
+        localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(parsedMsgs));
+      }
+      
+      // Dispatch sidebar update
+      window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
+
     } catch (err: any) {
       console.error(err);
       setMessages(prev => prev.map(msg => 
@@ -174,6 +235,94 @@ export default function SageHero() {
       ));
     }
   };
+
+  // Trigger reply generation automatically when a new user message lands at the end of stack
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].role === "user" && !isGenerating && !loadingHistory) {
+      generateSageReply();
+    }
+  }, [messages, isGenerating, loadingHistory]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim() && !imagePreview) return;
+    if (isGenerating) return;
+
+    const userPrompt = prompt;
+    const currentImage = imagePreview;
+
+    setPrompt("");
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const userMessageId = Date.now().toString();
+    const userMessage: Message = { id: userMessageId, role: "user", content: userPrompt + (currentImage ? "\n[Image Uploaded]" : "") };
+
+    if (sessionId) {
+      if (status === "authenticated") {
+        const { saveChatMessage } = await import("./actions");
+        await saveChatMessage(sessionId, "user", userMessage.content);
+      }
+      
+      setMessages(prev => [...prev, userMessage]);
+      
+      if (status !== "authenticated") {
+        const updated = [...messages, userMessage];
+        localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(updated));
+      }
+      
+      window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
+    } else {
+      const title = userPrompt.slice(0, 35) + (userPrompt.length > 35 ? "..." : "");
+      
+      if (status === "authenticated") {
+        const { createChatSession, saveChatMessage } = await import("./actions");
+        const res = await createChatSession(title);
+        if (res.success && res.session) {
+          const newSessionId = res.session.id;
+          await saveChatMessage(newSessionId, "user", userMessage.content);
+          window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
+          router.push(`/ask_sage/${newSessionId}`);
+        }
+      } else {
+        const newSessionId = `guest-session-${Date.now()}`;
+        const storedSessions = localStorage.getItem("palate_guest_sessions");
+        const sessionsList = storedSessions ? JSON.parse(storedSessions) : [];
+        
+        sessionsList.unshift({
+          id: newSessionId,
+          title,
+          createdAt: new Date().toISOString()
+        });
+        
+        localStorage.setItem("palate_guest_sessions", JSON.stringify(sessionsList));
+        localStorage.setItem(`palate_guest_messages_${newSessionId}`, JSON.stringify([userMessage]));
+        
+        window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
+        router.push(`/ask_sage/${newSessionId}`);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (loadingHistory) {
+    return (
+      <div className="w-full flex-1 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="relative w-16 h-16 flex items-center justify-center">
+          <div className="absolute inset-0 w-full h-full rounded-full bg-indigo-500/10 blur-xl animate-pulse" />
+          <div className="w-12 h-12 rounded-full border-2 border-indigo-400/20 border-t-indigo-400 animate-spin" />
+        </div>
+        <p className="text-slate-400 mt-4 text-sm font-medium tracking-wide animate-pulse">
+          Retrieving Chef's Chronicles...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full flex-1 flex flex-col justify-center relative ${!hasStarted ? 'max-w-4xl mx-auto' : ''}`}>
@@ -294,26 +443,49 @@ export default function SageHero() {
                     {/* Message Bubble */}
                     <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-full group`}>
                       {msg.role === 'sage' && msg.thoughts && (
-                        <div className="w-full min-w-[300px] border border-white/5 rounded-xl bg-black/20 overflow-hidden shadow-sm">
+                        <div className="w-full min-w-[320px] border border-white/10 rounded-2xl bg-slate-950/40 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-300 hover:border-white/15">
                           <button 
                             onClick={() => toggleThoughts(msg.id)}
-                            className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                            className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-medium text-slate-300 hover:text-white transition-colors select-none focus:outline-none"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               {msg.isStreaming && !msg.content ? (
-                                <Brain size={16} className="text-indigo-400 animate-pulse" />
+                                <div className="relative flex items-center justify-center">
+                                  <div className="absolute inset-0 w-5 h-5 rounded-full bg-indigo-500/30 blur-[4px] animate-ping" />
+                                  <Brain size={16} className="text-indigo-400 relative z-10 animate-pulse" />
+                                </div>
                               ) : (
-                                <CheckCircle2 size={16} className="text-emerald-400" />
+                                <CheckCircle2 size={16} className="text-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.3)]" />
                               )}
-                              <span>{msg.isStreaming && !msg.content ? "Thinking" : "Thoughts"}</span>
+                              <span className="tracking-wide text-xs uppercase font-semibold text-slate-400">
+                                {msg.isStreaming && !msg.content ? "Synthesizing Culinary Intelligence..." : "Sage Reasoning Process"}
+                              </span>
                             </div>
-                            <span className="text-xs font-mono">{openThoughts[msg.id] ? "HIDE" : "SHOW"}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400">
+                                {openThoughts[msg.id] ? "CLOSE" : "EXPAND"}
+                              </span>
+                            </div>
                           </button>
-                          {openThoughts[msg.id] && (
-                            <div className="px-4 py-4 text-xs font-mono text-slate-500 border-t border-white/5 whitespace-pre-wrap">
-                              {msg.thoughts}
-                            </div>
-                          )}
+                          
+                          <AnimatePresence initial={false}>
+                            {openThoughts[msg.id] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-5 pb-5 pt-1 text-xs font-mono text-indigo-200/60 border-t border-white/5 whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
+                                  {msg.thoughts}
+                                  {msg.isStreaming && !msg.content && (
+                                    <span className="inline-block w-1.5 h-3 ml-1 bg-indigo-400 animate-pulse" />
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                       
