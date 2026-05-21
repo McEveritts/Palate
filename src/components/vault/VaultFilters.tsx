@@ -6,8 +6,8 @@ import { Search } from 'lucide-react';
 interface VaultFiltersProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  activeCategory: 'all' | 'mains' | 'sides';
-  setActiveCategory: (c: 'all' | 'mains' | 'sides') => void;
+  activeCategory: 'all' | 'mains' | 'sides' | 'appetizers';
+  setActiveCategory: (c: 'all' | 'mains' | 'sides' | 'appetizers') => void;
 }
 
 export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setActiveCategory }: VaultFiltersProps) {
@@ -26,7 +26,7 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
         />
       </div>
       <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 backdrop-blur-xl shrink-0">
-        {(['all', 'mains', 'sides'] as const).map((cat) => (
+        {(['all', 'mains', 'sides', 'appetizers'] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}

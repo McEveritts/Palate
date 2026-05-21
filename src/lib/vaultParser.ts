@@ -16,7 +16,7 @@ export interface VaultRecipe {
   id: string;
   slug: string;
   title: string;
-  category: 'mains' | 'sides' | 'curated-current' | 'curated-archive';
+  category: 'mains' | 'sides' | 'appetizers' | 'curated-current' | 'curated-archive';
   tags: string[];
   macros: string;
   content: string;
@@ -53,8 +53,8 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
 }
 
 async function seedRecipesForUser(userId: string) {
-  // Read mains & sides
-  const categories: ('mains' | 'sides')[] = ['mains', 'sides'];
+  // Read mains, sides & appetizers
+  const categories: ('mains' | 'sides' | 'appetizers')[] = ['mains', 'sides', 'appetizers'];
   for (const category of categories) {
     const dirPath = path.join(process.cwd(), 'vault', category);
     try {
@@ -176,12 +176,12 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
     return recipes
       .filter(r => {
         const cat = (r.frontmatter as any)?.category;
-        return cat === 'mains' || cat === 'sides';
+        return cat === 'mains' || cat === 'sides' || cat === 'appetizers';
       })
       .map(r => mapDbRecipeToVaultRecipe(r));
   }
 
-  const categories: ('mains' | 'sides')[] = ['mains', 'sides'];
+  const categories: ('mains' | 'sides' | 'appetizers')[] = ['mains', 'sides', 'appetizers'];
   const allRecipes: VaultRecipe[] = [];
 
   for (const category of categories) {

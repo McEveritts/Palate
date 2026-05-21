@@ -35,7 +35,7 @@ Delicious dinner.`);
     expect(fs.writeFileSync).not.toHaveBeenCalled();
   });
 
-  it('should detect thought tags, self-heal, rewrite file to disk, and return sanitized recipe content', () => {
+  it('should detect thought tags, sanitize in-memory, and NOT rewrite file to disk (M8 fix)', () => {
     (fs.existsSync as any).mockReturnValue(true);
     (fs.readdirSync as any).mockImplementation((dirPath: string) => {
       if (dirPath.endsWith('mains')) return ['bad-recipe.md'];
@@ -55,15 +55,7 @@ This is a delicious dinner.`);
     expect(recipes[0].frontmatter.title).toBe('Self Healed Recipe');
     expect(recipes[0].content).toBe('This is a delicious dinner.');
 
-    // Verify file on disk was overwritten synchronously (self-healed!)
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringContaining('bad-recipe.md'),
-      expect.stringContaining('title: Self Healed Recipe'),
-      'utf8'
-    );
-    // Ensure the overwritten content does NOT contain <thought> tags
-    const overwrittenContent = (fs.writeFileSync as any).mock.calls[0][1];
-    expect(overwrittenContent).not.toContain('<thought>');
-    expect(overwrittenContent).not.toContain('construct a bad recipe');
+    // M8 Fix: Verify that read operations no longer write to disk
+    expect(fs.writeFileSync).not.toHaveBeenCalled();
   });
 });

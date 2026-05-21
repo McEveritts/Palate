@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppStore } from "@/lib/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from 'rehype-sanitize';
 import { parseSageStream, parseMessageContent } from "@/lib/parser";
 
 export default function ZeroWastePage() {
@@ -355,7 +356,7 @@ export default function ZeroWastePage() {
                            {markdown}
                          </div>
                        ) : (
-                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                            {markdown}
                          </ReactMarkdown>
                        )}

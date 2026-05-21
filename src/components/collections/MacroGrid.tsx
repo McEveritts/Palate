@@ -6,6 +6,7 @@ import { VaultRecipe } from '@/lib/vaultParser';
 import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { RecipeNutritionDetails } from '../vault/RecipeNutritionDetails';
 
 interface MacroRecipe extends VaultRecipe {
@@ -117,7 +118,7 @@ export function MacroGrid({ recipes }: MacroGridProps) {
 
                 <div className="prose prose-invert prose-indigo max-w-none relative z-10 mt-8">
                   <div className="bg-black/30 p-6 rounded-xl border border-white/5">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                       {selectedRecipe.content}
                     </ReactMarkdown>
                   </div>

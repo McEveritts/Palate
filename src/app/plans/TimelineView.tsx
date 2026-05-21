@@ -6,6 +6,7 @@ import { VaultRecipe } from '@/lib/vaultParser';
 import { X, Save, Eye, Code } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface TimelineViewProps {
   initialRecipes: VaultRecipe[];
@@ -204,7 +205,7 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
                       </pre>
                     ) : (
                       <div className="prose prose-invert prose-lg prose-indigo max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                           {selectedRecipe.content}
                         </ReactMarkdown>
                       </div>

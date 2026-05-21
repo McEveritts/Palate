@@ -92,6 +92,8 @@ describe('actions - saveRecipeToVault', () => {
   it('should save a main recipe and cleanly strip thought tags, preambles, and code block formatting', async () => {
     (fs.mkdir as any).mockResolvedValue(undefined);
     (fs.writeFile as any).mockResolvedValue(undefined);
+    // L6 fix: mock access to reject so overwrite prevention uses clean filename
+    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
 
     const input = `<thought>\nChoosing ingredients for perfect main.\n</thought>\n\`\`\`markdown\n---\ntitle: Lemon Garlic Chicken\ntags: [main, healthy]\n---\nCook chicken...\n\`\`\``;
 
@@ -114,6 +116,8 @@ describe('actions - saveRecipeToVault', () => {
   it('should save a side recipe when tags contain "side"', async () => {
     (fs.mkdir as any).mockResolvedValue(undefined);
     (fs.writeFile as any).mockResolvedValue(undefined);
+    // L6 fix: mock access to reject so overwrite prevention uses clean filename
+    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
 
     const input = `---\ntitle: Honey Carrots\ntags: [side]\n---\nCook carrots...`;
 

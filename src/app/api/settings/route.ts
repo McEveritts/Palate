@@ -32,9 +32,9 @@ export async function GET(req: Request) {
       hasCalendarScope: isCalendarScopeGranted,
       googleCalendars: calendars,
     });
-  } catch (error: any) {
-    console.error("GET /api/settings error:", error);
-    return NextResponse.json({ error: error.message || "Failed to load settings" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[GET /api/settings error]:", error);
+    return NextResponse.json({ error: "An unexpected error occurred while loading settings." }, { status: 500 });
   }
 }
 
@@ -96,9 +96,9 @@ export async function POST(req: Request) {
       googleCalendarSyncEnabled: config.googleCalendarSyncEnabled,
       googleCalendarId: config.googleCalendarId,
     });
-  } catch (error: any) {
-    console.error("POST /api/settings error:", error);
-    return NextResponse.json({ error: error.message || "Failed to save settings" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[POST /api/settings error]:", error);
+    return NextResponse.json({ error: "An unexpected error occurred while saving settings." }, { status: 500 });
   }
 }
 

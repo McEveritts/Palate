@@ -19,6 +19,22 @@ vi.mock('fs/promises', () => ({
   }
 }));
 
+vi.mock('@google/generative-ai', () => {
+  return {
+    GoogleGenerativeAI: class {
+      getGenerativeModel() {
+        return {
+          generateContent: vi.fn().mockResolvedValue({
+            response: {
+              text: () => '{"calories": 57, "protein": 0.74, "carbs": 14.49, "fat": 0.33}'
+            }
+          })
+        };
+      }
+    }
+  };
+});
+
 // Mock global fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -86,6 +102,37 @@ describe('GET /api/nutrition', () => {
     expect(json.success).toBe(true);
     expect(json.source).toBe('usda_api');
     expect(json.data.ingredient_matched).toBe('Raw Blueberries');
+    expect(json.data.calories).toBe('57');
+    expect(json.data.protein).toBe('0.74');
+    expect(json.data.carbs).toBe('14.49');
+    expect(json.data.fat).toBe('0.33');
+
+    expect(fs.writeFile).toHaveBeenCalled();
+    expect(globalMacroCache.invalidate).toHaveBeenCalled();
+  });
+
+  it('should fallback to Gemma AI when USDA API fails or rate-limits', async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    vi.mocked(globalMacroCache.get).mockReturnValue([]);
+    
+    // Simulate USDA failing with 429
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429
+    });
+
+    // Mock fs write
+    vi.mocked(fs.access).mockRejectedValueOnce(new Error('not exists'));
+    vi.mocked(fs.writeFile).mockResolvedValueOnce();
+
+    const req = new Request('http://localhost/api/nutrition?ingredient=blueberries');
+    const res = await GET(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.source).toBe('ai_fallback');
+    expect(json.data.ingredient_matched).toBe('blueberries (AI Estimated)');
     expect(json.data.calories).toBe('57');
     expect(json.data.protein).toBe('0.74');
     expect(json.data.carbs).toBe('14.49');

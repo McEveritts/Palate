@@ -5,6 +5,7 @@ import { Sparkles, Brain, CheckCircle2, User, Copy, Check, Save, FileText, Eye, 
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from 'rehype-sanitize';
 import { parseSageStream } from "../lib/parser";
 import { useAppStore } from "@/lib/store";
 
@@ -364,7 +365,7 @@ export default function SageHero() {
                                     </div>
                                   )}
                                   <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/10 prose-headings:text-indigo-50 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-indigo-100">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                                       {markdown}
                                     </ReactMarkdown>
                                   </div>

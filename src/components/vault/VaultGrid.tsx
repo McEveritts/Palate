@@ -7,10 +7,59 @@ import { VaultRecipe } from '@/lib/vaultParser';
 import { X, Save, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 import { RecipeNutritionDetails } from './RecipeNutritionDetails';
 import { VaultCockpit } from './VaultCockpit';
 import { deleteRecipeFromVault } from '@/app/actions';
+import { extractMacrosFromString } from '@/lib/parser';
+
+function getProceduralGradient(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const schemes = [
+    {
+      glow: 'bg-indigo-500/20',
+      borderHover: 'group-hover:border-indigo-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(99,102,241,0.25)]',
+      tagBg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.15)]',
+    },
+    {
+      glow: 'bg-fuchsia-500/20',
+      borderHover: 'group-hover:border-fuchsia-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(217,70,239,0.25)]',
+      tagBg: 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-300 shadow-[0_0_10px_rgba(217,70,239,0.15)]',
+    },
+    {
+      glow: 'bg-emerald-500/20',
+      borderHover: 'group-hover:border-emerald-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(16,185,129,0.25)]',
+      tagBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]',
+    },
+    {
+      glow: 'bg-amber-500/20',
+      borderHover: 'group-hover:border-amber-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(245,158,11,0.25)]',
+      tagBg: 'bg-amber-500/10 border-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]',
+    },
+    {
+      glow: 'bg-cyan-500/20',
+      borderHover: 'group-hover:border-cyan-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(6,182,212,0.25)]',
+      tagBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.15)]',
+    },
+    {
+      glow: 'bg-rose-500/20',
+      borderHover: 'group-hover:border-rose-500/30',
+      shadowHover: 'group-hover:shadow-[0_0_30px_rgba(244,63,94,0.25)]',
+      tagBg: 'bg-rose-500/10 border-rose-500/20 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.15)]',
+    }
+  ];
+  const idx = Math.abs(hash) % schemes.length;
+  return schemes[idx];
+}
 
 interface VaultGridProps {
   initialRecipes: VaultRecipe[];
@@ -22,7 +71,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides' | 'appetizers'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -117,66 +166,109 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       <VaultCockpit recipes={recipes} />
 
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6"
         animate={{ opacity: selectedId ? 0.3 : 1, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
         transition={{ duration: 0.3 }}
       >
         <AnimatePresence>
-          {filteredRecipes.map((recipe) => (
-            <motion.div
-              layoutId={`card-${recipe.id}`}
-              key={recipe.id}
-              onClick={() => setSelectedId(recipe.id)}
-              onMouseLeave={() => {
-                if (confirmDeleteId === recipe.id) {
-                  setConfirmDeleteId(null);
-                }
-              }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-6 transition-all duration-300 hover:bg-slate-900/20 hover:shadow-[0_0_30px_rgba(99,102,241,0.2),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:backdrop-saturate-[2]"
-            >
-              {/* Abstract Background Element */}
-              <div className="absolute -top-20 -right-20 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl group-hover:bg-fuchsia-500/40 transition-all duration-500"></div>
-              
-              <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 pr-12 z-10 relative">
-                {recipe.title}
-              </motion.h3>
+          {filteredRecipes.map((recipe) => {
+            const scheme = getProceduralGradient(recipe.title);
+            const { protein, carbs, fat, calories } = extractMacrosFromString(recipe.macros);
+            
+            return (
+              <motion.div
+                layoutId={`card-${recipe.id}`}
+                key={recipe.id}
+                onClick={() => setSelectedId(recipe.id)}
+                onMouseLeave={() => {
+                  if (confirmDeleteId === recipe.id) {
+                    setConfirmDeleteId(null);
+                  }
+                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={`cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-6 transition-all duration-300 hover:bg-slate-900/20 hover:backdrop-saturate-[2] break-inside-avoid inline-block w-full ${scheme.borderHover} ${scheme.shadowHover}`}
+              >
+                {/* Abstract Background Element */}
+                <div className={`absolute -top-20 -right-20 w-40 h-40 ${scheme.glow} rounded-full blur-3xl group-hover:scale-125 transition-transform duration-500 opacity-60`}></div>
                 
-              <div className="grid grid-cols-1 grid-rows-1 mb-6 z-10">
-              </div>
+                <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 pr-12 z-10 relative">
+                  {recipe.title}
+                </motion.h3>
 
-              {/* Secure Hover-Triggered Glassmorphic Trashcan Icon with confirmation */}
-              <div className="absolute bottom-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (confirmDeleteId === recipe.id) {
-                      handleDelete(recipe.id, e);
-                    } else {
-                      setConfirmDeleteId(recipe.id);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onMouseUp={(e) => e.stopPropagation()}
-                  className={`flex items-center gap-1.5 p-2.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
-                    confirmDeleteId === recipe.id
-                      ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
-                      : 'bg-white/5 border-white/10 hover:bg-rose-500/20 hover:border-rose-500/35 text-slate-400 hover:text-rose-200'
-                  }`}
-                  disabled={isDeleting === recipe.id}
-                  title="Delete recipe"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {confirmDeleteId === recipe.id && (
-                    <span className="text-xs font-semibold select-none pr-1">Confirm?</span>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          ))}
+                {/* Glowing category tags */}
+                {recipe.tags && recipe.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4 z-10 relative">
+                    {recipe.tags.map((tag) => (
+                      <span key={tag} className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${scheme.tagBg}`}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                  
+                {/* Hover Macro Dashboard */}
+                {(calories > 0 || protein > 0 || carbs > 0 || fat > 0) && (
+                  <div className="mt-4 pt-4 border-t border-white/5 opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 overflow-hidden transition-all duration-300 z-10 relative flex justify-between items-center text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Calories</span>
+                      <span className="text-white font-bold">{calories} kcal</span>
+                    </div>
+                    <div className="flex gap-3 font-mono">
+                      {protein > 0 && (
+                        <div className="flex flex-col items-center">
+                          <span className="text-[9px] text-emerald-400 font-bold uppercase">P</span>
+                          <span className="text-emerald-300 font-semibold">{protein}g</span>
+                        </div>
+                      )}
+                      {carbs > 0 && (
+                        <div className="flex flex-col items-center">
+                          <span className="text-[9px] text-sky-400 font-bold uppercase">C</span>
+                          <span className="text-sky-300 font-semibold">{carbs}g</span>
+                        </div>
+                      )}
+                      {fat > 0 && (
+                        <div className="flex flex-col items-center">
+                          <span className="text-[9px] text-amber-400 font-bold uppercase">F</span>
+                          <span className="text-amber-300 font-semibold">{fat}g</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Secure Hover-Triggered Glassmorphic Trashcan Icon with confirmation */}
+                <div className="absolute bottom-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (confirmDeleteId === recipe.id) {
+                        handleDelete(recipe.id, e);
+                      } else {
+                        setConfirmDeleteId(recipe.id);
+                      }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    className={`flex items-center gap-1.5 p-2.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
+                      confirmDeleteId === recipe.id
+                        ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
+                        : 'bg-white/5 border-white/10 hover:bg-rose-500/20 hover:border-rose-500/35 text-slate-400 hover:text-rose-200'
+                    }`}
+                    disabled={isDeleting === recipe.id}
+                    title="Delete recipe"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {confirmDeleteId === recipe.id && (
+                      <span className="text-xs font-semibold select-none pr-1">Confirm?</span>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </motion.div>
 
@@ -185,8 +277,12 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
         {selectedId && selectedRecipe && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             {/* Click-away backdrop */}
-            <div 
-              className="absolute inset-0 pointer-events-auto" 
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 pointer-events-auto bg-slate-950/60 backdrop-blur-md" 
               onClick={() => {
                 setSelectedId(null);
                 setConfirmDeleteId(null);
@@ -267,7 +363,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
 
                 <div className="prose prose-invert prose-indigo max-w-none relative z-10 mt-8">
                   <div className="bg-black/30 p-6 rounded-xl border border-white/5">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                       {selectedRecipe.content}
                     </ReactMarkdown>
                   </div>

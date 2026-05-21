@@ -7,6 +7,14 @@ if (!process.env.NEXTAUTH_SECRET) {
   console.warn("Warning: NEXTAUTH_SECRET is not defined. Authentication might fail in production.");
 }
 
+// L2 Fix: Fail-secure on missing OAuth credentials
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error("FATAL: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set in the environment.");
+  }
+  console.warn("Warning: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not defined. OAuth login will fail.");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -30,7 +38,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         // Ensure default UserConfig exists for this user
@@ -50,6 +58,28 @@ export const authOptions: NextAuthOptions = {
           console.error("Failed to create default UserConfig:", error);
         }
       }
+      
+      // Catch and persist refreshed Google OAuth tokens
+      if (account && account.provider === 'google') {
+        try {
+          await prisma.account.updateMany({
+            where: {
+              provider: 'google',
+              providerAccountId: account.providerAccountId,
+            },
+            data: {
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              scope: account.scope,
+              // Only overwrite refresh_token if Google actually provided a new one
+              ...(account.refresh_token && { refresh_token: account.refresh_token }),
+            },
+          });
+        } catch (error) {
+          console.error("[NextAuth] Failed to sync Google OAuth tokens to db:", error);
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {

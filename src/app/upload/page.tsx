@@ -5,6 +5,7 @@ import { Sparkles, Brain, Check, RefreshCcw, Save, ImagePlus, X } from "lucide-r
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from 'rehype-sanitize';
 import { saveParsedRecipe } from "../actions";
 
 import { parseMessageContent } from "../../lib/parser";
@@ -294,7 +295,7 @@ export default function UploadPage() {
                       )}
                       
                       <div className="prose prose-invert prose-lg prose-indigo max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                           {markdown}
                         </ReactMarkdown>
                       </div>

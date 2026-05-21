@@ -34,7 +34,7 @@ export interface Recipe {
 
 export function getAllRecipes(): Recipe[] {
   const recipes: Recipe[] = [];
-  const categories = ['mains', 'sides']; // Only pulling from recipe directories
+  const categories = ['mains', 'sides', 'appetizers']; // Only pulling from recipe directories
 
   categories.forEach(category => {
     const categoryPath = path.join(VAULT_DIR, category);
@@ -50,8 +50,8 @@ export function getAllRecipes(): Recipe[] {
       if (/<thought>/i.test(fileContent)) {
         const { data: sanitizedData, content: sanitizedBody, fileContent: sanitizedFileContent } = sanitizeRecipeContent(fileContent);
         
-        // Synchronously overwrite the file on disk (self-heal!)
-        fs.writeFileSync(filePath, sanitizedFileContent, 'utf8');
+        // M8 Fix: Removed self-healing write (read operations must not have write side-effects)
+        // The sanitized content is used in-memory only. Files can be cleaned via a separate action.
 
         recipes.push({
           slug: file.replace(/\.md$/, ''),

@@ -20,8 +20,12 @@ vi.mock('@/lib/db', () => ({
     scheduledMeal: {
       create: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn().mockResolvedValue(null),
       update: vi.fn(),
       delete: vi.fn(),
+    },
+    userConfig: {
+      findUnique: vi.fn().mockResolvedValue(null),
     },
   },
 }));
@@ -37,6 +41,30 @@ vi.mock('fs/promises', () => ({
     mkdir: vi.fn(),
     access: vi.fn(),
     unlink: vi.fn(),
+  },
+}));
+
+// M4 fix: readGuestMeals now calls existsSync before readFile
+const { mockExistsSync } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(() => false),
+}));
+vi.mock('fs', () => ({
+  default: { existsSync: mockExistsSync },
+  existsSync: mockExistsSync,
+}));
+
+// Mock Google Calendar sync functions used by actions.ts
+vi.mock('@/lib/googleCalendar', () => ({
+  syncMealToGoogle: vi.fn().mockResolvedValue(undefined),
+  deleteMealFromGoogle: vi.fn().mockResolvedValue(undefined),
+  hasCalendarScope: vi.fn().mockResolvedValue(false),
+  listUserCalendars: vi.fn().mockResolvedValue([]),
+}));
+
+// M4 fix: mock proper-lockfile so guest writes don't try to acquire real file locks
+vi.mock('proper-lockfile', () => ({
+  default: {
+    lock: vi.fn().mockResolvedValue(vi.fn().mockResolvedValue(undefined)),
   },
 }));
 
@@ -209,6 +237,7 @@ describe('Calendar Server Actions - Guest Mode Fallback', () => {
   });
 
   it('should save scheduled meal to local JSON store in guest mode', async () => {
+    mockExistsSync.mockReturnValue(false); // M4: no file yet
     (fs.readFile as any).mockResolvedValue('[]'); // initially empty array
     (fs.writeFile as any).mockResolvedValue(undefined);
 
@@ -225,6 +254,7 @@ describe('Calendar Server Actions - Guest Mode Fallback', () => {
     const guestMeals = [
       { id: 'guest-m1', userId: 'guest', recipeId: 'classic-carbonara', date: '2026-05-21T00:00:00.000Z', mealType: 'Dinner', plannedYield: 1 }
     ];
+    mockExistsSync.mockReturnValue(true); // M4: file exists
     (fs.readFile as any).mockResolvedValue(JSON.stringify(guestMeals));
 
     const res = await getScheduledMeals('2026-05-20', '2026-05-22');
@@ -243,6 +273,8 @@ describe('Calendar Server Actions - Guest Mode Fallback', () => {
     const guestMeals = [
       { id: 'guest-m1', userId: 'guest', recipeId: 'classic-carbonara', date: '2026-05-21T00:00:00.000Z', mealType: 'Dinner', plannedYield: 1 }
     ];
+    // M4: true for readGuestMeals (read), false for writeGuestMeals (skip lock)
+    mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(false);
     (fs.readFile as any).mockResolvedValue(JSON.stringify(guestMeals));
     (fs.writeFile as any).mockResolvedValue(undefined);
 
@@ -258,6 +290,8 @@ describe('Calendar Server Actions - Guest Mode Fallback', () => {
     const guestMeals = [
       { id: 'guest-m1', userId: 'guest', recipeId: 'classic-carbonara', date: '2026-05-21T00:00:00.000Z', mealType: 'Dinner', plannedYield: 1 }
     ];
+    // M4: true for readGuestMeals (read), false for writeGuestMeals (skip lock)
+    mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(false);
     (fs.readFile as any).mockResolvedValue(JSON.stringify(guestMeals));
     (fs.writeFile as any).mockResolvedValue(undefined);
 

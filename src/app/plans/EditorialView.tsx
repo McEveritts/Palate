@@ -6,6 +6,7 @@ import { VaultRecipe } from '@/lib/vaultParser';
 import { X, Save, Eye, Code } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface EditorialViewProps {
   initialRecipes: VaultRecipe[];
@@ -87,7 +88,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
             {/* Right Column: Editorial Excerpt */}
             <div className="hidden lg:flex flex-col justify-end h-full">
               <div className="prose prose-invert prose-indigo prose-lg max-w-none text-slate-300 line-clamp-5 xl:line-clamp-6 opacity-90 transition-opacity duration-500 group-hover:opacity-100">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                   {heroRecipe.content.split('\n\n').filter(p => p.trim().length > 30 && !p.match(/^[IVX]+\./) && !p.trim().startsWith('#')).slice(0, 2).join('\n\n')}
                 </ReactMarkdown>
               </div>
@@ -118,7 +119,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
               </motion.h3>
               
               <div className="text-slate-400 text-sm line-clamp-3 mb-6 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                   {recipe.content.split('\n\n').filter(p => p.trim().length > 30 && !p.match(/^[IVX]+\./) && !p.trim().startsWith('#')).slice(0, 1).join('\n\n')}
                 </ReactMarkdown>
               </div>
@@ -205,7 +206,7 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
                       </pre>
                     ) : (
                       <div className="prose prose-invert prose-lg prose-indigo max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                           {selectedRecipe.content}
                         </ReactMarkdown>
                       </div>

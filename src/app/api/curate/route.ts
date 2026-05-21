@@ -33,12 +33,17 @@ export async function POST(req: Request) {
       systemInstruction: `You are Sage, a MasterChef-level digital sous-chef and culinary educator. 
 Generate exactly 3 unique, highly appealing recipes that share a cohesive thematic thesis for this week's curation.
 
+CRITICAL REQUIREMENTS:
+1. You MUST generate exactly THREE distinct recipes.
+2. ONE recipe must be the Main dish, and its YAML frontmatter MUST contain the tag "main" in the tags list.
+3. TWO recipes must be Side dishes, and their YAML frontmatter MUST contain the tag "side" in the tags list.
+4. Separate each of the 3 recipes with exactly this string on its own line: |||RECIPE_SPLIT|||
+
 ACCESSIBILITY MANDATE:
 While your tone and presentation must be MasterChef-level, the actual techniques and ingredients MUST be accessible to an ambitious home cook. Do not require commercial kitchen equipment or impossible-to-source ingredients. The magic should come from elevated technique applied to accessible items (e.g., using a cast-iron skillet instead of a wok).
 
 FORMATTING REQUIREMENTS (ALL RECIPES):
 You MUST format your output EXACTLY matching this structure. Use the exact emojis and headers shown below.
-Separate each recipe with the exact delimiter: "|||RECIPE_SPLIT|||"
 Do not output any markdown code blocks wrapping the entire response.
 
 STRUCTURE TEMPLATE:
@@ -51,8 +56,8 @@ macros: "Calories: [X] | Protein: [X]g | Carbs: [X]g | Fat: [X]g"
 # [Relevant Emoji] [Recipe Name] [Relevant Emoji]
 
 [EDITORIAL INTRODUCTION]
-- For RECIPE 1 (The Weekly Hero): Write a 2-3 paragraph Master's-level editorial introduction. Start 'in media res' (in the middle of the action). Present a cultural/historical thesis. NO generic adjectives like 'delicious'.
-- For RECIPES 2 and 3 (Sub-grid): Write a sophisticated 1-paragraph introduction.
+- For RECIPE 1 (The Weekly Hero - Main): Write a 2-3 paragraph Master's-level editorial introduction. Start 'in media res' (in the middle of the action). Present a cultural/historical thesis. NO generic adjectives like 'delicious'.
+- For RECIPES 2 and 3 (Elevated Sides): Write a sophisticated 1-paragraph introduction.
 
 ### 🛒 Ingredients
 *   **[Category] (e.g., Protein):** [Amount] [Ingredient], [Preparation] [Emoji]
@@ -82,19 +87,41 @@ II. **[Step Title]**
     const text = result.response.text();
 
     // 3. Save the newly generated recipes
-    const recipes = text.split("|||RECIPE_SPLIT|||");
+    let recipes = text.split("|||RECIPE_SPLIT|||").map(r => r.trim()).filter(Boolean);
+
+    // Fallback: If the LLM hallucinated the token or bunched them together
+    if (recipes.length !== 3) {
+      console.warn(`[Curation Fallback]: Expected 3 recipes, got ${recipes.length}. Using regex fallback.`);
+      
+      // Safely split based on standard markdown YAML frontmatter initiation (`---` followed by `title:`)
+      recipes = text
+        .split(/(?=^---\r?\ntitle:)/im)
+        .map(r => r.trim())
+        .filter(Boolean);
+    }
+
+    // Hard cap to exactly 3 recipes to prevent downstream mapping errors in the UI
+    if (recipes.length > 3) recipes = recipes.slice(0, 3);
+    if (recipes.length < 3) throw new Error("Curation failed to generate distinct recipes.");
+
     let savedCount = 0;
 
     for (const rawRecipe of recipes) {
       let cleanContent = rawRecipe.trim();
       if (!cleanContent) continue;
+      // H5 Fix: Prevent disk exhaustion from oversized AI output
+      if (cleanContent.length > 50_000) {
+        console.warn(`Curated recipe output exceeds 50KB limit (${cleanContent.length} chars). Skipping.`);
+        continue;
+      }
       
       if (cleanContent.startsWith("\`\`\`yaml")) {
-        cleanContent = cleanContent.replace(/^```yaml/, "---");
-        cleanContent = cleanContent.replace(/```/, "---");
+        cleanContent = cleanContent.replace(/^```yaml\n?/, "---\n");
+        // L7 Fix: Only replace the NEXT standalone ``` line (closing fence), not any ``` in content
+        cleanContent = cleanContent.replace(/\n```\s*\n/, "\n---\n");
       } else if (cleanContent.startsWith("\`\`\`markdown")) {
-        cleanContent = cleanContent.replace(/^```markdown/, "");
-        cleanContent = cleanContent.replace(/```$/, "");
+        cleanContent = cleanContent.replace(/^```markdown\n?/, "");
+        cleanContent = cleanContent.replace(/\n?```\s*$/, "");
       }
 
       const titleMatch = cleanContent.match(/title:\s*["']?([^"'\n]+)["']?/i);
@@ -110,7 +137,7 @@ II. **[Step Title]**
     return NextResponse.json({ success: true, message: `Archived old recipes and generated ${savedCount} new curated recipes.` });
 
   } catch (error: unknown) {
-    console.error("Curate API Error:", error);
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    console.error("[Curate API Error]:", error);
+    return NextResponse.json({ success: false, error: "An unexpected error occurred during curation." }, { status: 500 });
   }
 }

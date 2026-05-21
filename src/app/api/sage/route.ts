@@ -68,9 +68,9 @@ export async function POST(req: Request) {
       },
     });
 
-  } catch (error: any) {
-    console.error("Sage AI Error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Failed to communicate with Sage." }), { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Sage API Error]:", error);
+    return new Response(JSON.stringify({ error: "An unexpected error occurred while communicating with Sage." }), { status: 500 });
   }
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import fs from "fs/promises";
+import { existsSync } from 'fs';
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { sanitizeRecipeContent } from "../lib/parser";
@@ -11,6 +12,7 @@ import matter from "gray-matter";
 import { getAllRecipes } from "../lib/vault";
 import { z } from 'zod/v4';
 import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
+import lockfile from 'proper-lockfile';
 
 async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
@@ -85,14 +87,25 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     // 3. Slugify
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
-    // 4. Determine category based on tags (default to mains)
-    const tags = Array.isArray(data.tags)
-      ? data.tags
-      : typeof data.tags === 'string'
-        ? data.tags.split(',').map((t: string) => t.trim())
-        : [];
-    const isSide = tags.some((t: string) => t.toLowerCase().includes('side')) || sanitizedFileContent.toLowerCase().includes("side");
-    const category = isSide ? "sides" : "mains";
+    // 4. Determine category dynamically
+    let category = "mains"; // default fallback
+    const contentLower = sanitizedFileContent.toLowerCase();
+
+    if (
+      contentLower.includes("tag: appetizer") || 
+      contentLower.includes("tags: [appetizer") || 
+      contentLower.includes("category: appetizers") ||
+      /\bappetizers?\b/.test(contentLower)
+    ) {
+      category = "appetizers";
+    } else if (
+      contentLower.includes("tag: side") || 
+      contentLower.includes("tags: [side") || 
+      contentLower.includes("category: sides") ||
+      /\bsides?\b/.test(contentLower)
+    ) {
+      category = "sides";
+    }
 
     if (userId) {
       const { data: frontmatterData, content: bodyContent } = matter(sanitizedFileContent);
@@ -134,7 +147,15 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     const vaultPath = path.join(process.cwd(), "vault", category);
     await fs.mkdir(vaultPath, { recursive: true });
     
-    const filePath = path.join(vaultPath, filename);
+    // L6 Fix: Prevent silent overwrite of existing recipes
+    let filePath = path.join(vaultPath, filename);
+    try {
+      await fs.access(filePath);
+      // File exists, append timestamp to prevent overwrite
+      filePath = path.join(vaultPath, `${slug}-${Date.now()}.${format}`);
+    } catch {
+      // File does not exist, safe to write
+    }
     await fs.writeFile(filePath, sanitizedFileContent, "utf-8");
     
     revalidatePath('/vault');
@@ -145,10 +166,10 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
   }
 }
 
-export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides', title: string) {
+export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides' | 'appetizers', title: string) {
   try {
-    if (category !== 'mains' && category !== 'sides') {
-      throw new Error('Invalid category. Must be mains or sides.');
+    if (category !== 'mains' && category !== 'sides' && category !== 'appetizers') {
+      throw new Error('Invalid category. Must be mains, sides or appetizers.');
     }
 
     validateContentLength(markdown);
@@ -247,8 +268,22 @@ export async function saveCuratedToVault(id: string) {
           ? frontmatter.tags.split(',').map((t: string) => t.trim())
           : [];
       
-      const isSide = tags.some((t: string) => t.toLowerCase().includes('side')) || fileContentLower.includes("side");
-      const targetCategory = isSide ? "sides" : "mains";
+      let targetCategory = "mains";
+      if (
+        fileContentLower.includes("tag: appetizer") || 
+        fileContentLower.includes("tags: [appetizer") || 
+        fileContentLower.includes("category: appetizers") ||
+        /\bappetizers?\b/.test(fileContentLower)
+      ) {
+        targetCategory = "appetizers";
+      } else if (
+        fileContentLower.includes("tag: side") || 
+        fileContentLower.includes("tags: [side") || 
+        fileContentLower.includes("category: sides") ||
+        /\bsides?\b/.test(fileContentLower)
+      ) {
+        targetCategory = "sides";
+      }
 
       await prisma.recipe.update({
         where: { id: recipe.id },
@@ -278,8 +313,23 @@ export async function saveCuratedToVault(id: string) {
     const fileContent = await fs.readFile(curatedPath, 'utf-8');
     
     // Determine category based on tags
-    const isSide = fileContent.toLowerCase().includes("tags:") && fileContent.toLowerCase().includes("side");
-    const targetCategory = isSide ? "sides" : "mains";
+    let targetCategory = "mains";
+    const fileContentLower = fileContent.toLowerCase();
+    if (
+      fileContentLower.includes("tag: appetizer") || 
+      fileContentLower.includes("tags: [appetizer") || 
+      fileContentLower.includes("category: appetizers") ||
+      /\bappetizers?\b/.test(fileContentLower)
+    ) {
+      targetCategory = "appetizers";
+    } else if (
+      fileContentLower.includes("tag: side") || 
+      fileContentLower.includes("tags: [side") || 
+      fileContentLower.includes("category: sides") ||
+      /\bsides?\b/.test(fileContentLower)
+    ) {
+      targetCategory = "sides";
+    }
     
     const safeFilename = path.basename(curatedPath);
     const targetBaseDir = path.join(process.cwd(), 'vault', targetCategory);
@@ -325,6 +375,8 @@ export async function deleteRecipeFromVault(id: string) {
         slug = id.substring('mains-'.length);
       } else if (id.startsWith('sides-')) {
         slug = id.substring('sides-'.length);
+      } else if (id.startsWith('appetizers-')) {
+        slug = id.substring('appetizers-'.length);
       } else {
         throw new Error(`Invalid recipe ID format: ${id}`);
       }
@@ -361,6 +413,9 @@ export async function deleteRecipeFromVault(id: string) {
     } else if (id.startsWith('sides-')) {
       category = 'sides';
       slug = id.substring('sides-'.length);
+    } else if (id.startsWith('appetizers-')) {
+      category = 'appetizers';
+      slug = id.substring('appetizers-'.length);
     } else {
       throw new Error(`Invalid recipe ID format: ${id}`);
     }
@@ -385,6 +440,8 @@ const GUEST_MEALS_FILE = path.join(process.cwd(), "vault", "scheduled_meals.json
 
 async function readGuestMeals(): Promise<any[]> {
   try {
+    await fs.mkdir(path.dirname(GUEST_MEALS_FILE), { recursive: true });
+    if (!existsSync(GUEST_MEALS_FILE)) return [];
     const data = await fs.readFile(GUEST_MEALS_FILE, "utf-8");
     return JSON.parse(data);
   } catch (error) {
@@ -394,7 +451,17 @@ async function readGuestMeals(): Promise<any[]> {
 
 async function writeGuestMeals(meals: any[]): Promise<void> {
   await fs.mkdir(path.dirname(GUEST_MEALS_FILE), { recursive: true });
-  await fs.writeFile(GUEST_MEALS_FILE, JSON.stringify(meals, null, 2), "utf-8");
+  // M4 Fix: File locking to prevent race conditions
+  if (!existsSync(GUEST_MEALS_FILE)) {
+    await fs.writeFile(GUEST_MEALS_FILE, JSON.stringify(meals, null, 2), "utf-8");
+    return;
+  }
+  const release = await lockfile.lock(GUEST_MEALS_FILE, { retries: { retries: 5, minTimeout: 100 } });
+  try {
+    await fs.writeFile(GUEST_MEALS_FILE, JSON.stringify(meals, null, 2), "utf-8");
+  } finally {
+    await release();
+  }
 }
 
 export async function scheduleMeal(

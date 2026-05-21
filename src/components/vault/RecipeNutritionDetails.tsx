@@ -61,11 +61,18 @@ export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }:
 
   const hasNoMacros = !macros || (macros.calories === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0);
 
+  // L5 Fix: Use a ref to track whether auto-fetch has been attempted,
+  // preventing infinite re-renders from state dependencies.
+  const autoFetchAttempted = React.useRef(false);
   React.useEffect(() => {
-    if (hasNoMacros && !isLoading && !error) {
+    autoFetchAttempted.current = false;
+  }, [recipeId, recipeTitle]);
+  React.useEffect(() => {
+    if (!autoFetchAttempted.current && hasNoMacros && !isLoading && !error) {
+      autoFetchAttempted.current = true;
       fetchUSDANutrition();
     }
-  }, [recipeId, recipeTitle]);
+  }, [recipeId, recipeTitle, hasNoMacros, isLoading, error]);
 
   return (
     <div className="w-full bg-slate-950/40 border border-white/5 rounded-2xl p-6 relative overflow-hidden backdrop-blur-xl">
