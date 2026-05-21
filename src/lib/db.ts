@@ -21,15 +21,14 @@ function getPrismaClient(): PrismaClient {
   if (dbUrl && dbUrl.startsWith('prisma+postgres')) {
     // Local dev: Prisma Accelerate / Prisma Postgres protocol
     prismaOptions.accelerateUrl = dbUrl;
-  } else if (dbUrl) {
-    // Production: Direct PostgreSQL connection (e.g., postgresql://user@host:port/db)
-    prismaOptions.datasourceUrl = dbUrl;
-  } else {
+  } else if (!dbUrl) {
     // If DATABASE_URL is missing, we use a dummy accelerateUrl format to satisfy
     // Prisma 7 constructor validation during Next.js static build pre-rendering.
     // No database queries are executed in Guest Mode.
     prismaOptions.accelerateUrl = 'prisma+postgres://localhost:51213/?api_key=dummy';
   }
+  // For direct PostgreSQL URLs (postgresql://...), Prisma reads from the
+  // schema datasource block via env("DATABASE_URL") — no constructor option needed.
 
   _prismaInstance = new PrismaClient(prismaOptions);
   
