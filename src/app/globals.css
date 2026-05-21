@@ -19,9 +19,24 @@
   
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   
+  --breakpoint-xs: 380px;
   --breakpoint-3xl: 1920px;
   --breakpoint-4xl: 2560px;
+  --breakpoint-5xl: 3840px;
 }
+
+@layer base {
+  html {
+    /* 
+      Fluid typography engine:
+      Min size: 14px (on 320px viewports)
+      Scale factor: 1.2vw + 10px
+      Max size: 24px (on 4K 110-inch TVs)
+    */
+    font-size: clamp(14px, 1.2vw + 10px, 24px);
+  }
+}
+
 
 :root {
   color-scheme: dark;

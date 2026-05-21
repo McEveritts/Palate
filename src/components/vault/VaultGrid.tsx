@@ -163,7 +163,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
 
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative px-4 md:px-8 3xl:px-20 5xl:px-28 max-w-[2400px] mx-auto">
       <VaultFilters 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -174,7 +174,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       <VaultCockpit recipes={recipes} />
 
       <motion.div 
-        className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6"
+        className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 3xl:columns-5 4xl:columns-6 gap-6 space-y-6"
         animate={{ opacity: selectedId ? 0.3 : 1, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
         transition={{ duration: 0.3 }}
       >

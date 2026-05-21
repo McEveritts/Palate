@@ -48,6 +48,15 @@ const parseMessageContent = (content: string) => {
 export default function SageHero({ sessionId }: { sessionId?: string }) {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isMicroScreen, setIsMicroScreen] = useState(false);
+
+  // Hydration-safe listener for dynamic viewport adjustments
+  useEffect(() => {
+    const handleResize = () => setIsMicroScreen(window.innerWidth < 380);
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -323,7 +332,6 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
       </div>
     );
   }
-
   return (
     <div className={`w-full flex-1 flex flex-col justify-center relative ${!hasStarted ? 'max-w-4xl mx-auto' : ''}`}>
       <AnimatePresence mode="wait">
@@ -335,7 +343,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -40, filter: "blur(10px)" }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-panel glass-hero p-10 lg:p-14 3xl:p-20 4xl:p-28 flex flex-col items-center text-center gap-6 3xl:gap-10 4xl:gap-14 w-full"
+            className="glass-panel glass-hero p-3 xs:p-5 md:p-10 lg:p-14 3xl:p-20 4xl:p-28 flex flex-col items-center text-center gap-6 3xl:gap-10 4xl:gap-14 w-full"
           >
             <div className="w-16 h-16 3xl:w-24 3xl:h-24 4xl:w-32 4xl:h-32 rounded-full glass-icon-wrapper flex items-center justify-center text-3xl 3xl:text-5xl 4xl:text-7xl">
               🌿
@@ -379,7 +387,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
               </AnimatePresence>
               <button
                 type="button"
-                className="absolute left-[1px] top-[1px] bottom-[1px] w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[38px] xs:w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors z-10"
                 title="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
@@ -389,16 +397,18 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-16 pr-36 py-4 w-full text-white placeholder-slate-400"
-                placeholder="e.g. 'I need a high-protein dinner from the vault...'"
+                className="glass-input pl-11 xs:pl-16 pr-12 xs:pr-36 py-3.5 xs:py-4 w-full text-white placeholder-slate-400"
+                placeholder={isMicroScreen ? "Ask Sage..." : "e.g. 'I need a high-protein dinner from the vault...'"}
               />
               <button
                 type="submit"
-                className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-5 flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
+                className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-3 xs:px-5 flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
               >
-                <Sparkles size={16} /> Ask Sage
+                <Sparkles size={16} />
+                <span className="hidden xs:inline">Ask Sage</span>
               </button>
-            </form>          </motion.div>
+            </form>
+          </motion.div>
         ) : (
           // Active Chat State
           <motion.div 
@@ -444,7 +454,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
                     <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-full group`}>
                       {msg.role === 'sage' && msg.thoughts && (
                         <motion.div 
-                          className="w-full min-w-[320px] border border-white/10 rounded-2xl bg-slate-950/45 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-300 hover:border-white/20 relative"
+                          className="w-full min-w-0 md:min-w-[320px] border border-white/10 rounded-2xl bg-slate-950/45 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-300 hover:border-white/20 relative"
                           animate={msg.isStreaming ? {
                             boxShadow: [
                               "0px 0px 8px rgba(99, 102, 241, 0.25), inset 0px 1px 1px rgba(255,255,255,0.05), 0px 8px 32px rgba(0,0,0,0.35)",
@@ -709,7 +719,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
               <button 
                 type="button"
                 disabled={isGenerating}
-                className="absolute left-[1px] top-[1px] bottom-[1px] w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[38px] xs:w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
                 title="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
@@ -720,15 +730,22 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
-                className="glass-input pl-16 pr-32 py-4 w-full text-white disabled:opacity-50" 
-                placeholder="Ask a follow up..."
+                className="glass-input pl-11 xs:pl-16 pr-12 xs:pr-32 py-3.5 xs:py-4 w-full text-white disabled:opacity-50" 
+                placeholder={isMicroScreen ? "Follow up..." : "Ask a follow up..."}
               />
               <button 
                 type="submit"
                 disabled={isGenerating}
-                className="absolute right-2 top-2 bottom-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-3xl px-4 flex items-center justify-center transition-all disabled:opacity-50"
+                className="absolute right-2 top-2 bottom-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-3xl px-3 xs:px-4 flex items-center justify-center transition-all disabled:opacity-50 font-medium text-sm"
               >
-                {isGenerating ? <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div> : "Send"}
+                {isGenerating ? (
+                  <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
+                ) : (
+                  <>
+                    <Sparkles size={16} className="xs:hidden" />
+                    <span className="hidden xs:inline">Send</span>
+                  </>
+                )}
               </button>
             </form>
           </motion.div>
