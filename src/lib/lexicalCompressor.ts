@@ -71,9 +71,9 @@ export function compressRecipeForPrompt(recipe: any, idfMap?: Record<string, num
   // Remove markdown headers for instructions/steps
   body = body.replace(/##\s*(Instructions|Directions|Steps|Method|Preparation)\b/gi, '');
   
-  // Remove any closed or open thought blocks
-  body = body.replace(/<thought>\s*([\s\S]*?)\s*<\/thought>/gi, '');
-  body = body.replace(/<thought>\s*([\s\S]*)$/gi, '');
+  // Remove any closed or open thought/thinking blocks
+  body = body.replace(/<(?:thought|thinking)>\s*([\s\S]*?)\s*<\/(?:thought|thinking)>/gi, '');
+  body = body.replace(/<(?:thought|thinking)>\s*([\s\S]*)$/gi, '');
   
   // Strip markdown formatting symbols but keep letters/numbers/spaces
   body = body.replace(/[#*`_\[\]()]/g, ' ');

@@ -5,19 +5,19 @@ export function parseSageStream(fullText: string, isDone: boolean): { thoughts: 
   let thoughts = "";
   let content = fullText;
 
-  // Extract all properly closed <thought>...</thought> blocks
-  const closedThoughtRegex = /<thought>\s*([\s\S]*?)\s*<\/thought>/ig;
+  // Extract all properly closed <thought>/<thinking>...</thought>/<thinking> blocks
+  const closedThoughtRegex = /<(?:thought|thinking)>\s*([\s\S]*?)\s*<\/(?:thought|thinking)>/ig;
   let match;
   while ((match = closedThoughtRegex.exec(fullText)) !== null) {
     if (thoughts) thoughts += "\n\n";
     thoughts += match[1].trim();
   }
   
-  // Remove all closed thought blocks from content
-  content = content.replace(/<thought>\s*([\s\S]*?)\s*<\/thought>/ig, "").trim();
+  // Remove all closed thought/thinking blocks from content
+  content = content.replace(/<(?:thought|thinking)>\s*([\s\S]*?)\s*<\/(?:thought|thinking)>/ig, "").trim();
 
-  // Try to find an unclosed <thought> block in the remaining content
-  const openThoughtMatch = content.match(/<thought>\s*([\s\S]*)$/i);
+  // Try to find an unclosed <thought>/<thinking> block in the remaining content
+  const openThoughtMatch = content.match(/<(?:thought|thinking)>\s*([\s\S]*)$/i);
   if (openThoughtMatch) {
     const thoughtsText = openThoughtMatch[1];
     
@@ -94,6 +94,14 @@ export function parseSageStream(fullText: string, isDone: boolean): { thoughts: 
 
 export function parseMessageContent(content: string) {
   let cleanContent = content.trim();
+
+  // Strip any thinking/thought tags the model may have emitted
+  cleanContent = cleanContent.replace(/<(?:thought|thinking)>\s*[\s\S]*?<\/(?:thought|thinking)>/gi, '').trim();
+  // Strip unclosed thinking/thought tags (model forgot closing tag but has frontmatter delimiter)
+  cleanContent = cleanContent.replace(/<(?:thought|thinking)>\s*[\s\S]*?(?=---)/gi, '').trim();
+  // Strip any remaining orphaned opening tags
+  cleanContent = cleanContent.replace(/<\/?(?:thought|thinking)>/gi, '').trim();
+
   if (cleanContent.startsWith('```markdown')) {
     cleanContent = cleanContent.replace(/^```markdown\n?/, '').replace(/\n?```$/, '').trim();
   }
