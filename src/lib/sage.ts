@@ -47,6 +47,8 @@ const getIngredientsMacrosDeclaration: FunctionDeclaration = {
 async function fetchMacros(ingredient_names: string[]) {
   console.log(`[Tool Call] Fetching macros for: ${ingredient_names.join(', ')}`);
   const macrosDir = path.join(process.cwd(), 'vault', 'macros');
+  const importsFilePath = path.join(macrosDir, 'USDA_Imports.md');
+  const usdaApiKey = process.env.USDA_API_KEY || "DEMO_KEY";
   
   try {
     const cache = globalMacroCache.get(macrosDir);
@@ -68,7 +70,101 @@ async function fetchMacros(ingredient_names: string[]) {
       if (bestMatch) {
         results[ingredient_name] = bestMatch;
       } else {
-        results[ingredient_name] = { status: "Not found in local vault. Please estimate macros based on your internal knowledge." };
+        // Cache miss: Live USDA Lookup
+        try {
+          const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${usdaApiKey}&query=${encodeURIComponent(ingredient_name)}&pageSize=1`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`USDA API response status: ${response.status}`);
+          }
+          const data = await response.json();
+          if (data.foods && data.foods.length > 0) {
+            const food = data.foods[0];
+            const nutrients = food.foodNutrients || [];
+            
+            const findNutrient = (nameRegex: RegExp, id?: number) => {
+              const n = nutrients.find((x: any) => 
+                (id && x.nutrientId === id) || 
+                (x.nutrientName && nameRegex.test(x.nutrientName))
+              );
+              return n ? n.value : undefined;
+            };
+            
+            const caloriesNutrient = nutrients.find((x: any) => 
+              (x.nutrientId === 1008 || (x.nutrientName && /Energy/i.test(x.nutrientName))) &&
+              (x.unitName && /KCAL/i.test(x.unitName))
+            );
+            const caloriesVal = caloriesNutrient ? caloriesNutrient.value : undefined;
+            const proteinVal = findNutrient(/Protein/i, 1003);
+            const carbsVal = findNutrient(/Carbohydrate, by difference/i, 1005) ?? findNutrient(/Carbohydrate/i);
+            const fatVal = findNutrient(/Total lipid \(fat\)/i, 1004) ?? findNutrient(/Fat/i);
+            const fiberVal = findNutrient(/Fiber, total dietary/i, 1079) ?? findNutrient(/Fiber/i);
+            const sugarVal = findNutrient(/Sugars, total/i, 2000) ?? findNutrient(/Sugar/i, 1009);
+            const sodiumVal = findNutrient(/Sodium/i, 1093);
+            
+            const capitalize = (str: string) => {
+              return str
+                .toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            };
+            const description = food.description ? capitalize(food.description) : capitalize(ingredient_name);
+            
+            let commonPortions = "100g (100g)";
+            if (food.servingSize && food.servingSizeUnit) {
+              commonPortions = `serving (${food.servingSize}${food.servingSizeUnit.toLowerCase()})`;
+            }
+            
+            const caloriesStr = caloriesVal !== undefined ? `${caloriesVal.toFixed(1)}kcal` : "0.0kcal";
+            const proteinStr = proteinVal !== undefined ? `${proteinVal.toFixed(2)}g` : "0.00g";
+            const carbsStr = carbsVal !== undefined ? `${carbsVal.toFixed(2)}g` : "0.00g";
+            const fatStr = fatVal !== undefined ? `${fatVal.toFixed(2)}g` : "0.00g";
+            const fiberStr = fiberVal !== undefined ? `${fiberVal.toFixed(2)}g` : "0.00g";
+            const sugarStr = sugarVal !== undefined ? `${sugarVal.toFixed(2)}g` : "0.00g";
+            const sodiumStr = sodiumVal !== undefined ? `${sodiumVal.toFixed(1)}mg` : "0.0mg";
+            
+            const usdaMatch = {
+              ingredient_matched: description,
+              calories: caloriesStr,
+              protein: proteinStr,
+              carbs: carbsStr,
+              fat: fatStr,
+              fiber: fiberStr,
+              sugar: sugarStr,
+              sodium: sodiumStr,
+              common_portions: commonPortions,
+              status: "Success (per 100g)"
+            };
+            
+            // Save back to USDA_Imports.md
+            if (!fs.existsSync(macrosDir)) {
+              fs.mkdirSync(macrosDir, { recursive: true });
+            }
+            
+            let fileContent = "";
+            if (fs.existsSync(importsFilePath)) {
+              fileContent = fs.readFileSync(importsFilePath, 'utf8');
+            } else {
+              fileContent = "# USDA Imports\n" +
+                            "| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |\n" +
+                            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n";
+            }
+            
+            // Append row
+            const newRow = `| ${description} | ${caloriesStr} | ${proteinStr} | ${carbsStr} | ${fatStr} | ${fiberStr} | ${sugarStr} | ${sodiumStr} | ${commonPortions} |\n`;
+            fileContent += newRow;
+            fs.writeFileSync(importsFilePath, fileContent, 'utf8');
+            
+            globalMacroCache.invalidate();
+            results[ingredient_name] = usdaMatch;
+          } else {
+            results[ingredient_name] = { status: "Not found in local vault. Please estimate macros based on your internal knowledge." };
+          }
+        } catch (apiError) {
+          console.warn(`USDA Lookup failed for ${ingredient_name}:`, apiError);
+          results[ingredient_name] = { status: "Not found in local vault. Please estimate macros based on your internal knowledge." };
+        }
       }
     }
     

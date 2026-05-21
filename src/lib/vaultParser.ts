@@ -161,8 +161,9 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
-export async function getVaultRecipes(): Promise<VaultRecipe[]> {
+export async function getVaultRecipes(userCategories?: string[]): Promise<VaultRecipe[]> {
   const userId = await getCurrentUserId();
+  const categoriesToScan = userCategories || ['mains', 'sides', 'appetizers'];
 
   if (userId) {
     const householdId = await getHouseholdId(userId);
@@ -178,15 +179,14 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
     return recipes
       .filter(r => {
         const cat = (r.frontmatter as any)?.category;
-        return cat === 'mains' || cat === 'sides' || cat === 'appetizers';
+        return categoriesToScan.includes(cat);
       })
       .map(r => mapDbRecipeToVaultRecipe(r));
   }
 
-  const categories: ('mains' | 'sides' | 'appetizers')[] = ['mains', 'sides', 'appetizers'];
   const allRecipes: VaultRecipe[] = [];
 
-  for (const category of categories) {
+  for (const category of categoriesToScan) {
     const dirPath = path.join(process.cwd(), 'vault', category);
     try {
       const files = await fs.readdir(dirPath);
@@ -213,7 +213,7 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
           id: `${category}-${file.replace('.md', '')}`,
           slug: file.replace('.md', ''),
           title: data.recipe || data.title || file.replace('.md', ''),
-          category,
+          category: category as any,
           tags,
           macros: macrosStr,
           content: content.trim()
@@ -312,5 +312,20 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
   });
 
   return allCurated.map(({ mtimeMs, ...recipe }) => recipe);
+}
+
+export async function compileVaultContextString(): Promise<string> {
+  try {
+    const recipes = await getVaultRecipes();
+    if (!recipes || recipes.length === 0) {
+      return "No recipes found in the vault.";
+    }
+    return recipes
+      .map(r => `Recipe: ${r.title}\nCategory: ${r.category}\nTags: ${r.tags?.join(', ')}\nMacros: ${r.macros}\nContent:\n${r.content}`)
+      .join('\n\n---\n\n');
+  } catch (error) {
+    console.error("Error compiling vault context string:", error);
+    return "Error compilation failed.";
+  }
 }
 

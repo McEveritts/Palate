@@ -89,23 +89,20 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
     // 4. Determine category dynamically
-    let category = "mains"; // default fallback
-    const contentLower = sanitizedFileContent.toLowerCase();
+    const tags = Array.isArray(data.tags)
+      ? data.tags.map((t: any) => String(t).toLowerCase())
+      : typeof data.tags === 'string'
+        ? data.tags.split(',').map((t: string) => t.trim().toLowerCase())
+        : [];
 
-    if (
-      contentLower.includes("tag: appetizer") || 
-      contentLower.includes("tags: [appetizer") || 
-      contentLower.includes("category: appetizers") ||
-      /\bappetizers?\b/.test(contentLower)
-    ) {
-      category = "appetizers";
-    } else if (
-      contentLower.includes("tag: side") || 
-      contentLower.includes("tags: [side") || 
-      contentLower.includes("category: sides") ||
-      /\bsides?\b/.test(contentLower)
-    ) {
-      category = "sides";
+    const isAppetizer = /appetizer/i.test(sanitizedFileContent) || tags.includes('appetizer') || tags.includes('appetizers');
+    const isSide = /side/i.test(sanitizedFileContent) || tags.includes('side') || tags.includes('sides');
+
+    let category = 'mains';
+    if (isAppetizer) {
+      category = 'appetizers';
+    } else if (isSide) {
+      category = 'sides';
     }
 
     if (userId) {
@@ -181,6 +178,22 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
     if (userId) {
       const householdId = await getHouseholdId(userId);
       const { data, content } = matter(markdown);
+      
+      const tags = Array.isArray(data.tags)
+        ? data.tags.map((t: any) => String(t).toLowerCase())
+        : typeof data.tags === 'string'
+          ? data.tags.split(',').map((t: string) => t.trim().toLowerCase())
+          : [];
+      const isAppetizer = /appetizer/i.test(markdown) || tags.includes('appetizer') || tags.includes('appetizers');
+      const isSide = /side/i.test(markdown) || tags.includes('side') || tags.includes('sides');
+
+      let finalCategory = category;
+      if (isAppetizer) {
+        finalCategory = 'appetizers';
+      } else if (isSide) {
+        finalCategory = 'sides';
+      }
+
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       let finalSlug = slug;
@@ -199,7 +212,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
           markdown: content.trim(),
           frontmatter: {
             ...data,
-            category,
+            category: finalCategory,
           }
         }
       });
@@ -208,13 +221,29 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
       return { success: true, message: `Recipe saved to database as ${finalSlug}` };
     }
 
+    const { data: fileData } = matter(markdown);
+    const tags = Array.isArray(fileData.tags)
+      ? fileData.tags.map((t: any) => String(t).toLowerCase())
+      : typeof fileData.tags === 'string'
+        ? fileData.tags.split(',').map((t: string) => t.trim().toLowerCase())
+        : [];
+    const isAppetizer = /appetizer/i.test(markdown) || tags.includes('appetizer') || tags.includes('appetizers');
+    const isSide = /side/i.test(markdown) || tags.includes('side') || tags.includes('sides');
+
+    let finalCategory = category;
+    if (isAppetizer) {
+      finalCategory = 'appetizers';
+    } else if (isSide) {
+      finalCategory = 'sides';
+    }
+
     const cleanContent = markdown.trim();
     
     // Slugify title for filename
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const filename = `${slug}.md`;
     
-    const vaultPath = path.join(process.cwd(), "vault", category);
+    const vaultPath = path.join(process.cwd(), "vault", finalCategory);
     await fs.mkdir(vaultPath, { recursive: true });
     
     let filePath = path.join(vaultPath, filename);
@@ -232,7 +261,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
     await fs.writeFile(filePath, cleanContent, "utf-8");
     
     revalidatePath('/vault');
-    return { success: true, message: `Recipe saved to vault/${category} as ${path.basename(filePath)}` };
+    return { success: true, message: `Recipe saved to vault/${finalCategory} as ${path.basename(filePath)}` };
   } catch (error: unknown) {
     console.error("Save parsed recipe error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

@@ -63,7 +63,7 @@ async function writeToLocalMacros(macro: MacroData) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const ingredient = searchParams.get('ingredient');
+    const ingredient = searchParams.get('ingredient') || searchParams.get('query');
 
     if (!ingredient || typeof ingredient !== 'string') {
       return NextResponse.json({ success: false, error: 'Ingredient query parameter is required' }, { status: 400 });
@@ -186,7 +186,20 @@ Return ONLY a valid JSON object matching this exact schema, with no markdown for
         source = 'ai_fallback';
 
         // 2. Self-heal: Cache to local vault
-        await writeToLocalMacros(newMacro);
+        const importsPath = path.join(process.cwd(), 'vault', 'macros', 'USDA_Imports.md');
+        const macroEntry = `\n## ${trimmedIngredient} (Estimated)\nCalories: ${estimatedMacros.calories}kcal\nProtein: ${estimatedMacros.protein}g\nCarbs: ${estimatedMacros.carbs}g\nFat: ${estimatedMacros.fat}g\n`;
+        
+        let fileExists = false;
+        try {
+          await fs.access(importsPath);
+          fileExists = true;
+        } catch {}
+
+        if (!fileExists) {
+          await fs.writeFile(importsPath, macroEntry, 'utf-8');
+        } else {
+          await fs.appendFile(importsPath, macroEntry, 'utf-8');
+        }
       } catch (llmError) {
         console.error("[Nutrition AI Fallback Error]:", llmError);
         return NextResponse.json({ success: false, error: "Nutrition data unavailable." }, { status: 500 });

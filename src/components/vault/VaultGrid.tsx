@@ -96,8 +96,16 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       if (activeCategory === 'all') {
         matchesCategory = true;
       } else if (recipe.category.startsWith('curated')) {
-        const isSide = recipe.tags.some(t => t.toLowerCase().includes('side'));
-        matchesCategory = activeCategory === 'sides' ? isSide : !isSide;
+        const isSide = recipe.tags.some(t => t.toLowerCase().includes('side') || t.toLowerCase().includes('sides'));
+        const isAppetizer = recipe.tags.some(t => t.toLowerCase().includes('appetizer') || t.toLowerCase().includes('appetizers'));
+        const isMain = !isSide && !isAppetizer;
+        if (activeCategory === 'sides') {
+          matchesCategory = isSide;
+        } else if (activeCategory === 'appetizers') {
+          matchesCategory = isAppetizer;
+        } else {
+          matchesCategory = isMain;
+        }
       } else {
         matchesCategory = recipe.category === activeCategory;
       }

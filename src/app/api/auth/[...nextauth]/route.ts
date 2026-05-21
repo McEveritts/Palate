@@ -23,9 +23,10 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/calendar",
-          access_type: "offline",
           prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: "openid email profile https://www.googleapis.com/auth/calendar.events"
         }
       }
     }),
@@ -77,24 +78,29 @@ export const authOptions: NextAuthOptions = {
         }
       }
       
-      // Catch and persist refreshed Google OAuth tokens
-      if (account && account.provider === 'google') {
-        try {
-          await prisma.account.updateMany({
-            where: {
-              provider: 'google',
-              providerAccountId: account.providerAccountId,
-            },
-            data: {
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              scope: account.scope,
-              // Only overwrite refresh_token if Google actually provided a new one
-              ...(account.refresh_token && { refresh_token: account.refresh_token }),
-            },
-          });
-        } catch (error) {
-          console.error("[NextAuth] Failed to sync Google OAuth tokens to db:", error);
+      if (account && user) {
+        token.accessToken = account.access_token;
+        token.id = user.id;
+
+        // Persist updated Google OAuth credentials to the DB on sign in
+        if (account.provider === 'google') {
+          try {
+            await prisma.account.updateMany({
+              where: {
+                userId: user.id as string,
+                provider: 'google'
+              },
+              data: {
+                access_token: account.access_token,
+                // Only overwrite refresh_token if a new one is provided by Google
+                ...(account.refresh_token && { refresh_token: account.refresh_token }),
+                expires_at: account.expires_at,
+                scope: account.scope
+              }
+            });
+          } catch (error) {
+            console.error("Failed to update Google OAuth tokens in Account table:", error);
+          }
         }
       }
       

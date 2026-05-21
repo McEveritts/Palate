@@ -1,6 +1,6 @@
 import { streamSage } from "@/lib/sage";
 import { getAllRecipes } from "@/lib/vault";
-import { getVaultRecipes } from "@/lib/vaultParser";
+import { getVaultRecipes, compileVaultContextString } from "@/lib/vaultParser";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
@@ -14,20 +14,24 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions).catch(() => null);
     const userId = session?.user ? session.user.id : null;
 
-    let recipes;
     let vaultContext = "";
 
     // Gather context from the vault/database to ground the AI
-    if (userId) {
-      recipes = await getVaultRecipes();
-      vaultContext = recipes
-        .map(r => `Recipe: ${r.title}\nTags: ${r.tags?.join(', ')}\nMacros: ${r.macros}`)
-        .join('\n\n');
-    } else {
-      recipes = getAllRecipes();
-      vaultContext = recipes
-        .map(r => `Recipe: ${r.frontmatter.title}\nTags: ${r.frontmatter.tags?.join(', ')}\nMacros: ${JSON.stringify(r.frontmatter.macros)}`)
-        .join('\n\n');
+    try {
+      vaultContext = await compileVaultContextString();
+    } catch (e) {
+      console.warn("Failed to compile vault context:", e);
+      if (userId) {
+        const recipes = await getVaultRecipes();
+        vaultContext = recipes
+          .map(r => `Recipe: ${r.title}\nTags: ${r.tags?.join(', ')}\nMacros: ${r.macros}`)
+          .join('\n\n');
+      } else {
+        const recipes = getAllRecipes();
+        vaultContext = recipes
+          .map(r => `Recipe: ${r.frontmatter.title}\nTags: ${r.frontmatter.tags?.join(', ')}\nMacros: ${JSON.stringify(r.frontmatter.macros)}`)
+          .join('\n\n');
+      }
     }
 
     let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;

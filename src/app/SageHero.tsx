@@ -443,26 +443,45 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
                     {/* Message Bubble */}
                     <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-full group`}>
                       {msg.role === 'sage' && msg.thoughts && (
-                        <div className="w-full min-w-[320px] border border-white/10 rounded-2xl bg-slate-950/40 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-300 hover:border-white/15">
+                        <motion.div 
+                          className="w-full min-w-[320px] border border-white/10 rounded-2xl bg-slate-950/45 backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-300 hover:border-white/20 relative"
+                          animate={msg.isStreaming ? {
+                            boxShadow: [
+                              "0px 0px 8px rgba(99, 102, 241, 0.25), inset 0px 1px 1px rgba(255,255,255,0.05), 0px 8px 32px rgba(0,0,0,0.35)",
+                              "0px 0px 28px rgba(217, 70, 239, 0.45), inset 0px 1px 1px rgba(255,255,255,0.1), 0px 8px 32px rgba(0,0,0,0.35)",
+                              "0px 0px 8px rgba(99, 102, 241, 0.25), inset 0px 1px 1px rgba(255,255,255,0.05), 0px 8px 32px rgba(0,0,0,0.35)"
+                            ],
+                            borderColor: [
+                              "rgba(255, 255, 255, 0.1)",
+                              "rgba(217, 70, 239, 0.5)",
+                              "rgba(255, 255, 255, 0.1)"
+                            ]
+                          } : undefined}
+                          transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                        >
+                          {msg.isStreaming && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-fuchsia-500/5 to-indigo-500/5 pointer-events-none animate-pulse" />
+                          )}
                           <button 
                             onClick={() => toggleThoughts(msg.id)}
-                            className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-medium text-slate-300 hover:text-white transition-colors select-none focus:outline-none"
+                            className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-medium text-slate-300 hover:text-white transition-colors select-none focus:outline-none relative z-10"
                           >
                             <div className="flex items-center gap-3">
-                              {msg.isStreaming && !msg.content ? (
-                                <div className="relative flex items-center justify-center">
-                                  <div className="absolute inset-0 w-5 h-5 rounded-full bg-indigo-500/30 blur-[4px] animate-ping" />
-                                  <Brain size={16} className="text-indigo-400 relative z-10 animate-pulse" />
+                              {msg.isStreaming ? (
+                                <div className="relative flex items-center justify-center w-5 h-5">
+                                  <div className="absolute inset-0 rounded-full bg-fuchsia-500/40 blur-[6px] animate-ping" />
+                                  <div className="absolute inset-0.5 rounded-full bg-indigo-500/40 blur-[4px] animate-pulse" />
+                                  <Brain size={16} className="text-fuchsia-400 relative z-10 animate-pulse" />
                                 </div>
                               ) : (
-                                <CheckCircle2 size={16} className="text-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.3)]" />
+                                <CheckCircle2 size={16} className="text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]" />
                               )}
-                              <span className="tracking-wide text-xs uppercase font-semibold text-slate-400">
-                                {msg.isStreaming && !msg.content ? "Synthesizing Culinary Intelligence..." : "Sage Reasoning Process"}
+                              <span className="tracking-wide text-xs uppercase font-bold text-slate-300">
+                                {msg.isStreaming ? "Synthesizing Culinary Intelligence..." : "Sage Reasoning Process"}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400">
+                              <span className="text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-colors">
                                 {openThoughts[msg.id] ? "CLOSE" : "EXPAND"}
                               </span>
                             </div>
@@ -475,18 +494,18 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
                                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                                className="overflow-hidden"
+                                className="overflow-hidden relative z-10"
                               >
-                                <div className="px-5 pb-5 pt-1 text-xs font-mono text-indigo-200/60 border-t border-white/5 whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
+                                <div className="px-5 pb-5 pt-2 text-xs font-mono text-slate-300 border-t border-white/5 whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar bg-slate-950/30">
                                   {msg.thoughts}
-                                  {msg.isStreaming && !msg.content && (
-                                    <span className="inline-block w-1.5 h-3 ml-1 bg-indigo-400 animate-pulse" />
+                                  {msg.isStreaming && (
+                                    <span className="inline-block w-1.5 h-3.5 ml-1 bg-fuchsia-400 animate-pulse" />
                                   )}
                                 </div>
                               </motion.div>
                             )}
                           </AnimatePresence>
-                        </div>
+                        </motion.div>
                       )}
                       
                       {msg.content || (msg.isStreaming && !msg.thoughts) ? (

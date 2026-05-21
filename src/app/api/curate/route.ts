@@ -112,15 +112,19 @@ II. **[Step Title]**
     // 3. Save the newly generated recipes
     let recipes = text.split("|||RECIPE_SPLIT|||").map(r => r.trim()).filter(Boolean);
 
-    // Fallback: If the LLM hallucinated the token or bunched them together
+    // ROBUST FALLBACK: If the LLM failed to use the split token, fallback to standard markdown parsing
     if (recipes.length !== 3) {
-      console.warn(`[Curation Fallback]: Expected 3 recipes, got ${recipes.length}. Using regex fallback.`);
+      console.warn("Curation Split Token missing or malformed. Engaging robust fallback splitter.");
+      // Split by markdown horizontal rules that precede a title block
+      const fallbackSplit = text.split(/(?=---\s*\ntitle:)/g).map(r => r.trim()).filter(Boolean);
       
-      // Safely split based on standard markdown YAML frontmatter initiation (`---` followed by `title:`)
-      recipes = text
-        .split(/(?=^---\r?\ntitle:)/im)
-        .map(r => r.trim())
-        .filter(Boolean);
+      if (fallbackSplit.length === 3) {
+        recipes = fallbackSplit;
+      } else {
+        // Absolute worst-case scenario: return what we can and log heavily
+        console.error(`Fallback splitter failed. Found ${fallbackSplit.length} recipes.`);
+        recipes = fallbackSplit; 
+      }
     }
 
     // Hard cap to exactly 3 recipes to prevent downstream mapping errors in the UI
