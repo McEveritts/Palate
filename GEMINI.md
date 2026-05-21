@@ -20,5 +20,11 @@
 - **Typography:** Inter font; `.prose` class includes `text-shadow` for glowing emojis and text.
 - **Hydration:** `suppressHydrationWarning` applied to `layout.tsx` to prevent mismatches from browser extensions (e.g., Dark Reader).
 
-## Upcoming Phases
-- **Phase 6:** Vault Visualization
+## Versioning & Releases
+- **Current Version:** 1.3.x series.
+- **Increment Rule:** Each commit/release bumps the **patch** version by `0.0.1` (e.g., `1.3.1` → `1.3.2` → `1.3.3`).
+- **Git Tags:** Create an annotated tag (`v1.3.x`) for each release and push it to origin.
+- **package.json:** Update the `"version"` field in `package.json` to match the new patch version before committing.
+
+## Completed Phases
+- **Phase 6:** Vault Visualization ✅

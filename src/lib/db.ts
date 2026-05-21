@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient | null };
 
@@ -21,14 +23,17 @@ function getPrismaClient(): PrismaClient {
   if (dbUrl && dbUrl.startsWith('prisma+postgres')) {
     // Local dev: Prisma Accelerate / Prisma Postgres protocol
     prismaOptions.accelerateUrl = dbUrl;
-  } else if (!dbUrl) {
+  } else if (dbUrl) {
+    // Production: Direct PostgreSQL connection via driver adapter (Prisma 7)
+    const pool = new Pool({ connectionString: dbUrl });
+    const adapter = new PrismaPg(pool);
+    prismaOptions.adapter = adapter;
+  } else {
     // If DATABASE_URL is missing, we use a dummy accelerateUrl format to satisfy
     // Prisma 7 constructor validation during Next.js static build pre-rendering.
     // No database queries are executed in Guest Mode.
     prismaOptions.accelerateUrl = 'prisma+postgres://localhost:51213/?api_key=dummy';
   }
-  // For direct PostgreSQL URLs (postgresql://...), Prisma reads from the
-  // schema datasource block via env("DATABASE_URL") — no constructor option needed.
 
   _prismaInstance = new PrismaClient(prismaOptions);
   
@@ -54,5 +59,3 @@ export const prisma = new Proxy({} as PrismaClient, {
     return Reflect.set(client, prop, value, receiver);
   }
 });
-
-
