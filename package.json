@@ -3,9 +3,9 @@
   "version": "1.3.2",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 2814",
+    "dev": "next dev -p 28014",
     "build": "next build",
-    "start": "next start -p 2814",
+    "start": "next start -p 28014",
     "lint": "eslint",
     "test": "vitest run",
     "postinstall": "node patch-next-inspector.js"
