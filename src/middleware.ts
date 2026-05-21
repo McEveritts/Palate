@@ -20,12 +20,6 @@ const ratelimit = redis
 export default withAuth(
   async function middleware(req: NextRequestWithAuth) {
     const { pathname } = req.nextUrl;
-
-    // Redirect root to /ask_sage
-    if (pathname === "/") {
-      return NextResponse.redirect(new URL("/ask_sage", req.url));
-    }
-
     const isApiRoute = pathname.startsWith("/api/");
 
     if (isApiRoute) {
@@ -97,13 +91,13 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/",
     "/ask_sage",
     "/plans/:path*",
     "/vault/:path*",
     "/collections/:path*",
     "/upload/:path*",
     "/settings",
+    "/calendar",
     "/api/((?!auth).*)",
   ],
 };
