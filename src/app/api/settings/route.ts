@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      metricSystem: config?.metricSystem ?? true,
+      metricSystem: config?.metricSystem ?? false,
       hasKey: !!config?.encryptedGcpKey,
       googleCalendarSyncEnabled: config?.googleCalendarSyncEnabled ?? false,
       googleCalendarId: config?.googleCalendarId ?? null,
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       update: updateData,
       create: {
         userId,
-        metricSystem: true,
+        metricSystem: false,
         ...updateData,
       },
     });

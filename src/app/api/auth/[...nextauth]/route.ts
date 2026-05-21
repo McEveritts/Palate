@@ -51,7 +51,7 @@ export const authOptions: NextAuthOptions = {
             await prisma.userConfig.create({
               data: {
                 userId: user.id,
-                metricSystem: true
+                metricSystem: false
               }
             });
           }

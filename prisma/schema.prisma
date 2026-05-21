@@ -95,7 +95,7 @@ model UserConfig {
   authTag           String?  // GCM Auth Tag for integrity verification
   iv                String?  // Initialization Vector
   
-  metricSystem      Boolean  @default(true)
+  metricSystem      Boolean  @default(false)
 
   // Google Calendar Integration
   googleCalendarId  String?

@@ -175,7 +175,7 @@ async function fetchMacros(ingredient_names: string[]) {
   }
 }
 
-export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric') {
+export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial') {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -206,7 +206,7 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: any[]) {
+export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial', history?: any[]) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");

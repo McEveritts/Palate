@@ -156,6 +156,52 @@ export async function POST(req: Request) {
         });
       }
 
+      case "remove-member": {
+        const { memberId } = body;
+        if (!memberId || typeof memberId !== "string") {
+          return NextResponse.json(
+            { error: "Invalid member ID." },
+            { status: 400 }
+          );
+        }
+
+        if (memberId === userId) {
+          return NextResponse.json(
+            { error: "You cannot remove yourself. Please use the Leave Household option instead." },
+            { status: 400 }
+          );
+        }
+
+        const householdId = await getHouseholdId(userId);
+
+        // Find the member to remove and verify they belong to the same household
+        const memberUser = await prisma.user.findUnique({
+          where: { id: memberId },
+          select: { id: true, householdId: true, name: true },
+        });
+
+        if (!memberUser || memberUser.householdId !== householdId) {
+          return NextResponse.json(
+            { error: "Member not found in your household." },
+            { status: 404 }
+          );
+        }
+
+        // Create a new solo household for the removed user
+        await prisma.household.create({
+          data: {
+            name: `${memberUser.name ?? "My"}'s Kitchen`,
+            members: { connect: { id: memberId } },
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Member successfully removed from the household.",
+          removedMemberId: memberId,
+        });
+      }
+
       case "leave": {
         const currentUser = await prisma.user.findUnique({
           where: { id: userId },

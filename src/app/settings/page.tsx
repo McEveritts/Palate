@@ -2,7 +2,7 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
-import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2 } from "lucide-react";
+import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -150,6 +150,25 @@ export default function SettingsPage() {
       }
     } catch (err) {
       console.error("Failed to leave household:", err);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to remove ${memberName} from the household? Their recipes will stay with this household, and they will receive a new personal kitchen.`)) return;
+    try {
+      const res = await fetch("/api/household", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove-member", memberId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadHousehold();
+      } else {
+        alert(data.error || "Failed to remove member.");
+      }
+    } catch (err) {
+      console.error("Failed to remove member:", err);
     }
   };
 
@@ -467,8 +486,16 @@ export default function SettingsPage() {
                           <p className="text-white font-medium text-sm">{member.name || "Unknown"}</p>
                           <p className="text-slate-500 text-xs">{member.email}</p>
                         </div>
-                        {member.id === session.user?.id && (
+                        {member.id === session.user?.id ? (
                           <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full">You</span>
+                        ) : (
+                          <button
+                            onClick={() => handleRemoveMember(member.id, member.name || "Member")}
+                            className="ml-3 p-1.5 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 hover:text-rose-200 hover:scale-105 active:scale-95 rounded-lg transition-all border border-rose-500/20 cursor-pointer flex items-center justify-center shadow-md shadow-rose-500/5 hover:shadow-rose-500/10"
+                            title="Remove from Household"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     ))}

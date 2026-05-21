@@ -15,7 +15,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       isGuest: false,
       geminiApiKey: '',
-      measurementSystem: 'metric',
+      measurementSystem: 'imperial',
       setGuest: (guest) => set({ isGuest: guest }),
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       setMeasurementSystem: (system) => set({ measurementSystem: system }),
