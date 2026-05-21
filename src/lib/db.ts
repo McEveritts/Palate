@@ -16,8 +16,14 @@ function getPrismaClient(): PrismaClient {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   };
 
-  if (process.env.DATABASE_URL) {
-    prismaOptions.accelerateUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.DATABASE_URL;
+
+  if (dbUrl && dbUrl.startsWith('prisma+postgres')) {
+    // Local dev: Prisma Accelerate / Prisma Postgres protocol
+    prismaOptions.accelerateUrl = dbUrl;
+  } else if (dbUrl) {
+    // Production: Direct PostgreSQL connection (e.g., postgresql://user@host:port/db)
+    prismaOptions.datasourceUrl = dbUrl;
   } else {
     // If DATABASE_URL is missing, we use a dummy accelerateUrl format to satisfy
     // Prisma 7 constructor validation during Next.js static build pre-rendering.
