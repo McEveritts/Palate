@@ -28,12 +28,51 @@
 @layer base {
   html {
     /* 
-      Fluid typography engine:
-      Min size: 14px (on 320px viewports)
-      Scale factor: 1.2vw + 10px
-      Max size: 24px (on 4K 110-inch TVs)
+      Fluid typography engine (AetherFlow refactored):
+      - Mobile/Tablet (< 1024px): fluidly transitions/scales down to 14px (responsive mobile boundaries 14px to 16px)
+      - Desktop/Laptop (1024px - 1920px): locked strictly to 16px
+      - Giant TVs (1920px+): clamp-scales from 16px up to 24px
     */
-    font-size: clamp(14px, 1.2vw + 10px, 24px);
+    font-size: clamp(14px, 0.284vw + 13.09px, 16px);
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 16px;
+    }
+
+    /* Universal sleek, dark-slate glassmorphic custom scrollbars for all scrollable elements in desktop viewports */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.08) rgba(15, 23, 42, 0.3);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  @media (min-width: 1920px) {
+    html {
+      font-size: clamp(16px, 0.417vw + 8px, 24px);
+    }
   }
 }
 
@@ -161,19 +200,26 @@ body {
   }
 
   /* Custom Scrollbar for Chat */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) rgba(15, 23, 42, 0.3);
+  }
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   /* Aurora Background Animations */

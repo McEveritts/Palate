@@ -6,7 +6,7 @@ export default async function VaultPage() {
   const recipes = await getVaultRecipes();
 
   return (
-    <main className="min-h-screen p-8 md:p-16 relative overflow-hidden bg-slate-950">
+    <main className="min-h-screen p-8 md:p-16 relative bg-slate-950">
       {/* Specular glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[150px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-500/10 rounded-full blur-[150px] pointer-events-none"></div>

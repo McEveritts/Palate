@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Calendar, Trash2, Move, Clock, Scale, 
@@ -82,6 +83,11 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
   const [scheduledMeals, setScheduledMeals] = useState<ScheduledMealData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Week configuration (starting Sunday of current week)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -468,354 +474,360 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       )}
 
       {/* Add Scheduled Meal Modal */}
-      <AnimatePresence>
-        {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
-              onClick={() => setIsAddModalOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
+      {isMounted && createPortal(
+        <AnimatePresence>
+          {isAddModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+                onClick={() => setIsAddModalOpen(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
 
-            <motion.div 
-              className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-2xl shadow-2xl relative z-10 overflow-hidden"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-            >
-              <div className="p-6 border-b border-white/5 bg-slate-950/20 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-400" />
-                  Schedule culinary recipe
-                </h3>
-                <button 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="p-1 rounded-md text-slate-400 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form noValidate onSubmit={handleAddMealSubmit} className="p-6 space-y-4">
-                {/* Recipe selection */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                    Select Recipe
-                  </label>
-                  <select
-                    required
-                    value={newMealRecipeId}
-                    onChange={(e) => setNewMealRecipeId(e.target.value)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+              <motion.div 
+                className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-2xl shadow-2xl relative z-10 overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <div className="p-6 border-b border-white/5 bg-slate-950/20 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                    Schedule culinary recipe
+                  </h3>
+                  <button 
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="p-1 rounded-md text-slate-400 hover:text-white transition-colors"
                   >
-                    <option value="" disabled>-- Pick a recipe --</option>
-                    {allRecipes.map(r => (
-                      <option key={r.id} value={r.slug}>{r.title}</option>
-                    ))}
-                  </select>
+                    ✕
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Date selection */}
+                <form noValidate onSubmit={handleAddMealSubmit} className="p-6 space-y-4">
+                  {/* Recipe selection */}
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={newMealDate}
-                      onChange={(e) => setNewMealDate(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* Meal Type */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                      Meal Type
+                      Select Recipe
                     </label>
                     <select
-                      value={newMealType}
-                      onChange={(e) => setNewMealType(e.target.value)}
+                      required
+                      value={newMealRecipeId}
+                      onChange={(e) => setNewMealRecipeId(e.target.value)}
                       className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
                     >
-                      {MEAL_TYPES.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      <option value="" disabled>-- Pick a recipe --</option>
+                      {allRecipes.map(r => (
+                        <option key={r.id} value={r.slug}>{r.title}</option>
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {/* Portion/Yield scaler */}
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Planned portion yield
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Date selection */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Date
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={newMealDate}
+                        onChange={(e) => setNewMealDate(e.target.value)}
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    {/* Meal Type */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Meal Type
+                      </label>
+                      <select
+                        value={newMealType}
+                        onChange={(e) => setNewMealType(e.target.value)}
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                      >
+                        {MEAL_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Portion/Yield scaler */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Planned portion yield
+                      </label>
+                      <span className="text-xs font-extrabold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                        {newMealYield.toFixed(2)}x
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="4.0"
+                      step="0.1"
+                      value={newMealYield}
+                      onChange={(e) => setNewMealYield(parseFloat(e.target.value))}
+                      className="w-full accent-indigo-500 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-semibold mt-1">
+                      <span>0.10x (Light snack)</span>
+                      <span>1.0x (Standard)</span>
+                      <span>4.00x (Family pack)</span>
+                    </div>
+                  </div>
+
+                  {/* Leftovers / Parent Meal DAG select */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1">
+                      <LinkIcon className="w-3.5 h-3.5 text-indigo-400" />
+                      Leftover of (Batch Cooking DAG)
                     </label>
-                    <span className="text-xs font-extrabold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                      {newMealYield.toFixed(2)}x
-                    </span>
+                    <select
+                      value={newMealParentId}
+                      onChange={(e) => setNewMealParentId(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">-- Freshly Cooked (No parent) --</option>
+                      {scheduledMeals.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.recipe.title} (Scheduled on {formatMealDateFriendly(m.date)} for {m.mealType})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                      Links this meal to a prior preparation, enabling advanced leftovers freshness decay visualization.
+                    </p>
                   </div>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="4.0"
-                    step="0.1"
-                    value={newMealYield}
-                    onChange={(e) => setNewMealYield(parseFloat(e.target.value))}
-                    className="w-full accent-indigo-500 cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-500 font-semibold mt-1">
-                    <span>0.10x (Light snack)</span>
-                    <span>1.0x (Standard)</span>
-                    <span>4.00x (Family pack)</span>
+
+                  {/* Validation Error Display */}
+                  {formError && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <p className="text-xs text-rose-300 font-medium">{formError}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                    <button 
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 transition-all text-xs font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button"
+                      disabled={isSaving}
+                      onClick={handleAddMealSubmit}
+                      className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-lg text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 border border-indigo-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      {isSaving ? 'Scheduling…' : 'Save Schedule'}
+                    </button>
                   </div>
-                </div>
-
-                {/* Leftovers / Parent Meal DAG select */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1">
-                    <LinkIcon className="w-3.5 h-3.5 text-indigo-400" />
-                    Leftover of (Batch Cooking DAG)
-                  </label>
-                  <select
-                    value={newMealParentId}
-                    onChange={(e) => setNewMealParentId(e.target.value)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">-- Freshly Cooked (No parent) --</option>
-                    {scheduledMeals.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.recipe.title} (Scheduled on {formatMealDateFriendly(m.date)} for {m.mealType})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-500 mt-1 pl-1">
-                    Links this meal to a prior preparation, enabling advanced leftovers freshness decay visualization.
-                  </p>
-                </div>
-
-                {/* Validation Error Display */}
-                {formError && (
-                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-rose-300 font-medium">{formError}</p>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
-                  <button 
-                    type="button"
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-300 hover:text-white hover:bg-white/5 transition-all text-xs font-bold"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="button"
-                    disabled={isSaving}
-                    onClick={handleAddMealSubmit}
-                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-lg text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 border border-indigo-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                  >
-                    {isSaving ? 'Scheduling…' : 'Save Schedule'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Scheduled Meal Details Panel Modal */}
-      <AnimatePresence>
-        {selectedMealDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
-              onClick={() => setSelectedMealDetail(null)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
+      {isMounted && createPortal(
+        <AnimatePresence>
+          {selectedMealDetail && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+                onClick={() => setSelectedMealDetail(null)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
 
-            <motion.div 
-              layoutId={`meal-card-${selectedMealDetail.id}`}
-              className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[85vh]"
-            >
-              {/* Decorative radial blur background */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-80 bg-gradient-to-b from-indigo-500/10 via-fuchsia-500/5 to-transparent rounded-full blur-[80px] pointer-events-none" />
+              <motion.div 
+                layoutId={`meal-card-${selectedMealDetail.id}`}
+                className="w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[85vh]"
+              >
+                {/* Decorative radial blur background */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-80 bg-gradient-to-b from-indigo-500/10 via-fuchsia-500/5 to-transparent rounded-full blur-[80px] pointer-events-none" />
 
-              <div className="p-6 border-b border-white/5 flex items-start justify-between relative z-10">
-                <div>
-                  <span className="text-[10px] font-bold bg-indigo-500/15 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20 uppercase tracking-widest">
-                    {selectedMealDetail.mealType} Listing
-                  </span>
-                  <h3 className="text-xl font-extrabold text-white mt-1 leading-snug">
-                    {selectedMealDetail.recipe.title}
-                  </h3>
-                  <p className="text-slate-400 text-xs mt-0.5 font-medium flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    Scheduled for {formatMealDateFriendlyLong(selectedMealDetail.date)}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setSelectedMealDetail(null)}
-                  className="p-1 rounded-md text-slate-400 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 relative z-10">
-                
-                {/* Leftover DAG relation badge */}
-                {selectedMealDetail.parentMealId && (
-                  <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 flex items-start gap-3">
-                    <LinkIcon className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Batch Leftover Dependency</p>
-                      <p className="text-xs text-indigo-300/80 mt-0.5">
-                        This meal is mapped as a leftover of the preparation cooked on{' '}
-                        {(() => {
-                          const p = scheduledMeals.find(m => m.id === selectedMealDetail.parentMealId);
-                          return p ? `${formatMealDateFriendly(p.date)} (${p.mealType})` : 'another date';
-                        })()}
-                        .
-                      </p>
-                    </div>
+                <div className="p-6 border-b border-white/5 flex items-start justify-between relative z-10">
+                  <div>
+                    <span className="text-[10px] font-bold bg-indigo-500/15 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20 uppercase tracking-widest">
+                      {selectedMealDetail.mealType} Listing
+                    </span>
+                    <h3 className="text-xl font-extrabold text-white mt-1 leading-snug">
+                      {selectedMealDetail.recipe.title}
+                    </h3>
+                    <p className="text-slate-400 text-xs mt-0.5 font-medium flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      Scheduled for {formatMealDateFriendlyLong(selectedMealDetail.date)}
+                    </p>
                   </div>
-                )}
-
-                {/* Portions Scale details */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                      <Scale className="w-3.5 h-3.5" /> Portion Multiplier
-                    </span>
-                    <span className="text-2xl font-black text-white">
-                      {selectedMealDetail.plannedYield}x
-                    </span>
-                    <span className="text-[10px] text-slate-500 mt-0.5">
-                      Adjusts quantities & macros on-the-fly
-                    </span>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                      <TrendingDown className="w-3.5 h-3.5" /> Freshness Status
-                    </span>
-                    <span className={`text-sm font-bold flex items-center gap-1.5 ${calculateFreshness(selectedMealDetail).status === 'Fresh' ? 'text-emerald-400' : calculateFreshness(selectedMealDetail).status === 'Leftover' ? 'text-amber-400' : 'text-rose-400'}`}>
-                      <CheckCircle2 className="w-4 h-4" />
-                      {calculateFreshness(selectedMealDetail).status} ({calculateFreshness(selectedMealDetail).percentage}% fresh)
-                    </span>
-                    <span className="text-[10px] text-slate-500 mt-0.5">
-                      Based on dynamic storage decay metrics
-                    </span>
-                  </div>
-                </div>
-
-                {/* Portions quantities scaling visualizer */}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">
-                    Scaled Ingredient Quantities (Symbolic Engine)
-                  </h4>
-                  <div className="p-4 rounded-2xl bg-slate-950/30 border border-white/5 space-y-2.5 max-h-40 overflow-y-auto custom-scrollbar">
-                    {(() => {
-                      // Extract ingredients from markdown (lines starting with - [ ] or - or *)
-                      const ingLines = selectedMealDetail.recipe.markdown
-                        .split('\n')
-                        .filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'))
-                        .slice(0, 8); // Top 8 ingredients
-
-                      if (ingLines.length === 0) {
-                        return <p className="text-xs text-slate-500 italic">No detailed ingredients catalog found.</p>;
-                      }
-
-                      return ingLines.map((line, i) => {
-                        const cleanLine = line.replace(/^[-*\s[\]x]*\s*/, '');
-                        // Run our Symbolic Math scaler to output scaled versions
-                        const scaledLine = scaleQuantity(cleanLine, selectedMealDetail.plannedYield);
-                        
-                        return (
-                          <div key={i} className="flex items-center justify-between text-xs border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
-                            <span className="text-slate-400">{cleanLine}</span>
-                            <div className="flex items-center gap-2 font-bold">
-                              <span className="text-slate-500 text-[10px]">→</span>
-                              <span className="text-indigo-400">{scaledLine}</span>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-
-                {/* Scaled Macro profile */}
-                {(() => {
-                  const baseMacros = extractMacrosFromString(selectedMealDetail.recipe.frontmatter?.macros || '');
-                  const hasMacros = baseMacros.calories > 0 || baseMacros.protein > 0;
-                  
-                  if (!hasMacros) return null;
-
-                  const scaledCal = Math.round(baseMacros.calories * selectedMealDetail.plannedYield);
-                  const scaledPro = Math.round(baseMacros.protein * selectedMealDetail.plannedYield);
-                  const scaledCar = Math.round(baseMacros.carbs * selectedMealDetail.plannedYield);
-                  const scaledFat = Math.round(baseMacros.fat * selectedMealDetail.plannedYield);
-
-                  return (
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">
-                        Scaled Macronutrient Yield
-                      </h4>
-                      <div className="grid grid-cols-4 gap-2.5">
-                        <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center flex flex-col">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Calories</span>
-                          <span className="text-lg font-black text-white mt-0.5">{scaledCal} kcal</span>
-                        </div>
-                        <div className="bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10 text-center flex flex-col">
-                          <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">Protein</span>
-                          <span className="text-lg font-black text-emerald-400 mt-0.5">{scaledPro}g</span>
-                        </div>
-                        <div className="bg-sky-500/5 p-3 rounded-xl border border-sky-500/10 text-center flex flex-col">
-                          <span className="text-[9px] text-sky-400 font-bold uppercase tracking-wider">Carbs</span>
-                          <span className="text-lg font-black text-sky-400 mt-0.5">{scaledCar}g</span>
-                        </div>
-                        <div className="bg-amber-500/5 p-3 rounded-xl border border-amber-500/10 text-center flex flex-col">
-                          <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Fat</span>
-                          <span className="text-lg font-black text-amber-400 mt-0.5">{scaledFat}g</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-              </div>
-
-              <div className="p-6 border-t border-white/5 bg-slate-950/20 flex justify-between gap-3 relative z-10">
-                <button 
-                  onClick={() => handleDeleteMeal(selectedMealDetail.id)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-bold transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Cancel Meal</span>
-                </button>
-
-                <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setSelectedMealDetail(null)}
-                    className="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+                    className="p-1 rounded-md text-slate-400 hover:text-white transition-colors"
                   >
-                    Close View
+                    ✕
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+
+                <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 relative z-10">
+                  
+                  {/* Leftover DAG relation badge */}
+                  {selectedMealDetail.parentMealId && (
+                    <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 flex items-start gap-3">
+                      <LinkIcon className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Batch Leftover Dependency</p>
+                        <p className="text-xs text-indigo-300/80 mt-0.5">
+                          This meal is mapped as a leftover of the preparation cooked on{' '}
+                          {(() => {
+                            const p = scheduledMeals.find(m => m.id === selectedMealDetail.parentMealId);
+                            return p ? `${formatMealDateFriendly(p.date)} (${p.mealType})` : 'another date';
+                          })()}
+                          .
+                         </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Portions Scale details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                        <Scale className="w-3.5 h-3.5" /> Portion Multiplier
+                      </span>
+                      <span className="text-2xl font-black text-white">
+                        {selectedMealDetail.plannedYield}x
+                      </span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">
+                        Adjusts quantities & macros on-the-fly
+                      </span>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                        <TrendingDown className="w-3.5 h-3.5" /> Freshness Status
+                      </span>
+                      <span className={`text-sm font-bold flex items-center gap-1.5 ${calculateFreshness(selectedMealDetail).status === 'Fresh' ? 'text-emerald-400' : calculateFreshness(selectedMealDetail).status === 'Leftover' ? 'text-amber-400' : 'text-rose-400'}`}>
+                        <CheckCircle2 className="w-4 h-4" />
+                        {calculateFreshness(selectedMealDetail).status} ({calculateFreshness(selectedMealDetail).percentage}% fresh)
+                      </span>
+                      <span className="text-[10px] text-slate-500 mt-0.5">
+                        Based on dynamic storage decay metrics
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Portions quantities scaling visualizer */}
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">
+                      Scaled Ingredient Quantities (Symbolic Engine)
+                    </h4>
+                    <div className="p-4 rounded-2xl bg-slate-950/30 border border-white/5 space-y-2.5 max-h-40 overflow-y-auto custom-scrollbar">
+                      {(() => {
+                        // Extract ingredients from markdown (lines starting with - [ ] or - or *)
+                        const ingLines = selectedMealDetail.recipe.markdown
+                          .split('\n')
+                          .filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'))
+                          .slice(0, 8); // Top 8 ingredients
+
+                        if (ingLines.length === 0) {
+                          return <p className="text-xs text-slate-500 italic">No detailed ingredients catalog found.</p>;
+                        }
+
+                        return ingLines.map((line, i) => {
+                          const cleanLine = line.replace(/^[-*\s[\]x]*\s*/, '');
+                          // Run our Symbolic Math scaler to output scaled versions
+                          const scaledLine = scaleQuantity(cleanLine, selectedMealDetail.plannedYield);
+                          
+                          return (
+                            <div key={i} className="flex items-center justify-between text-xs border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
+                              <span className="text-slate-400">{cleanLine}</span>
+                              <div className="flex items-center gap-2 font-bold">
+                                <span className="text-slate-500 text-[10px]">→</span>
+                                <span className="text-indigo-400">{scaledLine}</span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Scaled Macro profile */}
+                  {(() => {
+                    const baseMacros = extractMacrosFromString(selectedMealDetail.recipe.frontmatter?.macros || '');
+                    const hasMacros = baseMacros.calories > 0 || baseMacros.protein > 0;
+                    
+                    if (!hasMacros) return null;
+
+                    const scaledCal = Math.round(baseMacros.calories * selectedMealDetail.plannedYield);
+                    const scaledPro = Math.round(baseMacros.protein * selectedMealDetail.plannedYield);
+                    const scaledCar = Math.round(baseMacros.carbs * selectedMealDetail.plannedYield);
+                    const scaledFat = Math.round(baseMacros.fat * selectedMealDetail.plannedYield);
+
+                    return (
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">
+                          Scaled Macronutrient Yield
+                        </h4>
+                        <div className="grid grid-cols-4 gap-2.5">
+                          <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center flex flex-col">
+                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Calories</span>
+                            <span className="text-lg font-black text-white mt-0.5">{scaledCal} kcal</span>
+                          </div>
+                          <div className="bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10 text-center flex flex-col">
+                            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">Protein</span>
+                            <span className="text-lg font-black text-emerald-400 mt-0.5">{scaledPro}g</span>
+                          </div>
+                          <div className="bg-sky-500/5 p-3 rounded-xl border border-sky-500/10 text-center flex flex-col">
+                            <span className="text-[9px] text-sky-400 font-bold uppercase tracking-wider">Carbs</span>
+                            <span className="text-lg font-black text-sky-400 mt-0.5">{scaledCar}g</span>
+                          </div>
+                          <div className="bg-amber-500/5 p-3 rounded-xl border border-amber-500/10 text-center flex flex-col">
+                            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Fat</span>
+                            <span className="text-lg font-black text-amber-400 mt-0.5">{scaledFat}g</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                </div>
+
+                <div className="p-6 border-t border-white/5 bg-slate-950/20 flex justify-between gap-3 relative z-10">
+                  <button 
+                    onClick={() => handleDeleteMeal(selectedMealDetail.id)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-bold transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Cancel Meal</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setSelectedMealDetail(null)}
+                      className="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+                    >
+                      Close View
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
     </div>
   );

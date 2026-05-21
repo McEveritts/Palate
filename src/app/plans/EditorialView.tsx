@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VaultRecipe } from '@/lib/vaultParser';
 import { X, Save, Eye, Code } from 'lucide-react';
@@ -17,6 +18,11 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isRawView, setIsRawView] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (selectedId) {
@@ -132,92 +138,95 @@ export function EditorialView({ initialRecipes, onSaveAction }: EditorialViewPro
       </div>
 
       {/* Expanded Modal (Same as VaultGrid) */}
-      <AnimatePresence>
-        {selectedId && selectedRecipe && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            {/* Click-away backdrop */}
-            <motion.div 
-              className="absolute inset-0 pointer-events-auto bg-slate-950/20 backdrop-blur-sm" 
-              onClick={() => setSelectedId(null)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-            
-            <motion.div
-              layoutId={`card-${selectedId}`}
-              className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2] border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.2)] pointer-events-auto relative z-10 overflow-hidden"
-            >
-              {/* Top action bar: Action Buttons */}
-              <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">
-                {/* View Toggle Button */}
-                <button 
-                  onClick={() => setIsRawView(!isRawView)}
-                  className="p-2.5 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-600/50 rounded-full text-slate-200 transition-colors pointer-events-auto backdrop-blur-md group relative"
-                  title={isRawView ? "Switch to Formatted View" : "Switch to Raw View"}
-                >
-                  {isRawView ? <Eye className="w-5 h-5" /> : <Code className="w-5 h-5" />}
-                  <span className="absolute -bottom-8 right-0 whitespace-nowrap bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    {isRawView ? 'Eye View' : 'Raw View'}
-                  </span>
-                </button>
-
-                {onSaveAction && (
+      {isMounted && createPortal(
+        <AnimatePresence>
+          {selectedId && selectedRecipe && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+              {/* Click-away backdrop */}
+              <motion.div 
+                className="absolute inset-0 pointer-events-auto bg-slate-950/20 backdrop-blur-sm" 
+                onClick={() => setSelectedId(null)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              
+              <motion.div
+                layoutId={`card-${selectedId}`}
+                className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900/40 backdrop-blur-3xl backdrop-saturate-[2] border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.2)] pointer-events-auto relative z-10 overflow-hidden"
+              >
+                {/* Top action bar: Action Buttons */}
+                <div className="absolute top-0 right-0 p-6 z-20 flex gap-3 pointer-events-none">
+                  {/* View Toggle Button */}
                   <button 
-                    onClick={handleSaveClick}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-fuchsia-600/80 hover:bg-fuchsia-500 border border-fuchsia-400/50 rounded-full text-white shadow-lg backdrop-blur-md transition-all pointer-events-auto disabled:opacity-50"
+                    onClick={() => setIsRawView(!isRawView)}
+                    className="p-2.5 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-600/50 rounded-full text-slate-200 transition-colors pointer-events-auto backdrop-blur-md group relative"
+                    title={isRawView ? "Switch to Formatted View" : "Switch to Raw View"}
                   >
-                    <Save className="w-4 h-4" />
-                    <span className="text-sm font-bold">{isSaving ? 'Saving...' : 'Save to Vault'}</span>
-                  </button>
-                )}
-                <button 
-                  onClick={() => setSelectedId(null)}
-                  className="p-2.5 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-600/50 rounded-full text-slate-200 transition-colors pointer-events-auto backdrop-blur-md"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-8 md:p-12 relative overflow-y-auto custom-scrollbar flex-1">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-gradient-to-b from-fuchsia-500/20 via-indigo-500/10 to-transparent rounded-full blur-[100px] pointer-events-none"></div>
-                
-                <motion.h3 layoutId={`title-${selectedId}`} className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-6 pr-16 md:pr-48 relative z-10 leading-tight tracking-tight text-balance">
-                  {selectedRecipe.title}
-                </motion.h3>
-                
-                <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap items-center gap-3 mb-10 relative z-10">
-                  {selectedRecipe.tags.map(tag => (
-                    <span key={tag} className="px-4 py-1.5 text-sm font-medium rounded-md bg-indigo-500/20 text-indigo-100 border border-indigo-500/30">
-                      {tag}
+                    {isRawView ? <Eye className="w-5 h-5" /> : <Code className="w-5 h-5" />}
+                    <span className="absolute -bottom-8 right-0 whitespace-nowrap bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                      {isRawView ? 'Eye View' : 'Raw View'}
                     </span>
-                  ))}
-                  <span className="px-4 py-1.5 text-sm font-bold rounded-full bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 w-full sm:w-auto mt-3 sm:mt-0">
-                    {selectedRecipe.macros}
-                  </span>
-                </motion.div>
+                  </button>
 
-                <div className="relative z-10 mt-10">
-                  <div className="bg-black/20 p-8 md:p-10 rounded-2xl border border-white/5 shadow-inner">
-                    {isRawView ? (
-                      <pre className="text-sm font-mono text-slate-300 whitespace-pre-wrap break-words custom-scrollbar overflow-x-auto">
-                        {selectedRecipe.content}
-                      </pre>
-                    ) : (
-                      <div className="prose prose-invert prose-lg prose-indigo max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                  {onSaveAction && (
+                    <button 
+                      onClick={handleSaveClick}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-fuchsia-600/80 hover:bg-fuchsia-500 border border-fuchsia-400/50 rounded-full text-white shadow-lg backdrop-blur-md transition-all pointer-events-auto disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span className="text-sm font-bold">{isSaving ? 'Saving...' : 'Save to Vault'}</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setSelectedId(null)}
+                    className="p-2.5 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-600/50 rounded-full text-slate-200 transition-colors pointer-events-auto backdrop-blur-md"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-8 md:p-12 relative overflow-y-auto custom-scrollbar flex-1">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-gradient-to-b from-fuchsia-500/20 via-indigo-500/10 to-transparent rounded-full blur-[100px] pointer-events-none"></div>
+                  
+                  <motion.h3 layoutId={`title-${selectedId}`} className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-6 pr-16 md:pr-48 relative z-10 leading-tight tracking-tight text-balance">
+                    {selectedRecipe.title}
+                  </motion.h3>
+                  
+                  <motion.div layoutId={`tags-${selectedId}`} className="flex flex-wrap items-center gap-3 mb-10 relative z-10">
+                    {selectedRecipe.tags.map(tag => (
+                      <span key={tag} className="px-4 py-1.5 text-sm font-medium rounded-md bg-indigo-500/20 text-indigo-100 border border-indigo-500/30">
+                        {tag}
+                      </span>
+                    ))}
+                    <span className="px-4 py-1.5 text-sm font-bold rounded-full bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/30 w-full sm:w-auto mt-3 sm:mt-0">
+                      {selectedRecipe.macros}
+                    </span>
+                  </motion.div>
+
+                  <div className="relative z-10 mt-10">
+                    <div className="bg-black/20 p-8 md:p-10 rounded-2xl border border-white/5 shadow-inner">
+                      {isRawView ? (
+                        <pre className="text-sm font-mono text-slate-300 whitespace-pre-wrap break-words custom-scrollbar overflow-x-auto">
                           {selectedRecipe.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
+                        </pre>
+                      ) : (
+                        <div className="prose prose-invert prose-lg prose-indigo max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                            {selectedRecipe.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
