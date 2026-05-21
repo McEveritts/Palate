@@ -42,6 +42,42 @@ interface ScheduledMealData {
 
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getMealDateString = (dateInput: Date | string): string => {
+  if (dateInput instanceof Date) {
+    const year = dateInput.getFullYear();
+    const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const day = String(dateInput.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  if (typeof dateInput === 'string') {
+    return dateInput.split('T')[0];
+  }
+  return '';
+};
+
+const formatMealDateFriendly = (dateInput: Date | string): string => {
+  const dateStr = getMealDateString(dateInput);
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const formatMealDateFriendlyLong = (dateInput: Date | string): string => {
+  const dateStr = getMealDateString(dateInput);
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+};
+
 export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: CalendarViewProps) {
   const [scheduledMeals, setScheduledMeals] = useState<ScheduledMealData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,8 +108,8 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
     setError(null);
     try {
       const days = getWeekDays();
-      const startDate = days[0].toISOString().split('T')[0];
-      const endDate = days[6].toISOString().split('T')[0];
+      const startDate = getLocalDateString(days[0]);
+      const endDate = getLocalDateString(days[6]);
 
       const res = await getScheduledMeals(startDate, endDate);
       if (res.success && res.meals) {
@@ -332,12 +368,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
         /* Calendar Grid */
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
           {getWeekDays().map((day, idx) => {
-            const dayMeals = scheduledMeals.filter(meal => {
-              const mealDate = new Date(meal.date);
-              return mealDate.getDate() === day.getDate() &&
-                mealDate.getMonth() === day.getMonth() &&
-                mealDate.getFullYear() === day.getFullYear();
-            });
+            const dayMeals = scheduledMeals.filter(meal => getMealDateString(meal.date) === getLocalDateString(day));
 
             const today = isToday(day);
 
@@ -558,7 +589,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                     <option value="">-- Freshly Cooked (No parent) --</option>
                     {scheduledMeals.map(m => (
                       <option key={m.id} value={m.id}>
-                        {m.recipe.title} (Scheduled on {new Date(m.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })} for {m.mealType})
+                        {m.recipe.title} (Scheduled on {formatMealDateFriendly(m.date)} for {m.mealType})
                       </option>
                     ))}
                   </select>
@@ -627,7 +658,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                   </h3>
                   <p className="text-slate-400 text-xs mt-0.5 font-medium flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
-                    Scheduled for {new Date(selectedMealDetail.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    Scheduled for {formatMealDateFriendlyLong(selectedMealDetail.date)}
                   </p>
                 </div>
                 <button 
@@ -650,7 +681,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                         This meal is mapped as a leftover of the preparation cooked on{' '}
                         {(() => {
                           const p = scheduledMeals.find(m => m.id === selectedMealDetail.parentMealId);
-                          return p ? `${new Date(p.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })} (${p.mealType})` : 'another date';
+                          return p ? `${formatMealDateFriendly(p.date)} (${p.mealType})` : 'another date';
                         })()}
                         .
                       </p>
