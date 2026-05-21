@@ -138,6 +138,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
   const handleAddMealSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
+    window.alert(`DEBUG: Handler fired!\nRecipe: "${newMealRecipeId}"\nDate: "${newMealDate}"\nType: "${newMealType}"`);
     setFormError(null);
 
     // Explicit validation with user-facing feedback
