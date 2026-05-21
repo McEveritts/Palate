@@ -157,7 +157,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
     setIsSaving(true);
     try {
-      window.alert('DEBUG: About to call scheduleMeal...');
+
       const res = await scheduleMeal(
         newMealRecipeId,
         newMealDate,
@@ -165,7 +165,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
         newMealYield,
         newMealParentId || undefined
       );
-      window.alert(`DEBUG: scheduleMeal returned: ${JSON.stringify(res)}`);
+
 
       if (res.success) {
         // Reset form
@@ -181,7 +181,6 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
         setFormError(res.error || 'Failed to schedule meal. Please try again.');
       }
     } catch (err: any) {
-      window.alert(`DEBUG ERROR: ${err?.message || String(err)}`);
       setFormError(`Error: ${err?.message || 'Connection error while scheduling meal.'}`);
     } finally {
       setIsSaving(false);
