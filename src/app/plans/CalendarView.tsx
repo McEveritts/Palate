@@ -51,9 +51,9 @@ const getLocalDateString = (date: Date): string => {
 
 const getMealDateString = (dateInput: Date | string): string => {
   if (dateInput instanceof Date) {
-    const year = dateInput.getFullYear();
-    const month = String(dateInput.getMonth() + 1).padStart(2, '0');
-    const day = String(dateInput.getDate()).padStart(2, '0');
+    const year = dateInput.getUTCFullYear();
+    const month = String(dateInput.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dateInput.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
   if (typeof dateInput === 'string') {
