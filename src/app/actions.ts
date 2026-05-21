@@ -8,6 +8,7 @@ import { sanitizeRecipeContent } from "../lib/parser";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
+import { getHouseholdId } from "@/lib/household";
 import matter from "gray-matter";
 import { getAllRecipes } from "../lib/vault";
 import { z } from 'zod/v4';
@@ -108,17 +109,18 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     }
 
     if (userId) {
+      const householdId = await getHouseholdId(userId);
       const { data: frontmatterData, content: bodyContent } = matter(sanitizedFileContent);
       
       await prisma.recipe.upsert({
         where: {
-          userId_slug: {
-            userId,
+          householdId_slug: {
+            householdId,
             slug,
           }
         },
         create: {
-          userId,
+          householdId,
           slug,
           title,
           markdown: bodyContent.trim(),
@@ -177,12 +179,13 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
     const userId = await getCurrentUserId();
 
     if (userId) {
+      const householdId = await getHouseholdId(userId);
       const { data, content } = matter(markdown);
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       
       let finalSlug = slug;
       const existing = await prisma.recipe.findUnique({
-        where: { userId_slug: { userId, slug: finalSlug } }
+        where: { householdId_slug: { householdId, slug: finalSlug } }
       });
       if (existing) {
         finalSlug = `${slug}-${Date.now()}`;
@@ -190,7 +193,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
 
       await prisma.recipe.create({
         data: {
-          userId,
+          householdId,
           slug: finalSlug,
           title,
           markdown: content.trim(),
@@ -243,6 +246,7 @@ export async function saveCuratedToVault(id: string) {
     const userId = await getCurrentUserId();
 
     if (userId) {
+      const householdId = await getHouseholdId(userId);
       let slug: string;
       if (id.startsWith('curated-current-')) {
         slug = id.substring('curated-current-'.length);
@@ -253,7 +257,7 @@ export async function saveCuratedToVault(id: string) {
       }
 
       const recipe = await prisma.recipe.findUnique({
-        where: { userId_slug: { userId, slug } }
+        where: { householdId_slug: { householdId, slug } }
       });
 
       if (!recipe) {
@@ -366,6 +370,7 @@ export async function deleteRecipeFromVault(id: string) {
     const userId = await getCurrentUserId();
 
     if (userId) {
+      const householdId = await getHouseholdId(userId);
       let slug: string;
       if (id.startsWith('curated-current-')) {
         slug = id.substring('curated-current-'.length);
@@ -382,7 +387,7 @@ export async function deleteRecipeFromVault(id: string) {
       }
 
       const existing = await prisma.recipe.findUnique({
-        where: { userId_slug: { userId, slug } }
+        where: { householdId_slug: { householdId, slug } }
       });
 
       if (!existing) {
@@ -476,10 +481,11 @@ export async function scheduleMeal(
     const date = validateDateStr(dateStr);
 
     if (userId) {
+      const householdId = await getHouseholdId(userId);
       // Authenticated mode: find or import recipe
       let dbRecipe = await prisma.recipe.findFirst({
         where: {
-          userId,
+          householdId,
           OR: [
             { id: recipeId },
             { slug: recipeId },
@@ -497,7 +503,7 @@ export async function scheduleMeal(
         if (localRecipe) {
           dbRecipe = await prisma.recipe.create({
             data: {
-              userId,
+              householdId,
               slug: localRecipe.slug,
               title: localRecipe.frontmatter.title || localRecipe.slug,
               markdown: localRecipe.content,

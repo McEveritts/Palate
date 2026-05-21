@@ -7,6 +7,7 @@ import yaml from 'js-yaml';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
+import { getHouseholdId } from "@/lib/household";
 
 const SAFE_MATTER_OPTIONS = {
   engines: { yaml: (s: string) => yaml.load(s, { schema: yaml.FAILSAFE_SCHEMA }) as Record<string, unknown> }
@@ -52,7 +53,7 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
   };
 }
 
-async function seedRecipesForUser(userId: string) {
+async function seedRecipesForHousehold(householdId: string) {
   // Read mains, sides & appetizers
   const categories: ('mains' | 'sides' | 'appetizers')[] = ['mains', 'sides', 'appetizers'];
   for (const category of categories) {
@@ -69,13 +70,13 @@ async function seedRecipesForUser(userId: string) {
         
         await prisma.recipe.upsert({
           where: {
-            userId_slug: {
-              userId,
+            householdId_slug: {
+              householdId,
               slug,
             }
           },
           create: {
-            userId,
+            householdId,
             slug,
             title,
             markdown: content.trim(),
@@ -117,13 +118,13 @@ async function seedRecipesForUser(userId: string) {
 
         await prisma.recipe.upsert({
           where: {
-            userId_slug: {
-              userId,
+            householdId_slug: {
+              householdId,
               slug,
             }
           },
           create: {
-            userId,
+            householdId,
             slug,
             title,
             markdown: content.trim(),
@@ -164,13 +165,14 @@ export async function getVaultRecipes(): Promise<VaultRecipe[]> {
   const userId = await getCurrentUserId();
 
   if (userId) {
-    const count = await prisma.recipe.count({ where: { userId } });
+    const householdId = await getHouseholdId(userId);
+    const count = await prisma.recipe.count({ where: { householdId } });
     if (count === 0) {
-      await seedRecipesForUser(userId);
+      await seedRecipesForHousehold(householdId);
     }
 
     const recipes = await prisma.recipe.findMany({
-      where: { userId }
+      where: { householdId }
     });
 
     return recipes
@@ -229,16 +231,17 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
   const userId = await getCurrentUserId();
 
   if (userId) {
-    const count = await prisma.recipe.count({ where: { userId } });
+    const householdId = await getHouseholdId(userId);
+    const count = await prisma.recipe.count({ where: { householdId } });
     let recipes = await prisma.recipe.findMany({
-      where: { userId }
+      where: { householdId }
     });
 
     const currentCuratedCount = recipes.filter(r => (r.frontmatter as any)?.category === 'curated-current').length;
     if (count === 0 || currentCuratedCount !== 1) {
-      await seedRecipesForUser(userId);
+      await seedRecipesForHousehold(householdId);
       recipes = await prisma.recipe.findMany({
-        where: { userId }
+        where: { householdId }
       });
     }
 

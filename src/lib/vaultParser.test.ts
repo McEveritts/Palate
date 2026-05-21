@@ -18,8 +18,18 @@ vi.mock('@/lib/db', () => ({
       upsert: vi.fn(),
       delete: vi.fn(),
       update: vi.fn(),
-    }
+    },
+    user: {
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ householdId: 'household-abc', name: 'Test' }),
+    },
+    household: {
+      create: vi.fn().mockResolvedValue({ id: 'household-abc' }),
+    },
   }
+}));
+
+vi.mock('@/lib/household', () => ({
+  getHouseholdId: vi.fn().mockResolvedValue('household-abc'),
 }));
 
 vi.mock('next-auth/next', () => ({

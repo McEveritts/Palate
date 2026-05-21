@@ -57,6 +57,24 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           console.error("Failed to create default UserConfig:", error);
         }
+
+        // Ensure user belongs to a Household (auto-create solo household if needed)
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { householdId: true, name: true },
+          });
+          if (existingUser && !existingUser.householdId) {
+            await prisma.household.create({
+              data: {
+                name: `${existingUser.name ?? "My"}'s Kitchen`,
+                members: { connect: { id: user.id } },
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Failed to create default Household:", error);
+        }
       }
       
       // Catch and persist refreshed Google OAuth tokens

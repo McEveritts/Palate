@@ -2,29 +2,52 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/db";
+import { getHouseholdId } from "@/lib/household";
+import matter from 'gray-matter';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
+    // Determine if we're in DB mode or filesystem mode
+    const session = await getServerSession(authOptions).catch(() => null);
+    const userId = session?.user ? session.user.id : null;
+    const householdId = userId ? await getHouseholdId(userId) : null;
+
     const currentDir = path.join(process.cwd(), 'vault', 'curated', 'current');
     const archiveDir = path.join(process.cwd(), 'vault', 'curated', 'archive');
 
-    // Ensure directories exist
-    await fs.mkdir(currentDir, { recursive: true });
-    await fs.mkdir(archiveDir, { recursive: true });
-
-    // 1. Move all current files to archive
-    try {
-      const currentFiles = await fs.readdir(currentDir);
-      for (const file of currentFiles) {
-        if (!file.endsWith('.md')) continue;
-        const oldPath = path.join(currentDir, file);
-        const newPath = path.join(archiveDir, file);
-        await fs.rename(oldPath, newPath);
+    // 1. Archive old curated recipes
+    if (householdId) {
+      // DB mode: move curated-current → curated-archive
+      const currentRecipes = await prisma.recipe.findMany({
+        where: { householdId, frontmatter: { path: ['category'], equals: 'curated-current' } },
+      });
+      for (const recipe of currentRecipes) {
+        const fm = (recipe.frontmatter as any) || {};
+        await prisma.recipe.update({
+          where: { id: recipe.id },
+          data: { frontmatter: { ...fm, category: 'curated-archive' } },
+        });
       }
-    } catch (e) {
-      console.warn("Could not move current to archive (might be empty).", e);
+    } else {
+      // Filesystem mode: move files
+      await fs.mkdir(currentDir, { recursive: true });
+      await fs.mkdir(archiveDir, { recursive: true });
+      try {
+        const currentFiles = await fs.readdir(currentDir);
+        for (const file of currentFiles) {
+          if (!file.endsWith('.md')) continue;
+          const oldPath = path.join(currentDir, file);
+          const newPath = path.join(archiveDir, file);
+          await fs.rename(oldPath, newPath);
+        }
+      } catch (e) {
+        console.warn("Could not move current to archive (might be empty).", e);
+      }
     }
 
     // 2. Prompt Sage to generate new curated recipes
@@ -127,10 +150,32 @@ II. **[Step Title]**
       const titleMatch = cleanContent.match(/title:\s*["']?([^"'\n]+)["']?/i);
       const title = titleMatch ? titleMatch[1].trim() : `Curated Recipe ${Date.now()}`;
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const filename = `${slug}.md`;
 
-      const filePath = path.join(currentDir, filename);
-      await fs.writeFile(filePath, cleanContent.trim(), "utf-8");
+      if (householdId) {
+        // DB mode: save to database with householdId
+        const { data: frontmatterData, content: bodyContent } = matter(cleanContent);
+        await prisma.recipe.upsert({
+          where: { householdId_slug: { householdId, slug } },
+          create: {
+            householdId,
+            slug,
+            title,
+            markdown: bodyContent.trim(),
+            frontmatter: { ...frontmatterData, category: 'curated-current' },
+          },
+          update: {
+            title,
+            markdown: bodyContent.trim(),
+            frontmatter: { ...frontmatterData, category: 'curated-current' },
+          },
+        });
+      } else {
+        // Filesystem mode
+        const filename = `${slug}.md`;
+        await fs.mkdir(currentDir, { recursive: true });
+        const filePath = path.join(currentDir, filename);
+        await fs.writeFile(filePath, cleanContent.trim(), "utf-8");
+      }
       savedCount++;
     }
 

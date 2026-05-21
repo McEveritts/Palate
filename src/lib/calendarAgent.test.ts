@@ -27,7 +27,17 @@ vi.mock('@/lib/db', () => ({
     userConfig: {
       findUnique: vi.fn().mockResolvedValue(null),
     },
+    user: {
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ householdId: 'household-abc', name: 'Test' }),
+    },
+    household: {
+      create: vi.fn().mockResolvedValue({ id: 'household-abc' }),
+    },
   },
+}));
+
+vi.mock('@/lib/household', () => ({
+  getHouseholdId: vi.fn().mockResolvedValue('household-abc'),
 }));
 
 vi.mock('next/cache', () => ({

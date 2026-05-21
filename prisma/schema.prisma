@@ -9,6 +9,26 @@ datasource db {
   provider = "postgresql"
 }
 
+model Household {
+  id          String       @id @default(cuid())
+  name        String       // e.g. "The McEveritts' Kitchen"
+  members     User[]
+  recipes     Recipe[]
+  inviteCodes InviteCode[]
+  createdAt   DateTime     @default(now())
+}
+
+model InviteCode {
+  id          String    @id @default(cuid())
+  code        String    @unique // 8-char hex
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   String    // userId of the inviter
+  expiresAt   DateTime  // 48h from creation
+  usedAt      DateTime? // null until redeemed
+  usedBy      String?   // userId of the redeemer
+}
+
 model User {
   id            String          @id @default(cuid())
   email         String          @unique
@@ -16,9 +36,12 @@ model User {
   image         String?
   emailVerified DateTime?
   
+  // Household membership
+  householdId   String?
+  household     Household?      @relation(fields: [householdId], references: [id])
+
   // Relations
   config        UserConfig?
-  recipes       Recipe[]
   chatSessions  ChatSession[]
   schedule      ScheduledMeal[]
   accounts      Account[]
@@ -81,8 +104,8 @@ model UserConfig {
 
 model Recipe {
   id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  householdId     String
+  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   
   slug            String
   title           String
@@ -94,7 +117,7 @@ model Recipe {
   
   scheduledMeals  ScheduledMeal[]
   
-  @@unique([userId, slug]) // Enforces unique recipe names per user
+  @@unique([householdId, slug]) // Enforces unique recipe names per household
 }
 
 model ScheduledMeal {
