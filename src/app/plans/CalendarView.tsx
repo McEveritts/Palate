@@ -95,6 +95,8 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
   // Modal / Interaction states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedMealDetail, setSelectedMealDetail] = useState<ScheduledMealData | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // New meal form state
   const [newMealRecipeId, setNewMealRecipeId] = useState('');
@@ -136,8 +138,23 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
   const handleAddMealSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMealRecipeId || !newMealDate || !newMealType) return;
+    setFormError(null);
 
+    // Explicit validation with user-facing feedback
+    if (!newMealRecipeId) {
+      setFormError('Please select a recipe before scheduling.');
+      return;
+    }
+    if (!newMealDate) {
+      setFormError('Please select a date for this meal.');
+      return;
+    }
+    if (!newMealType) {
+      setFormError('Please select a meal type (Breakfast, Lunch, Dinner, or Snack).');
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const res = await scheduleMeal(
         newMealRecipeId,
@@ -148,19 +165,22 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       );
 
       if (res.success) {
-        setIsAddModalOpen(false);
         // Reset form
         setNewMealRecipeId('');
         setNewMealDate('');
         setNewMealType('Dinner');
         setNewMealYield(1.0);
         setNewMealParentId('');
+        setFormError(null);
+        setIsAddModalOpen(false);
         loadMeals();
       } else {
-        alert(res.error || 'Failed to schedule meal.');
+        setFormError(res.error || 'Failed to schedule meal. Please try again.');
       }
     } catch (err) {
-      alert('Error scheduling meal.');
+      setFormError('Connection error while scheduling meal. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -285,7 +305,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
           </button>
           
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => { setFormError(null); setIsAddModalOpen(true); }}
             className="ml-4 flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-600 hover:to-fuchsia-600 rounded-lg text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all border border-indigo-400/20"
           >
             <Plus className="w-4 h-4" />
@@ -544,6 +564,14 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                   </p>
                 </div>
 
+                {/* Validation Error Display */}
+                {formError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-rose-300 font-medium">{formError}</p>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                   <button 
                     type="button"
@@ -554,9 +582,10 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                   </button>
                   <button 
                     type="submit"
-                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-lg text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 border border-indigo-400/20"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-lg text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 border border-indigo-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                   >
-                    Save Schedule
+                    {isSaving ? 'Scheduling…' : 'Save Schedule'}
                   </button>
                 </div>
               </form>
