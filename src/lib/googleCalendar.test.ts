@@ -111,6 +111,15 @@ describe("Google Calendar Integration Utilities", () => {
       const result = await hasCalendarScope(mockUserId);
       expect(result).toBe(false);
     });
+
+    it("should return false if only calendar.events scope is present", async () => {
+      (prisma.account.findFirst as any).mockResolvedValue({
+        scope: "openid email https://www.googleapis.com/auth/calendar.events profile",
+      });
+
+      const result = await hasCalendarScope(mockUserId);
+      expect(result).toBe(false);
+    });
   });
 
   describe("listUserCalendars", () => {

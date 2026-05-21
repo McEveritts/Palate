@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, Brain, CheckCircle2, User, Copy, Check, Save, FileText, Eye, FileCode, ImagePlus, X, Scale } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -9,7 +9,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { parseSageStream } from "../lib/parser";
 import { useAppStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 interface Message {
   id: string;
@@ -45,7 +45,9 @@ const parseMessageContent = (content: string) => {
   };
 };
 
-export default function SageHero({ sessionId }: { sessionId?: string }) {
+export default function SageHero({ sessionId: propSessionId }: { sessionId?: string }) {
+  const params = useParams();
+  const sessionId = propSessionId || (params?.sessionId as string | undefined);
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isMicroScreen, setIsMicroScreen] = useState(false);
@@ -156,7 +158,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
     }
   };
 
-  const generateSageReply = async () => {
+  const generateSageReply = useCallback(async () => {
     if (!sessionId) return;
     setIsGenerating(true);
 
@@ -243,14 +245,17 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
         msg.id === sageMessageId ? { ...msg, isStreaming: false } : msg
       ));
     }
-  };
+  }, [sessionId, messages, geminiApiKey, measurementSystem, status]);
 
   // Trigger reply generation automatically when a new user message lands at the end of stack
   useEffect(() => {
     if (messages.length > 0 && messages[messages.length - 1].role === "user" && !isGenerating && !loadingHistory) {
-      generateSageReply();
+      const timer = setTimeout(() => {
+        generateSageReply();
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [messages, isGenerating, loadingHistory]);
+  }, [messages, isGenerating, loadingHistory, generateSageReply]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,16 +287,33 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
       
       window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
     } else {
+      // Transition UI to active chat state immediately for instant feedback
+      setHasStarted(true);
+      setMessages([userMessage]);
+      setIsGenerating(true);
+
       const title = userPrompt.slice(0, 35) + (userPrompt.length > 35 ? "..." : "");
       
       if (status === "authenticated") {
-        const { createChatSession, saveChatMessage } = await import("./actions");
-        const res = await createChatSession(title);
-        if (res.success && res.session) {
-          const newSessionId = res.session.id;
-          await saveChatMessage(newSessionId, "user", userMessage.content);
-          window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
-          router.push(`/ask_sage/${newSessionId}`);
+        try {
+          const { createChatSession, saveChatMessage } = await import("./actions");
+          const res = await createChatSession(title);
+          if (res.success && res.session) {
+            const newSessionId = res.session.id;
+            await saveChatMessage(newSessionId, "user", userMessage.content);
+            window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
+            router.push(`/ask_sage/${newSessionId}`);
+          } else {
+            // Revert state if creation failed
+            setIsGenerating(false);
+            setHasStarted(false);
+            setMessages([]);
+          }
+        } catch (error) {
+          console.error("Failed to create chat session:", error);
+          setIsGenerating(false);
+          setHasStarted(false);
+          setMessages([]);
         }
       } else {
         const newSessionId = `guest-session-${Date.now()}`;
@@ -327,7 +349,7 @@ export default function SageHero({ sessionId }: { sessionId?: string }) {
           <div className="w-12 h-12 rounded-full border-2 border-indigo-400/20 border-t-indigo-400 animate-spin" />
         </div>
         <p className="text-slate-400 mt-4 text-sm font-medium tracking-wide animate-pulse">
-          Retrieving Chef's Chronicles...
+          Retrieving Chef&apos;s Chronicles...
         </p>
       </div>
     );

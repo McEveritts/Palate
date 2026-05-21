@@ -76,7 +76,8 @@ export async function hasCalendarScope(userId: string): Promise<boolean> {
     where: { userId, provider: "google" },
   });
   if (!account || !account.scope) return false;
-  return account.scope.includes("https://www.googleapis.com/auth/calendar");
+  const scopes = account.scope.split(/\s+/);
+  return scopes.includes("https://www.googleapis.com/auth/calendar");
 }
 
 export interface GoogleCalendarItem {
