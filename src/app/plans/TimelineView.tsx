@@ -19,6 +19,8 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
   const [isSaving, setIsSaving] = useState(false);
   const [isRawView, setIsRawView] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'mains' | 'sides'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'mains-first' | 'sides-first'>('date');
 
   useEffect(() => {
     setIsMounted(true);
@@ -54,90 +56,209 @@ export function TimelineView({ initialRecipes, onSaveAction }: TimelineViewProps
     );
   }
 
-  // Sort descending by date (newest first)
+  // Sort according to selected sort criteria
   const sortedRecipes = [...initialRecipes].sort((a, b) => {
+    const aIsSide = a.tags.some(tag => tag.toLowerCase().includes('side'));
+    const bIsSide = b.tags.some(tag => tag.toLowerCase().includes('side'));
+
+    if (sortBy === 'mains-first') {
+      if (!aIsSide && bIsSide) return -1;
+      if (aIsSide && !bIsSide) return 1;
+    } else if (sortBy === 'sides-first') {
+      if (aIsSide && !bIsSide) return -1;
+      if (!aIsSide && bIsSide) return 1;
+    }
+
+    // Secondary/default sort: descending by date (newest first)
     if (a.date && b.date) {
       return b.date.localeCompare(a.date);
     }
     return 0; // Fallback
   });
 
+  const filteredRecipes = sortedRecipes.filter((recipe) => {
+    const isSide = recipe.tags.some(tag => tag.toLowerCase().includes('side'));
+    if (filter === 'mains') return !isSide;
+    if (filter === 'sides') return isSide;
+    return true;
+  });
+
   return (
-    <div className="w-full flex flex-col gap-12 relative pl-8 md:pl-12">
-      {/* Central continuous vertical timeline line */}
-      <div className="absolute left-3.5 md:left-5 top-2 bottom-2 w-px bg-gradient-to-b from-indigo-500 via-fuchsia-500 to-indigo-950/20" />
-      
-      {sortedRecipes.map((recipe) => {
-        // Date formatting
-        let formattedDate = "";
-        if (recipe.date) {
-          const dateObj = new Date(recipe.date + "T12:00:00"); // Avoid timezone shift
-          formattedDate = dateObj.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-        }
-
-        // Determine if it's a Side or Main based on tags
-        const isSide = recipe.tags.some(tag => tag.toLowerCase().includes('side'));
-        
-        return (
-          <div key={recipe.id} className="relative group">
-            {/* Timeline Node Orb */}
-            <div className="absolute left-[-26px] md:left-[-36px] top-6 -translate-x-1/2 w-5 h-5 rounded-full bg-slate-950 border-[3px] border-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.6)] group-hover:scale-125 group-hover:border-fuchsia-400 group-hover:shadow-[0_0_20px_rgba(240,171,252,0.8)] transition-all duration-300 z-10 flex items-center justify-center" />
-            
-            <div className="flex flex-col gap-3">
-              {/* Date Header Node */}
-              <div className="flex items-center gap-2 pl-1">
-                <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-400 group-hover:text-fuchsia-300 transition-colors">
-                  {formattedDate || recipe.date || "Past Curation"}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded border ${
-                  isSide 
-                    ? 'text-indigo-300 bg-indigo-500/10 border-indigo-500/20' 
-                    : 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/20'
-                }`}>
-                  {isSide ? 'Side Dish' : 'Main Dish'}
-                </span>
-              </div>
-
-              {/* CARD COMPONENT */}
-              <motion.div
-                layoutId={`archive-card-${recipe.id}`}
-                onClick={() => setSelectedId(recipe.id)}
-                className="cursor-pointer relative overflow-hidden rounded-2xl bg-slate-900/30 hover:bg-slate-900/20 backdrop-blur-3xl border border-white/5 hover:border-white/10 hover:shadow-[0_0_40px_rgba(99,102,241,0.1)] transition-all duration-300 p-6 md:p-8 flex flex-col justify-between min-h-[140px]"
-              >
-                {/* Specular glows inside cards */}
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-[radial-gradient(circle,rgba(99,102,241,0.06)_0%,transparent_70%)] rounded-full blur-2xl group-hover:bg-[radial-gradient(circle,rgba(240,171,252,0.08)_0%,transparent_70%)] transition-all duration-500 pointer-events-none" />
-                
-                <div className="relative z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <motion.h3 
-                      layoutId={`archive-title-${recipe.id}`} 
-                      className="text-xl md:text-2xl font-black text-white group-hover:text-indigo-300 transition-colors tracking-tight leading-snug"
-                    >
-                      {recipe.title}
-                    </motion.h3>
-                    <p className="text-slate-400 text-xs mt-2 line-clamp-2 md:line-clamp-1 max-w-3xl font-medium">
-                      {recipe.content.replace(/^#\s+.*$/m, '').replace(/^[*\-#\s[\]x]*\s*/gm, ' ').slice(0, 140).trim()}...
-                    </p>
-                  </div>
-                  
-                  {/* Macros Badge */}
-                  <div className="shrink-0 flex items-center">
-                    <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-slate-950/60 text-slate-300 border border-white/5 group-hover:border-white/10 group-hover:text-white transition-all shadow-inner">
-                      {recipe.macros}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
+    <div className="w-full flex flex-col gap-8">
+      {/* Controls Container (Filter & Sort) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pl-8 md:pl-12 pr-4 relative z-20">
+        {/* Filter Pills */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">Filter Recipes</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+                filter === 'all'
+                  ? 'bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] border border-transparent'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter('mains')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border cursor-pointer ${
+                filter === 'mains'
+                  ? 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40 shadow-[0_0_15px_rgba(217,70,239,0.25)]'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              Mains Only
+            </button>
+            <button
+              onClick={() => setFilter('sides')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border cursor-pointer ${
+                filter === 'sides'
+                  ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.25)]'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              Sides Only
+            </button>
           </div>
-        );
-      })}
+        </div>
+
+        {/* Sort Pills */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">Sort Order</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setSortBy('date')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border cursor-pointer ${
+                sortBy === 'date'
+                  ? 'bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] border border-transparent'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              By Date (Newest)
+            </button>
+            <button
+              onClick={() => setSortBy('mains-first')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border cursor-pointer ${
+                sortBy === 'mains-first'
+                  ? 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40 shadow-[0_0_15px_rgba(217,70,239,0.25)]'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              Mains First
+            </button>
+            <button
+              onClick={() => setSortBy('sides-first')}
+              className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border cursor-pointer ${
+                sortBy === 'sides-first'
+                  ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.25)]'
+                  : 'bg-slate-900/40 text-slate-400 hover:text-slate-200 border border-white/5 backdrop-blur-md hover:bg-slate-800/40'
+              }`}
+            >
+              Sides First
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full flex flex-col gap-12 relative pl-8 md:pl-12 min-h-[120px]">
+        {/* Central continuous vertical timeline line */}
+        <div className="absolute left-3.5 md:left-5 top-2 bottom-2 w-px bg-gradient-to-b from-indigo-500 via-fuchsia-500 to-indigo-950/20" />
+        
+        <AnimatePresence mode="popLayout">
+          {filteredRecipes.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center py-16 text-slate-500 italic relative z-10 w-full pr-8 md:pr-12"
+            >
+              No {filter === 'mains' ? 'main dishes' : 'side dishes'} found in the archive.
+            </motion.div>
+          ) : (
+            filteredRecipes.map((recipe) => {
+              // Date formatting
+              let formattedDate = "";
+              if (recipe.date) {
+                const dateObj = new Date(recipe.date + "T12:00:00"); // Avoid timezone shift
+                formattedDate = dateObj.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+              }
+
+              // Determine if it's a Side or Main based on tags
+              const isSide = recipe.tags.some(tag => tag.toLowerCase().includes('side'));
+              
+              return (
+                <motion.div 
+                  key={recipe.id} 
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="relative group w-full"
+                >
+                  {/* Timeline Node Orb */}
+                  <div className="absolute left-[-26px] md:left-[-36px] top-6 -translate-x-1/2 w-5 h-5 rounded-full bg-slate-950 border-[3px] border-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.6)] group-hover:scale-125 group-hover:border-fuchsia-400 group-hover:shadow-[0_0_20px_rgba(240,171,252,0.8)] transition-all duration-300 z-10 flex items-center justify-center" />
+                  
+                  <div className="flex flex-col gap-3">
+                    {/* Date Header Node */}
+                    <div className="flex items-center gap-2 pl-1">
+                      <span className="text-xs md:text-sm font-black uppercase tracking-widest text-indigo-400 group-hover:text-fuchsia-300 transition-colors">
+                        {formattedDate || recipe.date || "Past Curation"}
+                      </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                      <span className={`text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded border ${
+                        isSide 
+                          ? 'text-indigo-300 bg-indigo-500/10 border-indigo-500/20' 
+                          : 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/20'
+                      }`}>
+                        {isSide ? 'Side Dish' : 'Main Dish'}
+                      </span>
+                    </div>
+
+                    {/* CARD COMPONENT */}
+                    <motion.div
+                      layoutId={`archive-card-${recipe.id}`}
+                      onClick={() => setSelectedId(recipe.id)}
+                      className="cursor-pointer relative overflow-hidden rounded-2xl bg-slate-900/30 hover:bg-slate-900/20 backdrop-blur-3xl border border-white/5 hover:border-white/10 hover:shadow-[0_0_40px_rgba(99,102,241,0.1)] transition-all duration-300 p-6 md:p-8 flex flex-col justify-between min-h-[140px]"
+                    >
+                      {/* Specular glows inside cards */}
+                      <div className="absolute -top-24 -right-24 w-64 h-64 bg-[radial-gradient(circle,rgba(99,102,241,0.06)_0%,transparent_70%)] rounded-full blur-2xl group-hover:bg-[radial-gradient(circle,rgba(240,171,252,0.08)_0%,transparent_70%)] transition-all duration-500 pointer-events-none" />
+                      
+                      <div className="relative z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <motion.h3 
+                            layoutId={`archive-title-${recipe.id}`} 
+                            className="text-xl md:text-2xl font-black text-white group-hover:text-indigo-300 transition-colors tracking-tight leading-snug"
+                          >
+                            {recipe.title}
+                          </motion.h3>
+                          <p className="text-slate-400 text-xs mt-2 line-clamp-2 md:line-clamp-1 max-w-3xl font-medium">
+                            {recipe.content.replace(/^#\s+.*$/m, '').replace(/^[*\-#\s[\]x]*\s*/gm, ' ').slice(0, 140).trim()}...
+                          </p>
+                        </div>
+                        
+                        {/* Macros Badge */}
+                        <div className="shrink-0 flex items-center">
+                          <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-slate-950/60 text-slate-300 border border-white/5 group-hover:border-white/10 group-hover:text-white transition-all shadow-inner">
+                            {recipe.macros}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Expanded Modal */}
       {isMounted && createPortal(
