@@ -182,8 +182,7 @@ Side description
     mockGenerateContent.mockResolvedValueOnce({
       response: {
         text: () => `
-Some thoughts and preamble here that should be stripped
----
+Some thoughts with separator --- inside it and preamble that should be stripped Yes.---
 title: "Hero Main with Preamble"
 tags: ["main", "Curated By Sage"]
 macros: "Calories: 500 | Protein: 30g | Carbs: 50g | Fat: 15g"

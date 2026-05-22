@@ -154,12 +154,10 @@ II. **[Step Title]**
       if (!cleanContent) continue;
 
       // Clean up any preamble/thought residue before the actual frontmatter/recipe starts
-      let firstIndex = cleanContent.indexOf("---");
-      if (firstIndex === -1) {
-        firstIndex = cleanContent.indexOf("```yaml");
-      }
-      if (firstIndex === -1) {
-        firstIndex = cleanContent.indexOf("```markdown");
+      let firstIndex = -1;
+      const fmMatch = cleanContent.match(/(?:---\s*\r?\ntitle:|```yaml\s*\r?\ntitle:|```markdown\s*\r?\ntitle:)/);
+      if (fmMatch && fmMatch.index !== undefined) {
+        firstIndex = fmMatch.index;
       }
       if (firstIndex !== -1 && firstIndex > 0) {
         cleanContent = cleanContent.substring(firstIndex);
