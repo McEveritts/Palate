@@ -53,51 +53,55 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
   };
 }
 
+async function seedCategoryForHousehold(householdId: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts') {
+  const dirPath = path.join(process.cwd(), 'vault', category);
+  try {
+    const files = await fs.readdir(dirPath);
+    for (const file of files) {
+      if (!file.endsWith('.md')) continue;
+      const filePath = path.join(dirPath, file);
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
+      const slug = file.replace('.md', '');
+      const title = data.recipe || data.title || slug;
+      
+      await prisma.recipe.upsert({
+        where: {
+          householdId_slug: {
+            householdId,
+            slug,
+          }
+        },
+        create: {
+          householdId,
+          slug,
+          title,
+          markdown: content.trim(),
+          frontmatter: {
+            ...data,
+            category,
+          }
+        },
+        update: {
+          title,
+          markdown: content.trim(),
+          frontmatter: {
+            ...data,
+            category,
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.warn(`Could not read directory ${dirPath} for seeding ${category}`);
+  }
+}
+
 async function seedRecipesForHousehold(householdId: string) {
   // Read mains, sides, appetizers & desserts
   const categories: ('mains' | 'sides' | 'appetizers' | 'desserts')[] = ['mains', 'sides', 'appetizers', 'desserts'];
   for (const category of categories) {
-    const dirPath = path.join(process.cwd(), 'vault', category);
-    try {
-      const files = await fs.readdir(dirPath);
-      for (const file of files) {
-        if (!file.endsWith('.md')) continue;
-        const filePath = path.join(dirPath, file);
-        const fileContent = await fs.readFile(filePath, 'utf-8');
-        const { data, content } = matter(fileContent, SAFE_MATTER_OPTIONS);
-        const slug = file.replace('.md', '');
-        const title = data.recipe || data.title || slug;
-        
-        await prisma.recipe.upsert({
-          where: {
-            householdId_slug: {
-              householdId,
-              slug,
-            }
-          },
-          create: {
-            householdId,
-            slug,
-            title,
-            markdown: content.trim(),
-            frontmatter: {
-              ...data,
-              category,
-            }
-          },
-          update: {
-            title,
-            markdown: content.trim(),
-            frontmatter: {
-              ...data,
-              category,
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.warn(`Could not read directory ${dirPath} for seeding`);
-    }
+    await seedCategoryForHousehold(householdId, category);
   }
 
   // Read curated current & archive
@@ -170,6 +174,20 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
     const count = await prisma.recipe.count({ where: { householdId } });
     if (count === 0) {
       await seedRecipesForHousehold(householdId);
+    } else {
+      // Dynamic incremental seeding of new default categories (e.g., desserts)
+      const dessertCount = await prisma.recipe.count({
+        where: {
+          householdId,
+          frontmatter: {
+            path: ['category'],
+            equals: 'desserts'
+          }
+        }
+      });
+      if (dessertCount === 0) {
+        await seedCategoryForHousehold(householdId, 'desserts');
+      }
     }
 
     const recipes = await prisma.recipe.findMany({

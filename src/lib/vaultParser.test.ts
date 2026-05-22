@@ -95,5 +95,51 @@ describe('vaultParser', () => {
       expect(recipes[0].id).toBe('mains-db-main-recipe');
       expect(recipes[0].content).toBe('# Body content');
     });
+
+    it('should incrementally seed desserts if user is logged in, count > 0, but no dessert recipes exist', async () => {
+      const { getServerSession } = await import('next-auth/next');
+      const { prisma } = await import('@/lib/db');
+      
+      (getServerSession as any).mockResolvedValue({ user: { id: 'user-123' } });
+      
+      let countCall = 0;
+      (prisma.recipe.count as any).mockImplementation(async (args: any) => {
+        countCall++;
+        if (countCall === 1) return 5;
+        if (countCall === 2) return 0;
+        return 0;
+      });
+
+      (fs.readdir as any).mockImplementation(async (dir: string) => {
+        if (dir.includes('desserts')) return ['matcha-chia-pudding.md'];
+        return [];
+      });
+      (fs.readFile as any).mockImplementation(async (filePath: string) => {
+        if (filePath.includes('matcha-chia-pudding.md')) {
+          return `---\nrecipe: 'Matcha Chia Pudding'\ntags: ['sweet']\nmacros: 'Protein: 5g'\n---\n# Delicious green tea pudding`;
+        }
+        return '';
+      });
+
+      (prisma.recipe.findMany as any).mockResolvedValue([
+        {
+          slug: 'matcha-chia-pudding',
+          title: 'Matcha Chia Pudding',
+          markdown: '# Delicious green tea pudding',
+          frontmatter: {
+            category: 'desserts',
+            tags: ['sweet'],
+            macros: { protein: '5g' }
+          }
+        }
+      ]);
+
+      const recipes = await getVaultRecipes();
+      
+      expect(prisma.recipe.upsert).toHaveBeenCalled();
+      expect(recipes).toHaveLength(1);
+      expect(recipes[0].title).toBe('Matcha Chia Pudding');
+      expect(recipes[0].category).toBe('desserts');
+    });
   });
 });
