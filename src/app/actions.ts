@@ -348,6 +348,34 @@ export async function saveCuratedToVault(id: string) {
         }
       });
 
+      // Synchronize file on disk by moving it to the new category folder to prevent re-seeding
+      const [_, type, ...filenameParts] = id.split('-');
+      if (type === 'current' || type === 'archive') {
+        const rawSlug = filenameParts.join('-');
+        const curatedBaseDir = path.join(process.cwd(), 'vault', 'curated', type);
+        const curatedPath = safeVaultPath(curatedBaseDir, rawSlug);
+        
+        const safeFilename = path.basename(curatedPath);
+        const targetBaseDir = path.join(process.cwd(), 'vault', targetCategory);
+        let targetPath = path.join(targetBaseDir, safeFilename);
+        
+        try {
+          await fs.access(curatedPath);
+          // Prevent overwrite
+          try {
+            await fs.access(targetPath);
+            const ext = path.extname(safeFilename);
+            const base = path.basename(safeFilename, ext);
+            const newFilename = `${base}-${Date.now()}${ext}`;
+            targetPath = path.join(targetBaseDir, newFilename);
+          } catch {}
+          
+          await fs.rename(curatedPath, targetPath);
+        } catch (err) {
+          console.warn(`Curated file not found on disk during saveCuratedToVault: ${curatedPath}`);
+        }
+      }
+
       revalidatePath('/vault');
       revalidatePath('/plans');
       return { success: true };
@@ -469,9 +497,36 @@ export async function deleteRecipeFromVault(id: string) {
         where: { id: existing.id }
       });
 
+      // Synchronize file on disk by deleting it from the flat vault as well to prevent re-seeding
+      let category: string;
+      if (id.startsWith('curated-current-')) {
+        category = 'curated/current';
+      } else if (id.startsWith('curated-archive-')) {
+        category = 'curated/archive';
+      } else if (id.startsWith('mains-')) {
+        category = 'mains';
+      } else if (id.startsWith('sides-')) {
+        category = 'sides';
+      } else if (id.startsWith('appetizers-')) {
+        category = 'appetizers';
+      } else if (id.startsWith('desserts-')) {
+        category = 'desserts';
+      } else {
+        throw new Error(`Invalid recipe ID format: ${id}`);
+      }
+      
+      const vaultPath = path.join(process.cwd(), 'vault', category);
+      const filePath = safeVaultPath(vaultPath, slug);
+      try {
+        await fs.access(filePath);
+        await fs.unlink(filePath);
+      } catch (err) {
+        console.warn(`File not found on disk during DB recipe delete: ${filePath}`);
+      }
+
       revalidatePath('/vault');
       revalidatePath('/plans');
-      return { success: true, message: `Recipe successfully deleted from database` };
+      return { success: true, message: `Recipe successfully deleted from database and disk` };
     }
 
     let category: string;
