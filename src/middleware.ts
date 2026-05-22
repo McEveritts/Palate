@@ -98,6 +98,6 @@ export const config = {
     "/upload/:path*",
     "/settings",
     "/calendar",
-    "/api/((?!auth).*)",
+    "/api/((?!auth|curate).*)",
   ],
 };
