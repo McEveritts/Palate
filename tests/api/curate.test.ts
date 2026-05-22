@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from '@/app/api/curate/route';
+import { POST, GET } from '@/app/api/curate/route';
 import fs from 'fs/promises';
 
 vi.mock('fs/promises', () => ({
@@ -135,5 +135,46 @@ Hero description
     expect(res.status).toBe(500);
     expect(json.success).toBe(false);
     expect(json.error).toBe('An unexpected error occurred during curation.');
+  });
+
+  it('should successfully run curation with a GET request', async () => {
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => `
+---
+title: "Hero Main GET"
+tags: ["main", "Curated By Sage"]
+macros: "Calories: 500 | Protein: 30g | Carbs: 50g | Fat: 15g"
+---
+# 🥩 Hero Main GET 🥩
+Hero description
+|||RECIPE_SPLIT|||
+---
+title: "Side One GET"
+tags: ["side", "Curated By Sage"]
+macros: "Calories: 200 | Protein: 5g | Carbs: 20g | Fat: 5g"
+---
+# 🥗 Side One GET 🥗
+Side description
+|||RECIPE_SPLIT|||
+---
+title: "Side Two GET"
+tags: ["side", "Curated By Sage"]
+macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
+---
+# 🍤 Side Two GET 🍤
+Side description
+`
+      }
+    });
+
+    const req = new Request('http://localhost/api/curate', { method: 'GET' });
+    const res = await GET(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.message).toContain('generated 3 new curated recipes');
+    expect(fs.writeFile).toHaveBeenCalledTimes(3);
   });
 });
