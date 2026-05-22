@@ -13,7 +13,7 @@ import { parseMessageContent } from "../../lib/parser";
 export default function UploadPage() {
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
-  const [parsedData, setParsedData] = useState<{ markdown: string, category: 'mains' | 'sides', title: string } | null>(null);
+  const [parsedData, setParsedData] = useState<{ markdown: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts', title: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);

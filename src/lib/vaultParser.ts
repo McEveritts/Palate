@@ -17,7 +17,7 @@ export interface VaultRecipe {
   id: string;
   slug: string;
   title: string;
-  category: 'mains' | 'sides' | 'appetizers' | 'curated-current' | 'curated-archive';
+  category: 'mains' | 'sides' | 'appetizers' | 'desserts' | 'curated-current' | 'curated-archive';
   tags: string[];
   macros: string;
   content: string;
@@ -54,8 +54,8 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
 }
 
 async function seedRecipesForHousehold(householdId: string) {
-  // Read mains, sides & appetizers
-  const categories: ('mains' | 'sides' | 'appetizers')[] = ['mains', 'sides', 'appetizers'];
+  // Read mains, sides, appetizers & desserts
+  const categories: ('mains' | 'sides' | 'appetizers' | 'desserts')[] = ['mains', 'sides', 'appetizers', 'desserts'];
   for (const category of categories) {
     const dirPath = path.join(process.cwd(), 'vault', category);
     try {
@@ -163,7 +163,7 @@ async function getCurrentUserId(): Promise<string | null> {
 
 export async function getVaultRecipes(userCategories?: string[]): Promise<VaultRecipe[]> {
   const userId = await getCurrentUserId();
-  const categoriesToScan = userCategories || ['mains', 'sides', 'appetizers'];
+  const categoriesToScan = userCategories || ['mains', 'sides', 'appetizers', 'desserts'];
 
   if (userId) {
     const householdId = await getHouseholdId(userId);

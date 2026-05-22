@@ -34,7 +34,7 @@ export interface Recipe {
 
 export function getAllRecipes(): Recipe[] {
   const recipes: Recipe[] = [];
-  const categories = ['mains', 'sides', 'appetizers']; // Only pulling from recipe directories
+  const categories = ['mains', 'sides', 'appetizers', 'desserts']; // Only pulling from recipe directories
 
   categories.forEach(category => {
     const categoryPath = path.join(VAULT_DIR, category);

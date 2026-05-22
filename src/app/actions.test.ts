@@ -81,6 +81,19 @@ describe('actions - deleteRecipeFromVault', () => {
     expect(result.error).toBe('ENOENT: no such file or directory');
     expect(fs.unlink).not.toHaveBeenCalled();
   });
+
+  it('should successfully delete a dessert recipe file', async () => {
+    (fs.access as any).mockResolvedValue(undefined);
+    (fs.unlink as any).mockResolvedValue(undefined);
+
+    const result = await deleteRecipeFromVault('desserts-test-dessert');
+    
+    expect(result.success).toBe(true);
+    expect(fs.access).toHaveBeenCalled();
+    expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining(path.join('vault', 'desserts', 'test-dessert.md')));
+    expect(revalidatePath).toHaveBeenCalledWith('/vault');
+    expect(revalidatePath).toHaveBeenCalledWith('/plans');
+  });
 });
 
 describe('actions - saveRecipeToVault', () => {
@@ -127,6 +140,23 @@ describe('actions - saveRecipeToVault', () => {
     expect(fs.writeFile).toHaveBeenCalledWith(
       expect.stringContaining(path.join('sides', 'honey-carrots.md')),
       expect.stringContaining('title: Honey Carrots'),
+      'utf-8'
+    );
+  });
+
+  it('should save a dessert recipe when tags contain "sweet"', async () => {
+    (fs.mkdir as any).mockResolvedValue(undefined);
+    (fs.writeFile as any).mockResolvedValue(undefined);
+    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
+
+    const input = `---\ntitle: Chocolate Cake\ntags: [sweet]\n---\nBake cake...`;
+
+    const result = await saveRecipeToVault(input, 'md');
+
+    expect(result.success).toBe(true);
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining(path.join('desserts', 'chocolate-cake.md')),
+      expect.stringContaining('title: Chocolate Cake'),
       'utf-8'
     );
   });

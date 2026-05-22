@@ -72,7 +72,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides' | 'appetizers'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides' | 'appetizers' | 'desserts'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -102,18 +102,25 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       if (activeCategory === 'all') {
         matchesCategory = true;
       } else if (recipe.category.startsWith('curated')) {
-        const isSide = recipe.tags.some(t => t.toLowerCase().includes('side') || t.toLowerCase().includes('sides'));
-        const isAppetizer = recipe.tags.some(t => t.toLowerCase().includes('appetizer') || t.toLowerCase().includes('appetizers'));
-        const isMain = !isSide && !isAppetizer;
+        const isDessert = recipe.tags.some(t => {
+          const lower = t.toLowerCase().trim();
+          return ['dessert', 'desserts', 'sweet', 'sweets'].includes(lower);
+        });
+        const isSide = !isDessert && recipe.tags.some(t => t.toLowerCase().includes('side') || t.toLowerCase().includes('sides'));
+        const isAppetizer = !isDessert && recipe.tags.some(t => t.toLowerCase().includes('appetizer') || t.toLowerCase().includes('appetizers'));
+        const isMain = !isSide && !isAppetizer && !isDessert;
+
         if (activeCategory === 'sides') {
           matchesCategory = isSide;
         } else if (activeCategory === 'appetizers') {
           matchesCategory = isAppetizer;
+        } else if (activeCategory === 'desserts') {
+          matchesCategory = isDessert;
         } else {
           matchesCategory = isMain;
         }
       } else {
-        matchesCategory = recipe.category === activeCategory;
+        matchesCategory = recipe.category === (activeCategory as any);
       }
 
       const searchLower = searchQuery.toLowerCase();
