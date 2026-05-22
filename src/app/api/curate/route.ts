@@ -113,6 +113,15 @@ II. **[Step Title]**
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
+    // Log the raw AI output for debugging purposes
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        await fs.writeFile(path.join(process.cwd(), 'vault', 'curation_raw.log'), text, 'utf-8');
+      } catch (e) {
+        console.warn("Could not write curation raw log:", e);
+      }
+    }
+
     // 3. Save the newly generated recipes
     let recipes = text.split("|||RECIPE_SPLIT|||").map(r => r.trim()).filter(Boolean);
 
