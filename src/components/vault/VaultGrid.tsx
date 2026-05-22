@@ -96,6 +96,16 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!confirmDeleteId) return;
+
+    const timer = setTimeout(() => {
+      setConfirmDeleteId(null);
+    }, 4000); // Auto-reset confirmation state after 4 seconds of inactivity
+
+    return () => clearTimeout(timer);
+  }, [confirmDeleteId]);
+
   const filteredRecipes = useMemo(() => {
     return recipes.filter(recipe => {
       let matchesCategory = false;
@@ -201,11 +211,6 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                 layoutId={`card-${recipe.id}`}
                 key={recipe.id}
                 onClick={() => setSelectedId(recipe.id)}
-                onMouseLeave={() => {
-                  if (confirmDeleteId === recipe.id) {
-                    setConfirmDeleteId(null);
-                  }
-                }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}

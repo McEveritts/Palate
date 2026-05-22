@@ -255,8 +255,24 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
       where: { householdId }
     });
 
-    const currentCuratedCount = recipes.filter(r => (r.frontmatter as any)?.category === 'curated-current').length;
-    if (count === 0 || currentCuratedCount !== 1) {
+    // Read the current curated files on disk to detect out-of-sync state
+    let diskSlugs: string[] = [];
+    try {
+      const files = await fs.readdir(path.join(process.cwd(), 'vault', 'curated', 'current'));
+      diskSlugs = files.filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''));
+    } catch (e) {
+      console.warn("Could not read current curated files from disk:", e);
+    }
+
+    const dbCuratedCurrent = recipes.filter(r => (r.frontmatter as any)?.category === 'curated-current');
+    const dbSlugs = new Set(dbCuratedCurrent.map(r => r.slug));
+
+    const isOutOfSync = diskSlugs.length > 0 && (
+      dbCuratedCurrent.length !== diskSlugs.length || 
+      diskSlugs.some(slug => !dbSlugs.has(slug))
+    );
+
+    if (count === 0 || isOutOfSync) {
       await seedRecipesForHousehold(householdId);
       recipes = await prisma.recipe.findMany({
         where: { householdId }
