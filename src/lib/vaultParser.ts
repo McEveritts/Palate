@@ -104,6 +104,24 @@ async function seedRecipesForHousehold(householdId: string) {
     await seedCategoryForHousehold(householdId, category);
   }
 
+  // Create the desserts seeded sentinel so we never re-seed it
+  await prisma.recipe.upsert({
+    where: {
+      householdId_slug: {
+        householdId,
+        slug: '__seeded_desserts',
+      }
+    },
+    create: {
+      householdId,
+      slug: '__seeded_desserts',
+      title: 'System Seeded Desserts',
+      markdown: 'System record',
+      frontmatter: { category: 'system' }
+    },
+    update: {}
+  });
+
   // Read curated current & archive
   const curatedTypes: ('current' | 'archive')[] = ['current', 'archive'];
   for (const type of curatedTypes) {
@@ -176,17 +194,43 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
       await seedRecipesForHousehold(householdId);
     } else {
       // Dynamic incremental seeding of new default categories (e.g., desserts)
-      const dessertCount = await prisma.recipe.count({
+      const wasDessertsSeeded = await prisma.recipe.findUnique({
         where: {
-          householdId,
-          frontmatter: {
-            path: ['category'],
-            equals: 'desserts'
+          householdId_slug: {
+            householdId,
+            slug: '__seeded_desserts'
           }
         }
       });
-      if (dessertCount === 0) {
-        await seedCategoryForHousehold(householdId, 'desserts');
+      if (!wasDessertsSeeded) {
+        const dessertCount = await prisma.recipe.count({
+          where: {
+            householdId,
+            frontmatter: {
+              path: ['category'],
+              equals: 'desserts'
+            }
+          }
+        });
+        if (dessertCount === 0) {
+          await seedCategoryForHousehold(householdId, 'desserts');
+        }
+        await prisma.recipe.upsert({
+          where: {
+            householdId_slug: {
+              householdId,
+              slug: '__seeded_desserts'
+            }
+          },
+          create: {
+            householdId,
+            slug: '__seeded_desserts',
+            title: 'System Seeded Desserts',
+            markdown: 'System record',
+            frontmatter: { category: 'system' }
+          },
+          update: {}
+        });
       }
     }
 
