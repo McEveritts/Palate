@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     // 2. Prompt Sage to generate new curated recipes
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-pro-preview",
+      model: "gemma-4-31b-it",
       systemInstruction: `You are Sage, a MasterChef-level digital sous-chef and culinary educator. 
 Generate exactly 3 unique, highly appealing recipes that share a cohesive thematic thesis for this week's curation.
 
