@@ -177,4 +177,57 @@ Side description
     expect(json.message).toContain('generated 3 new curated recipes');
     expect(fs.writeFile).toHaveBeenCalledTimes(3);
   });
+
+  it('should strip preamble and thoughts from recipes', async () => {
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => `
+Some thoughts and preamble here that should be stripped
+---
+title: "Hero Main with Preamble"
+tags: ["main", "Curated By Sage"]
+macros: "Calories: 500 | Protein: 30g | Carbs: 50g | Fat: 15g"
+---
+# 🥩 Hero Main 🥩
+Hero description
+|||RECIPE_SPLIT|||
+---
+title: "Side One Clean"
+tags: ["side", "Curated By Sage"]
+macros: "Calories: 200 | Protein: 5g | Carbs: 20g | Fat: 5g"
+---
+# 🥗 Side One 🥗
+Side description
+|||RECIPE_SPLIT|||
+Some side thoughts before the side
+---
+title: "Side Two Clean"
+tags: ["side", "Curated By Sage"]
+macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
+---
+# 🍤 Side Two 🍤
+Side description
+`
+      }
+    });
+
+    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(json.message).toContain('generated 3 new curated recipes');
+    expect(fs.writeFile).toHaveBeenCalledTimes(3);
+    
+    // The first file saved should not contain the preamble
+    const firstCallArgs = vi.mocked(fs.writeFile).mock.calls[0];
+    expect(firstCallArgs[1]).not.toContain('Some thoughts and preamble here');
+    expect(firstCallArgs[1].startsWith('---')).toBe(true);
+
+    // The third file saved should not contain the side thoughts
+    const thirdCallArgs = vi.mocked(fs.writeFile).mock.calls[2];
+    expect(thirdCallArgs[1]).not.toContain('Some side thoughts before the side');
+    expect(thirdCallArgs[1].startsWith('---')).toBe(true);
+  });
 });

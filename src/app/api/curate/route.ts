@@ -152,6 +152,18 @@ II. **[Step Title]**
     for (const rawRecipe of recipes) {
       let cleanContent = rawRecipe.trim();
       if (!cleanContent) continue;
+
+      // Clean up any preamble/thought residue before the actual frontmatter/recipe starts
+      let firstIndex = cleanContent.indexOf("---");
+      if (firstIndex === -1) {
+        firstIndex = cleanContent.indexOf("```yaml");
+      }
+      if (firstIndex === -1) {
+        firstIndex = cleanContent.indexOf("```markdown");
+      }
+      if (firstIndex !== -1 && firstIndex > 0) {
+        cleanContent = cleanContent.substring(firstIndex);
+      }
       // H5 Fix: Prevent disk exhaustion from oversized AI output
       if (cleanContent.length > 50_000) {
         console.warn(`Curated recipe output exceeds 50KB limit (${cleanContent.length} chars). Skipping.`);
