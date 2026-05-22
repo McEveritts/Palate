@@ -116,18 +116,21 @@ II. **[Step Title]**
     // 3. Save the newly generated recipes
     let recipes = text.split("|||RECIPE_SPLIT|||").map(r => r.trim()).filter(Boolean);
 
+    // Filter out any blocks that do not look like recipes (e.g., preambles, thoughts, or drafts)
+    recipes = recipes.filter(r => r.includes("title:") && r.includes("tags:"));
+
     // ROBUST FALLBACK: If the LLM failed to use the split token, fallback to standard markdown parsing
     if (recipes.length !== 3) {
-      console.warn("Curation Split Token missing or malformed. Engaging robust fallback splitter.");
-      // Split by markdown horizontal rules that precede a title block
+      console.warn("Curation Split Token missing, malformed, or contaminated. Engaging robust fallback splitter.");
+      // Split by markdown frontmatter blocks
       const fallbackSplit = text.split(/(?=---\s*\ntitle:)/g).map(r => r.trim()).filter(Boolean);
+      const filteredFallback = fallbackSplit.filter(r => r.includes("title:") && r.includes("tags:"));
       
-      if (fallbackSplit.length === 3) {
-        recipes = fallbackSplit;
+      if (filteredFallback.length === 3) {
+        recipes = filteredFallback;
       } else {
-        // Absolute worst-case scenario: return what we can and log heavily
-        console.error(`Fallback splitter failed. Found ${fallbackSplit.length} recipes.`);
-        recipes = fallbackSplit; 
+        console.error(`Fallback splitter failed. Found ${filteredFallback.length} valid recipes.`);
+        recipes = filteredFallback; 
       }
     }
 
