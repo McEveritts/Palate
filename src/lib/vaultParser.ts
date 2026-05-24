@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db";
 import { getHouseholdId } from "@/lib/household";
 import { globalMacroCache, MacroData } from './macroCache';
 
-export const INGREDIENT_STOP_WORDS = /ground|fresh|raw|dried|frozen|cooked|boneless|skinless|organic/g;
+const INGREDIENT_STOP_WORDS = /ground|fresh|raw|dried|frozen|cooked|boneless|skinless|organic/g;
 
 const SAFE_MATTER_OPTIONS = {
   engines: { yaml: (s: string) => yaml.load(s, { schema: yaml.FAILSAFE_SCHEMA }) as Record<string, unknown> }
