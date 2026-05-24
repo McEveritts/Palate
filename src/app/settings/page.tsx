@@ -2,7 +2,8 @@
 
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
-import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus } from "lucide-react";
+import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus, Activity } from "lucide-react";
+import ProfileOnboarding from "@/components/fitness/ProfileOnboarding";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,6 +43,20 @@ export default function SettingsPage() {
   const [householdNameEdit, setHouseholdNameEdit] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [suggestingName, setSuggestingName] = useState(false);
+
+  // Fitness Profile states
+  const [fitnessProfile, setFitnessProfile] = useState<{
+    gender: string;
+    dateOfBirth: string;
+    weightKg: number;
+    heightCm: number;
+    activityLevel: string;
+    goal: string;
+    targetCalories: number;
+    targetProtein: number;
+    targetCarbs: number;
+    targetFat: number;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -86,9 +101,24 @@ export default function SettingsPage() {
     }
   }, [session]);
 
+  // Load fitness profile
+  const loadFitnessProfile = useCallback(async () => {
+    if (!session?.user) return;
+    try {
+      const res = await fetch("/api/profile");
+      const data = await res.json();
+      if (data.success && data.profile) {
+        setFitnessProfile(data.profile);
+      }
+    } catch (err) {
+      console.error("Failed to load fitness profile:", err);
+    }
+  }, [session]);
+
   useEffect(() => {
     loadHousehold();
-  }, [loadHousehold]);
+    loadFitnessProfile();
+  }, [loadHousehold, loadFitnessProfile]);
 
   const handleCreateInvite = async () => {
     try {
@@ -405,6 +435,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => {
                   useAppStore.getState().setGuest(false);
+                  document.cookie = "palate_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                   signOut({ callbackUrl: '/login' });
                 }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium"
@@ -419,6 +450,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => {
                   useAppStore.getState().setGuest(false);
+                  document.cookie = "palate_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                   window.location.href = '/login';
                 }}
                 className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-medium transition-colors"
@@ -636,6 +668,18 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {/* Fitness Profile Section */}
+        {session?.user && (
+          <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className="text-emerald-400 w-6 h-6 animate-pulse" />
+              <h2 className="text-2xl font-bold text-white">Fitness Profile</h2>
+            </div>
+            <ProfileOnboarding existingProfile={fitnessProfile} onComplete={() => loadFitnessProfile()} />
+          </section>
+        )}
+
         {/* Display & Units Section */}
         <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
@@ -713,6 +757,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => {
                   useAppStore.getState().setGuest(false);
+                  document.cookie = 'palate_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
                   window.location.href = '/login';
                 }}
                 className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold transition-all shadow-lg"

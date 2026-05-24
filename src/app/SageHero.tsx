@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from 'rehype-sanitize';
-import { parseSageStream } from "../lib/parser";
+import { parseSageStream, parseMessageContent } from "../lib/parser";
 import { useAppStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
@@ -19,31 +19,7 @@ interface Message {
   isStreaming?: boolean;
 }
 
-const parseMessageContent = (content: string) => {
-  let cleanContent = content.trim();
-  if (cleanContent.startsWith('```markdown')) {
-    cleanContent = cleanContent.replace(/^```markdown\n?/, '').replace(/\n?```$/, '').trim();
-  }
 
-  const match = cleanContent.match(/---\n([\s\S]*?)\n---/);
-  if (!match) return { frontmatter: null, markdown: content };
-  
-  const yaml = match[1];
-  const markdown = cleanContent.slice(match.index! + match[0].length).trim();
-  
-  const recipeMatch = yaml.match(/(?:recipe|title):\s*(.*)/);
-  const tagsMatch = yaml.match(/tags:\s*\[?(.*?)\]?(?:\n|$)/);
-  const macrosMatch = yaml.match(/macros:\s*(.*)/);
-  
-  return {
-    markdown,
-    frontmatter: {
-      recipe: recipeMatch ? recipeMatch[1].trim().replace(/^['"]|['"]$/g, '') : '',
-      tags: tagsMatch ? tagsMatch[1].split(',').map(t => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [],
-      macros: macrosMatch ? macrosMatch[1].trim() : ''
-    }
-  };
-};
 
 export default function SageHero({ sessionId: propSessionId }: { sessionId?: string }) {
   const params = useParams();
@@ -70,8 +46,10 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   const isGuest = useAppStore((state) => state.isGuest);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
+
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingImageRef = useRef<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const { status } = useSession();
@@ -79,6 +57,8 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [openThoughts, setOpenThoughts] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   useEffect(() => {
     const handleClickOutside = () => setShowCopyOptions(null);
@@ -162,9 +142,11 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
     if (!sessionId) return;
     setIsGenerating(true);
 
-    const lastUserMessage = messages[messages.length - 1];
+    const currentMessages = messagesRef.current;
+    const userProfile = useAppStore.getState().userProfile;
+    const lastUserMessage = currentMessages[currentMessages.length - 1];
     const userPrompt = lastUserMessage.content;
-    const historyPayload = messages.slice(0, messages.length - 1).map(m => ({
+    const historyPayload = currentMessages.slice(0, currentMessages.length - 1).map(m => ({
       role: m.role,
       content: m.content,
       thoughts: m.thoughts
@@ -185,9 +167,20 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         body: JSON.stringify({
           prompt: userPrompt,
           measurementSystem: measurementSystem,
-          history: historyPayload
+          history: historyPayload,
+          image: pendingImageRef.current || undefined,
+          dailyTargets: userProfile ? {
+            calories: userProfile.targetCalories,
+            protein: userProfile.targetProtein,
+            carbs: userProfile.targetCarbs,
+            fat: userProfile.targetFat,
+          } : undefined,
+          currentTotals: undefined, // TODO: Wire up from diary state
         }),
       });
+
+      // Consume the pending image so it's not re-sent on the next message
+      pendingImageRef.current = null;
 
       if (!res.ok) {
         throw new Error("Failed to generate");
@@ -207,7 +200,31 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         done = doneReading;
         if (value) {
           fullText += decoder.decode(value, { stream: true });
-          
+
+          // Intercept ___TOOL_CALL_LOG_FOOD___ token before the parser sees it
+          const toolCallMarker = '___TOOL_CALL_LOG_FOOD___';
+          if (fullText.includes(toolCallMarker)) {
+            const markerIndex = fullText.indexOf(toolCallMarker);
+            const afterMarker = fullText.substring(markerIndex + toolCallMarker.length);
+            const newlineIndex = afterMarker.indexOf('\n\n');
+            if (newlineIndex !== -1) {
+              // Full terminator present – safe to parse and strip
+              try {
+                const jsonStr = afterMarker.substring(0, newlineIndex).trim();
+                const foodData = JSON.parse(jsonStr);
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('[SageAI] Food logged:', foodData);
+                }
+                // TODO: Dispatch to diary state / show toast notification
+              } catch {
+                // Malformed JSON – strip the marker anyway to avoid flash
+              }
+              fullText = fullText.replace(/___TOOL_CALL_LOG_FOOD___[^\n]*\n\n/g, '');
+            }
+            // else: terminator not yet received – leave fullText intact
+            // so the marker accumulates until the next chunk completes it
+          }
+
           const parsed = parseSageStream(fullText, done);
           finalThoughts = parsed.thoughts;
           finalContent = parsed.content;
@@ -224,18 +241,25 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         const { saveChatMessage } = await import("./actions");
         await saveChatMessage(sessionId, "sage", finalContent, finalThoughts);
       } else {
-        // Guest mode - get fresh state
-        const storedMsgs = localStorage.getItem(`palate_guest_messages_${sessionId}`);
-        const parsedMsgs = storedMsgs ? JSON.parse(storedMsgs) : [];
-        parsedMsgs.push({ id: sageMessageId, role: "sage", content: finalContent, thoughts: finalThoughts });
-        localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(parsedMsgs));
+        // Guest mode – sync to localStorage from fresh state
+        setMessages(prev => {
+          const updated = prev.map(msg =>
+            msg.id === sageMessageId
+              ? { ...msg, content: finalContent, thoughts: finalThoughts, isStreaming: false }
+              : msg
+          );
+          try {
+            localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(updated));
+          } catch { /* storage full / unavailable */ }
+          return prev; // don't double-update; the finally block handles isStreaming
+        });
       }
       
       // Dispatch sidebar update
       window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
 
     } catch (err: any) {
-      console.error(err);
+      if (process.env.NODE_ENV === 'development') console.error(err);
       setMessages(prev => prev.map(msg => 
         msg.id === sageMessageId ? { ...msg, content: "⚠️ Failed to connect to Sage." } : msg
       ));
@@ -245,7 +269,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         msg.id === sageMessageId ? { ...msg, isStreaming: false } : msg
       ));
     }
-  }, [sessionId, messages, geminiApiKey, measurementSystem, status]);
+  }, [sessionId, geminiApiKey, measurementSystem, status]);
 
   // Trigger reply generation automatically when a new user message lands at the end of stack
   useEffect(() => {
@@ -265,6 +289,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
     const userPrompt = prompt;
     const currentImage = imagePreview;
 
+    pendingImageRef.current = imagePreview;
     setPrompt("");
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -281,8 +306,12 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
       setMessages(prev => [...prev, userMessage]);
       
       if (status !== "authenticated") {
-        const updated = [...messages, userMessage];
-        localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(updated));
+        setMessages(prev => {
+          try {
+            localStorage.setItem(`palate_guest_messages_${sessionId}`, JSON.stringify(prev));
+          } catch { /* storage full / unavailable */ }
+          return prev;
+        });
       }
       
       window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
@@ -310,7 +339,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
             setMessages([]);
           }
         } catch (error) {
-          console.error("Failed to create chat session:", error);
+          if (process.env.NODE_ENV === 'development') console.error("Failed to create chat session:", error);
           setIsGenerating(false);
           setHasStarted(false);
           setMessages([]);
@@ -318,7 +347,8 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
       } else {
         const newSessionId = `guest-session-${Date.now()}`;
         const storedSessions = localStorage.getItem("palate_guest_sessions");
-        const sessionsList = storedSessions ? JSON.parse(storedSessions) : [];
+        let sessionsList: any[] = [];
+        try { sessionsList = storedSessions ? JSON.parse(storedSessions) : []; } catch { /* corrupted – reset */ }
         
         sessionsList.unshift({
           id: newSessionId,

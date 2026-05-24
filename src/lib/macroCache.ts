@@ -45,21 +45,21 @@ export class MacroCache {
     const files = fs.readdirSync(macrosDir).filter(f => f.endsWith('.md'));
     for (const file of files) {
       const content = fs.readFileSync(path.join(macrosDir, file), 'utf8');
-      const lines = content.split('\n');
+      const lines = content.split(/\r?\n/);
       for (const line of lines) {
         if (line.includes('|') && !line.includes('---') && !line.includes('Calories')) {
           const cells = line.split('|').map(c => c.trim()).filter(c => c);
           if (cells.length >= 5) {
             parsedData.push({
               ingredient_matched: cells[0],
-              calories: cells[1],
-              protein: cells[2],
-              carbs: cells[3],
-              fat: cells[4],
-              fiber: cells[5],
-              sugar: cells[6],
-              sodium: cells[7],
-              common_portions: cells[8]
+              calories: cells[1].replace(/kcal$/i, '').trim(),
+              protein: cells[2].replace(/g$/i, '').trim(),
+              carbs: cells[3].replace(/g$/i, '').trim(),
+              fat: cells[4].replace(/g$/i, '').trim(),
+              fiber: cells[5] ? cells[5].replace(/g$/i, '').trim() : undefined,
+              sugar: cells[6] ? cells[6].replace(/g$/i, '').trim() : undefined,
+              sodium: cells[7] ? cells[7].replace(/mg$/i, '').trim() : undefined,
+              common_portions: cells[8]?.trim()
             });
           }
         }

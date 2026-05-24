@@ -41,3 +41,17 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Debug/utility scripts with hardcoded credentials
+check_logs.py
+deploy_whatbox.py
+diagnose.py
+fix_db.py
+fix_url.py
+list_db_recipes.ts
+test_prisma.py
+test_psql.py
+test_sage.py
+
+# Deployment artifacts
+palate-deploy.tar.gz

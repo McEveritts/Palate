@@ -5,10 +5,30 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/db";
 import { decryptKey } from "@/lib/encryption";
+import { analyzeDietaryPatterns, buildProactiveContext } from "@/lib/patternAnalysis";
+import { z } from 'zod';
+
+// H-4 Fix: Zod schema for request body validation
+const sageRequestSchema = z.object({
+  prompt: z.string().min(1),
+  image: z.string().optional(),
+  measurementSystem: z.enum(['metric', 'imperial']).default('metric'),
+  history: z.array(z.any()).optional(),
+  dailyTargets: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
+  currentTotals: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    const { prompt, image, measurementSystem, history } = await req.json();
+    const body = await req.json();
+    const parseResult = sageRequestSchema.safeParse(body);
+    if (!parseResult.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', details: parseResult.error.flatten() }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { prompt, image, measurementSystem, history, dailyTargets, currentTotals } = parseResult.data;
 
     // Retrieve NextAuth session
     const session = await getServerSession(authOptions).catch(() => null);
@@ -34,6 +54,37 @@ export async function POST(req: Request) {
       }
     }
 
+    if (dailyTargets || currentTotals) {
+      vaultContext += `\n\n[USER MACRO TRACKING]`;
+      if (dailyTargets) vaultContext += `\nDaily Targets: ${JSON.stringify(dailyTargets)}`;
+      if (currentTotals) vaultContext += `\nCurrent Totals: ${JSON.stringify(currentTotals)}`;
+    }
+
+    // ── Behavioral Pattern Analysis (non-fatal) ─────────────
+    if (userId) {
+      try {
+        const profile = await prisma.userProfile.findUnique({ where: { userId } });
+        if (profile) {
+          const patterns = await analyzeDietaryPatterns(
+            userId,
+            profile.targetCalories,
+            profile.targetProtein
+          );
+          const currentHour = new Date().getHours();
+          const behavioralContext = buildProactiveContext(
+            patterns,
+            currentTotals || null,
+            profile.targetCalories,
+            profile.targetProtein,
+            currentHour
+          );
+          vaultContext += `\n\n${behavioralContext}`;
+        }
+      } catch (err) {
+        console.warn('[SageAI] Pattern analysis failed (non-fatal):', err);
+      }
+    }
+
     let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
 
     if (!clientApiKey && userId) {
@@ -45,7 +96,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = streamSage(prompt, vaultContext, false, image, clientApiKey, measurementSystem, history);
+    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history);
 
     // Discard key immediately after calling the stream function
     clientApiKey = undefined;
@@ -74,7 +125,8 @@ export async function POST(req: Request) {
 
   } catch (error: unknown) {
     console.error("[Sage API Error]:", error);
-    return new Response(JSON.stringify({ error: "An unexpected error occurred while communicating with Sage." }), { status: 500 });
+    // M-25 Fix: Include Content-Type header on error response
+    return new Response(JSON.stringify({ error: "An unexpected error occurred while communicating with Sage." }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
 

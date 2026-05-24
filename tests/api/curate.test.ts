@@ -222,11 +222,11 @@ Side description
     // The first file saved should not contain the preamble
     const firstCallArgs = vi.mocked(fs.writeFile).mock.calls[0];
     expect(firstCallArgs[1]).not.toContain('Some thoughts and preamble here');
-    expect(firstCallArgs[1].startsWith('---')).toBe(true);
+    expect((firstCallArgs[1] as string).startsWith('---')).toBe(true);
 
     // The third file saved should not contain the side thoughts
     const thirdCallArgs = vi.mocked(fs.writeFile).mock.calls[2];
     expect(thirdCallArgs[1]).not.toContain('Some side thoughts before the side');
-    expect(thirdCallArgs[1].startsWith('---')).toBe(true);
+    expect((thirdCallArgs[1] as string).startsWith('---')).toBe(true);
   });
 });

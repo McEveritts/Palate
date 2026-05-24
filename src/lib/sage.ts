@@ -44,6 +44,22 @@ const getIngredientsMacrosDeclaration: FunctionDeclaration = {
   },
 };
 
+const logFoodConsumptionDeclaration: FunctionDeclaration = {
+  name: "log_food_consumption",
+  description: "Logs a food item and its macro nutrients to the user's daily tracker. Call this when the user reports eating something.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      food_name: { type: SchemaType.STRING, description: "Name of the food consumed" },
+      calories: { type: SchemaType.NUMBER, description: "Calories consumed" },
+      protein: { type: SchemaType.NUMBER, description: "Protein in grams" },
+      carbs: { type: SchemaType.NUMBER, description: "Carbohydrates in grams" },
+      fat: { type: SchemaType.NUMBER, description: "Fat in grams" },
+    },
+    required: ["food_name", "calories", "protein", "carbs", "fat"],
+  },
+};
+
 async function fetchMacros(ingredient_names: string[]) {
   console.log(`[Tool Call] Fetching macros for: ${ingredient_names.join(', ')}`);
   const macrosDir = path.join(process.cwd(), 'vault', 'macros');
@@ -111,18 +127,15 @@ async function fetchMacros(ingredient_names: string[]) {
             };
             const description = food.description ? capitalize(food.description) : capitalize(ingredient_name);
             
-            let commonPortions = "100g (100g)";
-            if (food.servingSize && food.servingSizeUnit) {
-              commonPortions = `serving (${food.servingSize}${food.servingSizeUnit.toLowerCase()})`;
-            }
+            const caloriesStr = caloriesVal !== undefined ? `${caloriesVal.toFixed(1)}` : "0.0";
+            const proteinStr = proteinVal !== undefined ? `${proteinVal.toFixed(2)}` : "0.00";
+            const carbsStr = carbsVal !== undefined ? `${carbsVal.toFixed(2)}` : "0.00";
+            const fatStr = fatVal !== undefined ? `${fatVal.toFixed(2)}` : "0.00";
+            const fiberStr = fiberVal !== undefined ? `${fiberVal.toFixed(2)}` : "0.00";
+            const sugarStr = sugarVal !== undefined ? `${sugarVal.toFixed(2)}` : "0.00";
+            const sodiumStr = sodiumVal !== undefined ? `${sodiumVal.toFixed(1)}` : "0.0";
             
-            const caloriesStr = caloriesVal !== undefined ? `${caloriesVal.toFixed(1)}kcal` : "0.0kcal";
-            const proteinStr = proteinVal !== undefined ? `${proteinVal.toFixed(2)}g` : "0.00g";
-            const carbsStr = carbsVal !== undefined ? `${carbsVal.toFixed(2)}g` : "0.00g";
-            const fatStr = fatVal !== undefined ? `${fatVal.toFixed(2)}g` : "0.00g";
-            const fiberStr = fiberVal !== undefined ? `${fiberVal.toFixed(2)}g` : "0.00g";
-            const sugarStr = sugarVal !== undefined ? `${sugarVal.toFixed(2)}g` : "0.00g";
-            const sodiumStr = sodiumVal !== undefined ? `${sodiumVal.toFixed(1)}mg` : "0.0mg";
+            const commonPortions = "100g (100.0g)";
             
             const usdaMatch = {
               ingredient_matched: description,
@@ -142,19 +155,16 @@ async function fetchMacros(ingredient_names: string[]) {
               fs.mkdirSync(macrosDir, { recursive: true });
             }
             
-            let fileContent = "";
+            // M-10 Fix: Use appendFileSync for existing files to avoid read-modify-write race conditions
+            const newRow = `| ${description} | ${caloriesStr}kcal | ${proteinStr}g | ${carbsStr}g | ${fatStr}g | ${fiberStr}g | ${sugarStr}g | ${sodiumStr}mg | ${commonPortions} |\n`;
             if (fs.existsSync(importsFilePath)) {
-              fileContent = fs.readFileSync(importsFilePath, 'utf8');
+              fs.appendFileSync(importsFilePath, newRow, 'utf8');
             } else {
-              fileContent = "# USDA Imports\n" +
+              const header = "# USDA Imports\n" +
                             "| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |\n" +
                             "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n";
+              fs.writeFileSync(importsFilePath, header + newRow, 'utf8');
             }
-            
-            // Append row
-            const newRow = `| ${description} | ${caloriesStr} | ${proteinStr} | ${carbsStr} | ${fatStr} | ${fiberStr} | ${sugarStr} | ${sodiumStr} | ${commonPortions} |\n`;
-            fileContent += newRow;
-            fs.writeFileSync(importsFilePath, fileContent, 'utf8');
             
             globalMacroCache.invalidate();
             results[ingredient_name] = usdaMatch;
@@ -175,7 +185,7 @@ async function fetchMacros(ingredient_names: string[]) {
   }
 }
 
-export async function askSage(prompt: string, context?: string, _usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial') {
+export async function askSage(prompt: string, context?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric') {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -187,11 +197,11 @@ export async function askSage(prompt: string, context?: string, _usePro: boolean
     : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
 
   const modelName = "gemma-4-31b-it";
+  // H-1 Fix: askSage is for simple non-streaming responses — no tools (no tool-call loop to handle them)
   const model = genAI.getGenerativeModel({ 
     model: modelName,
     systemInstruction: systemInstruction,
     generationConfig: { temperature: 0.7 },
-    tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration] }]
   });
 
   // C6 Fix: Sanitize user input to prevent prompt injection
@@ -206,7 +216,7 @@ export async function askSage(prompt: string, context?: string, _usePro: boolean
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, _usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial', history?: any[]) {
+export async function* streamSage(prompt: string, context?: string, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: any[]) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -222,7 +232,7 @@ export async function* streamSage(prompt: string, context?: string, _usePro: boo
     model: modelName,
     systemInstruction: systemInstruction,
     generationConfig: { temperature: 0.7 },
-    tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration] }]
+    tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration, logFoodConsumptionDeclaration] }]
   });
 
   const chatHistory: any[] = [
@@ -274,28 +284,55 @@ export async function* streamSage(prompt: string, context?: string, _usePro: boo
   for await (const chunk of streamResult.stream) {
     const calls = typeof chunk.functionCalls === 'function' ? chunk.functionCalls() : chunk.functionCalls;
     if (calls && calls.length > 0) {
-      const call = calls[0];
-      if (call.name === "get_ingredients_macros") {
-        const args = call.args as any;
-        const macroData = await fetchMacros(args.ingredient_names || []);
-        
-        // Send the function response back to the model
-        streamResult = await chat.sendMessageStream([{
-          functionResponse: {
-            name: "get_ingredients_macros",
-            response: macroData
+      // M-7 Fix: Handle ALL function calls in the response, not just the first
+      for (const call of calls) {
+        if (call.name === "get_ingredients_macros") {
+          const args = call.args as any;
+          const macroData = await fetchMacros(args.ingredient_names || []);
+
+          // Send the function response back to the model
+          streamResult = await chat.sendMessageStream([{
+            functionResponse: {
+              name: "get_ingredients_macros",
+              response: macroData
+            }
+          }]);
+
+          // Yield the response from the follow-up stream
+          for await (const followUpChunk of streamResult.stream) {
+            if (followUpChunk.text) {
+              yield followUpChunk.text();
+            }
           }
-        }]);
-        
-        // Yield the response from the follow-up stream
-        for await (const followUpChunk of streamResult.stream) {
-          if (followUpChunk.text) {
-            yield followUpChunk.text();
+        } else if (call.name === "log_food_consumption") {
+          const args = call.args as any;
+          console.log(`[Tool Call] Logging food: ${args.food_name}`);
+
+          // Yield a special UI token so the client can update the tracker immediately
+          yield `\n\n___TOOL_CALL_LOG_FOOD___${JSON.stringify(args)}\n\n`;
+
+          // Send the function response back to the model
+          streamResult = await chat.sendMessageStream([{
+            functionResponse: {
+              name: "log_food_consumption",
+              response: { status: "success", message: `Successfully logged ${args.food_name}` }
+            }
+          }]);
+
+          // Yield the response from the follow-up stream
+          for await (const followUpChunk of streamResult.stream) {
+            if (followUpChunk.text) {
+              yield followUpChunk.text();
+            }
           }
         }
       }
+      // M-8: Known limitation (V1) — follow-up streams after tool responses are not
+      // checked for *chained* tool calls. A full recursive tool-call loop will be
+      // implemented in a future version.
     } else if (chunk.text) {
       yield chunk.text();
     }
   }
 }
+

@@ -13,6 +13,7 @@ export default function LoginPage() {
 
   const handleGuestLogin = () => {
     setGuest(true);
+    document.cookie = "palate_guest=true; path=/; max-age=2592000; SameSite=Lax; Secure";
     router.push("/");
   };
 

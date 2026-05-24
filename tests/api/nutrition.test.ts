@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from '@/app/api/nutrition/route';
 import { globalMacroCache } from '@/lib/macroCache';
-import fs from 'fs/promises';
+import fs, { mkdir } from 'fs/promises';
 
 vi.mock('@/lib/macroCache', () => ({
   globalMacroCache: {
@@ -15,8 +15,11 @@ vi.mock('fs/promises', () => ({
     access: vi.fn(),
     writeFile: vi.fn(),
     appendFile: vi.fn(),
-    readFile: vi.fn()
-  }
+    readFile: vi.fn(),
+    stat: vi.fn(),
+    mkdir: vi.fn(),
+  },
+  mkdir: vi.fn(),
 }));
 
 vi.mock('@google/generative-ai', () => {
@@ -90,7 +93,8 @@ describe('GET /api/nutrition', () => {
       })
     });
 
-    // Mock fs write
+    // Mock fs write (mkdir is a named import, fs.access rejects = file doesn't exist)
+    vi.mocked(mkdir).mockResolvedValueOnce(undefined as any);
     vi.mocked(fs.access).mockRejectedValueOnce(new Error('not exists'));
     vi.mocked(fs.writeFile).mockResolvedValueOnce();
 
@@ -121,7 +125,8 @@ describe('GET /api/nutrition', () => {
       status: 429
     });
 
-    // Mock fs write
+    // Mock fs write (mkdir is a named import, fs.access rejects = file doesn't exist)
+    vi.mocked(mkdir).mockResolvedValueOnce(undefined as any);
     vi.mocked(fs.access).mockRejectedValueOnce(new Error('not exists'));
     vi.mocked(fs.writeFile).mockResolvedValueOnce();
 

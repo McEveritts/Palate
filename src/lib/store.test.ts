@@ -12,7 +12,7 @@ describe('useAppStore', () => {
     const state = useAppStore.getState();
     expect(state.isGuest).toBe(false);
     expect(state.geminiApiKey).toBe('');
-    expect(state.measurementSystem).toBe('imperial');
+    expect(state.measurementSystem).toBe('metric');
   });
 
   it('should update isGuest state', () => {

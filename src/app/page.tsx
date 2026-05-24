@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import HomeButtons from "@/components/layout/HomeButtons";
 
 export const metadata: Metadata = {
   title: "Palate - Your AI Sous-Chef",
@@ -27,20 +28,7 @@ export default function Home() {
             digital sous-chef.
           </p>
 
-          <div className="flex flex-wrap gap-4 justify-center mt-4">
-            <Link
-              href="/login"
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white font-bold rounded-xl transition-all shadow-lg border border-indigo-500/30 text-lg"
-            >
-              Get Started
-            </Link>
-            <Link
-              href="/ask_sage"
-              className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all text-lg"
-            >
-              Try as Guest
-            </Link>
-          </div>
+          <HomeButtons />
         </div>
 
         {/* Features */}

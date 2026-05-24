@@ -5,11 +5,9 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
 // H4 Fix: Upstash Redis rate limiter (safe fallback if not configured)
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
+// M-13 Fix: Validate both env vars before initialising Redis
+const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
   : null;
 
 // 20 requests per minute sliding window per user/IP
@@ -28,7 +26,15 @@ export default withAuth(
         const origin = req.headers.get("origin");
         const host = req.headers.get("host");
 
-        if (origin && host) {
+        // H-9 Fix: Reject mutating requests that lack an Origin header
+        if (!origin) {
+          return NextResponse.json(
+            { error: "CSRF Blocked: Missing Origin header." },
+            { status: 403 }
+          );
+        }
+
+        if (host) {
           try {
             const originUrl = new URL(origin);
             if (originUrl.host !== host) {
@@ -77,10 +83,14 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // Require authentication for all protected routes.
-        // Unauthenticated users will be automatically redirected to /login.
-        return !!token;
+      authorized: ({ req, token }) => {
+        // C-1 Fix: API routes ALWAYS require a real auth token.
+        // Guest cookie only allows access to page routes.
+        const { pathname } = req.nextUrl;
+        const isApiRoute = pathname.startsWith('/api/');
+        if (isApiRoute) return !!token;
+        const isGuest = req.cookies.get("palate_guest")?.value === "true";
+        return !!token || isGuest;
       },
     },
     pages: {

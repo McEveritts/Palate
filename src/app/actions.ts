@@ -14,6 +14,7 @@ import { getAllRecipes } from "../lib/vault";
 import { z } from 'zod/v4';
 import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
 import lockfile from 'proper-lockfile';
+import { MealType, ChatRole } from '@prisma/client';
 
 async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
@@ -646,12 +647,16 @@ export async function scheduleMeal(
         throw new Error(`Recipe not found in database or local vault: ${recipeId}`);
       }
 
+      if (!VALID_MEAL_TYPES.includes(mealType as typeof VALID_MEAL_TYPES[number])) {
+        throw new Error(`Invalid meal type: ${mealType}`);
+      }
+
       const meal = await prisma.scheduledMeal.create({
         data: {
           userId,
           recipeId: dbRecipe.id,
           date,
-          mealType,
+          mealType: mealType as MealType,
           plannedYield,
           parentMealId: parentMealId || null,
         },
@@ -775,11 +780,15 @@ export async function moveScheduledMeal(mealId: string, newDateStr: string, newM
     const newDate = validateDateStr(newDateStr);
 
     if (userId) {
+      if (!VALID_MEAL_TYPES.includes(newMealType as typeof VALID_MEAL_TYPES[number])) {
+        throw new Error(`Invalid meal type: ${newMealType}`);
+      }
+
       const updated = await prisma.scheduledMeal.update({
         where: { id: mealId, userId },
         data: {
           date: newDate,
-          mealType: newMealType,
+          mealType: newMealType as MealType,
         },
         include: {
           recipe: true,
@@ -944,10 +953,14 @@ export async function saveChatMessage(sessionId: string, role: string, content: 
         throw new Error("Chat session not found or unauthorized.");
       }
 
+      if (role !== 'user' && role !== 'model') {
+        throw new Error(`Invalid chat role: ${role}`);
+      }
+
       const message = await prisma.chatMessage.create({
         data: {
           sessionId,
-          role,
+          role: role as ChatRole,
           content,
           thought: thought || null,
         }

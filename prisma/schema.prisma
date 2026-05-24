@@ -9,6 +9,38 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum ActivityLevel {
+  Sedentary
+  Light
+  Moderate
+  Active
+  VeryActive
+}
+
+enum Goal {
+  Lose
+  Maintain
+  Gain
+}
+
+enum MealType {
+  Breakfast
+  Lunch
+  Dinner
+  Snack
+}
+
+enum ChatRole {
+  user
+  model
+}
+
 model Household {
   id          String       @id @default(cuid())
   name        String       // e.g. "The McEveritts' Kitchen"
@@ -38,7 +70,7 @@ model User {
   
   // Household membership
   householdId   String?
-  household     Household?      @relation(fields: [householdId], references: [id])
+  household     Household?      @relation(fields: [householdId], references: [id], onDelete: SetNull)
 
   // Relations
   config        UserConfig?
@@ -46,6 +78,9 @@ model User {
   schedule      ScheduledMeal[]
   accounts      Account[]
   sessions      Session[]
+  profile       UserProfile?
+  dailyLogs     DailyLog[]
+  weightLogs    WeightLog[]
   
   createdAt     DateTime        @default(now())
 }
@@ -111,11 +146,14 @@ model Recipe {
   title           String
   markdown        String   // Recipe content
   frontmatter     Json     // Macros, USDA status, tags
+  cooklangAST     Json?    // Compiled AST for rapid scalar multiplication
+  totalMacros     Json?    // Cached [P, C, F, Kcal] vector
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   scheduledMeals  ScheduledMeal[]
+  logEntries      FoodLogEntry[]
   
   @@unique([householdId, slug]) // Enforces unique recipe names per household
 }
@@ -129,7 +167,7 @@ model ScheduledMeal {
   recipe        Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   
   date          DateTime // The specific day on the calendar
-  mealType      String   // 'Breakfast', 'Lunch', 'Dinner', 'Snack'
+  mealType      MealType
   plannedYield  Float    @default(1.0) // E.g., eating 2 portions of an 8-portion meal
   
   // Self-relations for parentMealId (DAG for leftovers/batch cooking)
@@ -139,6 +177,8 @@ model ScheduledMeal {
 
   // Google Calendar integration
   googleEventId String?
+
+  @@index([userId, date])
 }
 
 model ChatSession {
@@ -150,15 +190,114 @@ model ChatSession {
   
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
 }
 
 model ChatMessage {
   id            String      @id @default(cuid())
   sessionId     String
   session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role          String      // "user" | "model"
+  role          ChatRole
   content       String      // The message text
   thought       String?     // Preserved Gemma-4 <thought> blocks
   
   createdAt     DateTime    @default(now())
+
+  @@index([sessionId])
+}
+
+// ---------------------------------------------------------
+// INDIVIDUAL SCOPE (Physiological Telemetry)
+// ---------------------------------------------------------
+model UserProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Anthropometric Vectors
+  gender          Gender   
+  dateOfBirth     DateTime 
+  weightKg        Float    // Current weight for TDEE calculation, synced from latest WeightLog
+  heightCm        Float
+  activityLevel   ActivityLevel   
+  goal            Goal   
+  
+  // Computed Target Matrices
+  targetCalories  Int
+  targetProtein   Int      
+  targetCarbs     Int      
+  targetFat       Int      
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WeightLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measuredAt      DateTime @default(now())
+  weightKg        Float
+  createdAt       DateTime @default(now())
+
+  @@index([userId, measuredAt])
+}
+
+model DailyLog {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime       @db.Date // Ensures strict temporal mapping
+  
+  // Aggregated Vectors (Maintained by triggers/hooks for fast read)
+  totalCalories   Float          @default(0)
+  totalProtein    Float          @default(0)
+  totalCarbs      Float          @default(0)
+  totalFat        Float          @default(0)
+  
+  entries         FoodLogEntry[]
+  exerciseEntries ExerciseLogEntry[]
+
+  @@unique([userId, date]) // A user can only have one master log per day
+}
+
+model FoodLogEntry {
+  id              String   @id @default(cuid())
+  dailyLogId      String
+  dailyLog        DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  
+  mealType        MealType
+  timestamp       DateTime @default(now()) // High-resolution temporal tracking
+  createdAt       DateTime @default(now())
+  
+  // Optional link to the Household culinary graph
+  recipeId        String?  
+  recipe          Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  
+  customFoodName  String?  
+  amountConsumed  Float    // Scalar multiplier (y)
+  
+  // Immutable snapshot of macros at time of consumption
+  calories        Float
+  protein         Float
+  carbs           Float
+  fat             Float
+
+  @@index([dailyLogId])
+}
+
+model ExerciseLogEntry {
+  id              String   @id @default(cuid())
+  dailyLogId      String
+  dailyLog        DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  
+  exerciseName    String
+  timestamp       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  durationMinutes Int
+  caloriesBurned  Float
+  
+  @@index([dailyLogId])
 }

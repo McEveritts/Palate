@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
-import { globalMacroCache } from '@/lib/macroCache';
-import fs from 'fs/promises';
+import { globalMacroCache, MacroData } from '@/lib/macroCache';
+import fs, { mkdir } from 'fs/promises';
 import path from 'path';
 
-interface MacroData {
-  ingredient_matched: string;
-  calories: string;
-  protein: string;
-  carbs: string;
-  fat: string;
-  fiber?: string;
-  sugar?: string;
-  sodium?: string;
-  common_portions?: string;
-}
-
 // Helper to extract a nutrient value by typical IDs or name patterns
-function extractNutrient(nutrients: any[], ids: number[], names: string[], unit: string): string {
+function extractNutrient(nutrients: any[], ids: number[], names: string[]): string {
   const nutrient = nutrients.find(n => 
     ids.includes(n.nutrientId) || 
     names.some(name => n.nutrientName.toLowerCase().includes(name.toLowerCase()))
@@ -31,6 +19,9 @@ async function writeToLocalMacros(macro: MacroData) {
   const filePath = path.join(process.cwd(), 'vault', 'macros', 'USDA_Imports.md');
   const headers = `| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |`;
+
+  // H-6: Ensure directory exists before any file operations
+  await mkdir(path.dirname(filePath), { recursive: true });
   
   let fileExists = false;
   try {
@@ -50,7 +41,10 @@ async function writeToLocalMacros(macro: MacroData) {
   const row = `| ${macro.ingredient_matched} | ${macro.calories}kcal | ${macro.protein}g | ${macro.carbs}g | ${macro.fat}g | ${macro.fiber || '0.00'}g | ${macro.sugar || '0.00'}g | ${macro.sodium || '0.0'}mg | ${macro.common_portions || '100g (100.0g)'} |`;
 
   if (!fileExists) {
-    const fileContent = `# USDA Imports\n${headers}\n${row}\n`;
+    const fileContent = `# USDA Imports
+${headers}
+${row}
+`;
     await fs.writeFile(filePath, fileContent, 'utf-8');
   } else {
     // Ensure the file ends with a newline before appending
@@ -75,14 +69,17 @@ export async function GET(req: Request) {
     // 1. Local Cache Lookup
     const cache = globalMacroCache.get(macrosDir);
     let bestMatch: MacroData | null = null;
-    const searchTerms = trimmedIngredient.toLowerCase().replace(/ground|fresh|raw/g, '').trim().split(' ');
+    const searchTerms = trimmedIngredient.toLowerCase().replace(/ground|fresh|raw|dried|frozen|cooked|boneless|skinless|organic/g, '').trim().split(/\s+/);
+    const validTerms = searchTerms.filter(t => t.length > 0);
 
-    for (const item of cache) {
-      const itemIngredient = item.ingredient_matched.toLowerCase();
-      const matches = searchTerms.every(term => itemIngredient.includes(term));
-      if (matches) {
-        bestMatch = item;
-        break;
+    if (validTerms.length > 0) {
+      for (const item of cache) {
+        const itemIngredient = item.ingredient_matched.toLowerCase();
+        const matches = validTerms.every(term => itemIngredient.includes(term));
+        if (matches) {
+          bestMatch = item;
+          break;
+        }
       }
     }
 
@@ -123,13 +120,13 @@ export async function GET(req: Request) {
       const nutrients = food.foodNutrients || [];
 
       // Parse nutrients per 100g
-      const caloriesVal = extractNutrient(nutrients, [1008], ["energy"], "kcal");
-      const proteinVal = extractNutrient(nutrients, [1003], ["protein"], "g");
-      const carbsVal = extractNutrient(nutrients, [1005], ["carbohydrate"], "g");
-      const fatVal = extractNutrient(nutrients, [1004], ["lipid", "fat"], "g");
-      const fiberVal = extractNutrient(nutrients, [1079], ["fiber"], "g");
-      const sugarVal = extractNutrient(nutrients, [2000], ["sugar"], "g");
-      const sodiumVal = extractNutrient(nutrients, [1093], ["sodium"], "mg");
+      const caloriesVal = extractNutrient(nutrients, [1008], ["energy"]);
+      const proteinVal = extractNutrient(nutrients, [1003], ["protein"]);
+      const carbsVal = extractNutrient(nutrients, [1005], ["carbohydrate"]);
+      const fatVal = extractNutrient(nutrients, [1004], ["lipid", "fat"]);
+      const fiberVal = extractNutrient(nutrients, [1079], ["fiber"]);
+      const sugarVal = extractNutrient(nutrients, [2000, 1063], ["sugar"]);
+      const sodiumVal = extractNutrient(nutrients, [1093], ["sodium"]);
 
       // Standardize title/description (capitalize nicely)
       const formattedName = food.description
@@ -157,10 +154,16 @@ export async function GET(req: Request) {
 
       try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+        // M-16: Guard against missing API key instead of non-null assertion
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (!geminiKey) throw new Error('GEMINI_API_KEY not configured');
+        const genAI = new GoogleGenerativeAI(geminiKey);
         const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
 
-        const prompt = `You are a strict nutrition database. Estimate the macronutrient profile per 100g for the raw ingredient: "${trimmedIngredient}".
+        // M-17: Sanitize ingredient to prevent prompt injection
+        const sanitized = trimmedIngredient.replace(/["\\]/g, '').slice(0, 100);
+
+        const prompt = `You are a strict nutrition database. Estimate the macronutrient profile per 100g for the raw ingredient: "${sanitized}".
 Return ONLY a valid JSON object matching this exact schema, with no markdown formatting or text:
 {"calories": <number>, "protein": <number>, "carbs": <number>, "fat": <number>}`;
 
@@ -186,20 +189,7 @@ Return ONLY a valid JSON object matching this exact schema, with no markdown for
         source = 'ai_fallback';
 
         // 2. Self-heal: Cache to local vault
-        const importsPath = path.join(process.cwd(), 'vault', 'macros', 'USDA_Imports.md');
-        const macroEntry = `\n## ${trimmedIngredient} (Estimated)\nCalories: ${estimatedMacros.calories}kcal\nProtein: ${estimatedMacros.protein}g\nCarbs: ${estimatedMacros.carbs}g\nFat: ${estimatedMacros.fat}g\n`;
-        
-        let fileExists = false;
-        try {
-          await fs.access(importsPath);
-          fileExists = true;
-        } catch {}
-
-        if (!fileExists) {
-          await fs.writeFile(importsPath, macroEntry, 'utf-8');
-        } else {
-          await fs.appendFile(importsPath, macroEntry, 'utf-8');
-        }
+        await writeToLocalMacros(newMacro);
       } catch (llmError) {
         console.error("[Nutrition AI Fallback Error]:", llmError);
         return NextResponse.json({ success: false, error: "Nutrition data unavailable." }, { status: 500 });
