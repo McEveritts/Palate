@@ -175,7 +175,7 @@ async function fetchMacros(ingredient_names: string[]) {
   }
 }
 
-export async function askSage(prompt: string, context?: string, usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial') {
+export async function askSage(prompt: string, context?: string, _usePro: boolean = false, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial') {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -186,7 +186,7 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
     ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
     : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
 
-  const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it";
+  const modelName = "gemma-4-31b-it";
   const model = genAI.getGenerativeModel({ 
     model: modelName,
     systemInstruction: systemInstruction,
@@ -206,7 +206,7 @@ export async function askSage(prompt: string, context?: string, usePro: boolean 
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial', history?: any[]) {
+export async function* streamSage(prompt: string, context?: string, _usePro: boolean = false, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'imperial', history?: any[]) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -217,7 +217,7 @@ export async function* streamSage(prompt: string, context?: string, usePro: bool
     ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
     : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
 
-  const modelName = usePro ? "gemini-3.1-pro-preview" : "gemma-4-31b-it"; // testing 26b for tool calling
+  const modelName = "gemma-4-31b-it";
   const model = genAI.getGenerativeModel({ 
     model: modelName,
     systemInstruction: systemInstruction,

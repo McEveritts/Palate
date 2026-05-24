@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [keyInput, setKeyInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [keyVerification, setKeyVerification] = useState<{ status: "idle" | "success" | "error"; message: string }>({ status: "idle", message: "" });
 
   // Google Calendar Integration states
   const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
@@ -212,6 +213,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveKey = async () => {
+    setKeyVerification({ status: "idle", message: "" });
     if (session?.user) {
       setSaving(true);
       try {
@@ -226,18 +228,47 @@ export default function SettingsPage() {
           }),
         });
         const data = await res.json();
-        if (data.success) {
+        if (res.ok && data.success) {
+          setKeyVerification({ status: "success", message: data.message || "API key successfully verified and saved!" });
           if (data.hasKey) {
             setKeyInput("••••••••••••••••");
           }
+        } else {
+          setKeyVerification({ status: "error", message: data.error || "Failed to verify API key." });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to save settings to server:", err);
+        setKeyVerification({ status: "error", message: "Failed to connect to the server." });
       } finally {
         setSaving(false);
       }
     } else {
-      setGeminiApiKey(keyInput);
+      // Guest Mode: test the key directly from the browser before saving to local store
+      setSaving(true);
+      try {
+        const testRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${keyInput.trim()}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "hi" }] }]
+            })
+          }
+        );
+        if (testRes.ok) {
+          setGeminiApiKey(keyInput.trim());
+          setKeyVerification({ status: "success", message: "API key verified and saved locally!" });
+        } else {
+          const errData = await testRes.json().catch(() => ({}));
+          const errMsg = errData.error?.message || "Invalid API key.";
+          setKeyVerification({ status: "error", message: `Google API Error: ${errMsg}` });
+        }
+      } catch (e) {
+        setKeyVerification({ status: "error", message: "Failed to connect to Google API for verification." });
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -826,26 +857,68 @@ export default function SettingsPage() {
             </p>
 
             <div className="flex flex-col gap-3">
-              <label htmlFor="api-key" className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+              <label htmlFor="api-key" className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                 Gemini API Key
+                {keyVerification.status === "success" && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <Check className="w-2.5 h-2.5" /> Verified & Active
+                  </span>
+                )}
+                {keyVerification.status === "error" && (
+                  <span className="flex items-center gap-1 text-[10px] text-rose-400 font-bold uppercase tracking-wider bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 animate-pulse">
+                    <AlertCircle className="w-2.5 h-2.5" /> Verification Failed
+                  </span>
+                )}
               </label>
               <div className="flex gap-4">
                 <input
                   id="api-key"
                   type="password"
                   value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
+                  onChange={(e) => {
+                    setKeyInput(e.target.value);
+                    if (keyVerification.status !== "idle") setKeyVerification({ status: "idle", message: "" });
+                  }}
                   placeholder="AIzaSy..."
-                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 placeholder-slate-600 transition-all"
+                  className={`flex-1 bg-black/40 border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 placeholder-slate-600 transition-all ${
+                    keyVerification.status === "success"
+                      ? "border-emerald-500/30 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                      : keyVerification.status === "error"
+                      ? "border-rose-500/30 focus:ring-rose-500/50 focus:border-rose-500/50"
+                      : "border-white/10 focus:ring-fuchsia-500/50 focus:border-fuchsia-500/50"
+                  }`}
                 />
                 <button
                   onClick={handleSaveKey}
                   disabled={saving || (session?.user ? false : keyInput === geminiApiKey)}
-                  className="px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  className="px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[140px]"
                 >
-                  {saving ? 'Saving...' : 'Save Key'}
+                  {saving ? 'Verifying...' : 'Save & Verify'}
                 </button>
               </div>
+
+              <AnimatePresence>
+                {keyVerification.status !== "idle" && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -5 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -5 }}
+                    className={`mt-2 p-3.5 rounded-xl border text-sm flex items-start gap-2.5 font-medium leading-relaxed ${
+                      keyVerification.status === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                        : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                    }`}
+                  >
+                    {keyVerification.status === "success" ? (
+                      <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                    )}
+                    <div>{keyVerification.message}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <p className="text-xs text-slate-500 mt-2">
                 Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Google AI Studio</a>.
               </p>

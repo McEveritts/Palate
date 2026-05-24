@@ -70,6 +70,27 @@ export async function POST(req: Request) {
         updateData.authTag = null;
         updateData.iv = null;
       } else if (!geminiApiKey.startsWith("••••")) {
+        // Live verify key validity with Google API before saving
+        try {
+          const testRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${geminiApiKey.trim()}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: "hi" }] }]
+              })
+            }
+          );
+          if (!testRes.ok) {
+            const errData = await testRes.json().catch(() => ({}));
+            const errMsg = errData.error?.message || "Invalid API key.";
+            return NextResponse.json({ success: false, error: `Google API Error: ${errMsg}` }, { status: 400 });
+          }
+        } catch (e) {
+          return NextResponse.json({ success: false, error: "Failed to connect to Google API for verification." }, { status: 400 });
+        }
+
         // Only encrypt if it's a raw new key (not the masked version sent from frontend)
         const encrypted = encryptKey(geminiApiKey.trim());
         updateData.encryptedGcpKey = encrypted.encryptedString;
@@ -91,6 +112,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      message: "API key successfully verified and saved!",
       metricSystem: config.metricSystem,
       hasKey: !!config.encryptedGcpKey,
       googleCalendarSyncEnabled: config.googleCalendarSyncEnabled,
