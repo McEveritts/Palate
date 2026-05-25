@@ -193,6 +193,12 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
 
     setMessages(prev => [...prev, initialSageMessage]);
 
+    let currentImage = pendingImageRef.current;
+    if (typeof window !== 'undefined' && !currentImage) {
+      currentImage = sessionStorage.getItem('palate_pending_image');
+      sessionStorage.removeItem('palate_pending_image');
+    }
+
     try {
       const res = await fetch("/api/sage", {
         method: "POST",
@@ -204,7 +210,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
           prompt: userPrompt,
           measurementSystem: measurementSystem,
           history: historyPayload,
-          image: pendingImageRef.current || undefined,
+          image: currentImage || undefined,
           dailyTargets: userProfile ? {
             calories: userProfile.targetCalories,
             protein: userProfile.targetProtein,
@@ -217,6 +223,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
 
       // Consume the pending image so it's not re-sent on the next message
       pendingImageRef.current = null;
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('palate_pending_image');
+      }
 
       if (!res.ok) {
         throw new Error("Failed to generate");
@@ -393,6 +402,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
     const currentImage = imagePreview;
 
     pendingImageRef.current = imagePreview;
+    if (imagePreview && typeof window !== 'undefined') {
+      sessionStorage.setItem('palate_pending_image', imagePreview);
+    }
     setPrompt("");
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -489,6 +501,13 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   }
   return (
     <div className={`w-full flex-1 flex flex-col justify-center relative ${!hasStarted ? 'max-w-4xl mx-auto' : ''}`}>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        accept="image/*" 
+        onChange={handleImageSelect} 
+      />
       <AnimatePresence mode="wait">
         {!hasStarted ? (
           // Initial Hero State
@@ -512,13 +531,6 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
             </p>
             
             <form onSubmit={handleSubmit} className="w-full max-w-2xl 3xl:max-w-4xl 4xl:max-w-6xl relative mt-4 3xl:mt-8 4xl:mt-12">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleImageSelect} 
-              />
               <AnimatePresence>
                 {imagePreview && (
                   <motion.div 
