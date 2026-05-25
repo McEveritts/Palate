@@ -3,7 +3,7 @@
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
 import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus, Activity } from "lucide-react";
-import ProfileOnboarding from "@/components/fitness/ProfileOnboarding";
+
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -676,7 +676,43 @@ export default function SettingsPage() {
               <Activity className="text-emerald-400 w-6 h-6 animate-pulse" />
               <h2 className="text-2xl font-bold text-white">Fitness Profile</h2>
             </div>
-            <ProfileOnboarding existingProfile={fitnessProfile} onComplete={() => loadFitnessProfile()} />
+            <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+              {fitnessProfile ? (
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-white font-medium mb-2">Your fitness profile is active.</p>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-400">
+                      <span><strong className="text-slate-300">Target:</strong> {fitnessProfile.targetCalories} kcal/day</span>
+                      <span><strong className="text-slate-300">Protein:</strong> {fitnessProfile.targetProtein}g</span>
+                      <span><strong className="text-slate-300">Carbs:</strong> {fitnessProfile.targetCarbs}g</span>
+                      <span><strong className="text-slate-300">Fat:</strong> {fitnessProfile.targetFat}g</span>
+                      <span><strong className="text-slate-300">Goal:</strong> {fitnessProfile.goal}</span>
+                    </div>
+                  </div>
+                  <a
+                    href="/diary"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    <Activity className="w-4 h-4" />
+                    Open Sage Fitness
+                  </a>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-white font-medium mb-1">No fitness profile configured yet.</p>
+                    <p className="text-slate-400 text-sm">Set up your biometrics, activity level, and goals in Sage Fitness.</p>
+                  </div>
+                  <a
+                    href="/diary"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    <Activity className="w-4 h-4" />
+                    Set Up in Sage Fitness
+                  </a>
+                </div>
+              )}
+            </div>
           </section>
         )}
 

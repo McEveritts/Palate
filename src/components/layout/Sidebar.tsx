@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, Leaf, Settings, Menu, X, Calendar, MessageSquare, History } from "lucide-react";
+import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, HeartPulse, Leaf, Settings, Menu, X, Calendar, MessageSquare, History } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -170,6 +170,9 @@ export function Sidebar() {
                 </Link>
                 <Link href="/calendar" className={getLinkClass('/calendar')} onClick={closeSidebar}>
                   <Calendar size={18} suppressHydrationWarning /> Culinary Calendar
+                </Link>
+                <Link href="/diary" className={getLinkClass('/diary')} onClick={closeSidebar}>
+                  <HeartPulse size={18} suppressHydrationWarning /> Sage Fitness
                 </Link>
                 <Link href="/collections/zero-waste" className={getLinkClass('/collections/zero-waste')} onClick={closeSidebar}>
                   <Leaf size={18} suppressHydrationWarning /> Zero-Waste

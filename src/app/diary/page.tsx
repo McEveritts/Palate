@@ -142,7 +142,7 @@ export default async function DiaryPage() {
         {/* Header */}
         <div className="flex flex-col gap-2 pt-4 pb-2">
           <h1 className="text-3xl font-light text-white tracking-tight">
-            Daily <span className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-fuchsia-400 drop-shadow-sm">Diary</span>
+            Sage <span className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-fuchsia-400 drop-shadow-sm">Fitness</span>
           </h1>
           <p className="text-slate-400 text-sm">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -279,7 +279,7 @@ export default async function DiaryPage() {
         </div>
 
         {/* Weight Chart Section — rendered in client wrapper */}
-        <DiaryClientWrapper />
+        <DiaryClientWrapper userProfile={userProfile ? { gender: userProfile.gender, dateOfBirth: userProfile.dateOfBirth.toISOString(), weightKg: userProfile.weightKg, heightCm: userProfile.heightCm, activityLevel: userProfile.activityLevel, goal: userProfile.goal, targetCalories: userProfile.targetCalories, targetProtein: userProfile.targetProtein, targetCarbs: userProfile.targetCarbs, targetFat: userProfile.targetFat } : null} />
       </div>
     </div>
   );
