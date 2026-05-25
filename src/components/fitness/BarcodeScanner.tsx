@@ -46,7 +46,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [detectorSupported, setDetectorSupported] = useState(false);
-  const lookupRef = useRef(handleLookup);
+  const lookupRef = useRef<((code?: string) => Promise<void>) | null>(null);
 
   useEffect(() => {
     lookupRef.current = handleLookup;
@@ -85,7 +85,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
               try { navigator.vibrate(100); } catch {}
             }
             setUpcInput(rawValue);
-            lookupRef.current(rawValue);
+            lookupRef.current?.(rawValue);
             
             // Pause detection upon successful detection to prevent double triggering
             active = false;
