@@ -228,6 +228,7 @@ model UserProfile {
   targetProtein   Int      
   targetCarbs     Int      
   targetFat       Int      
+  targetWaterMl   Int      @default(1893)  // ~64 oz daily hydration goal
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -255,9 +256,11 @@ model DailyLog {
   totalProtein    Float          @default(0)
   totalCarbs      Float          @default(0)
   totalFat        Float          @default(0)
+  waterIntakeMl   Int            @default(0)  // Aggregated daily water intake in ml
   
   entries         FoodLogEntry[]
   exerciseEntries ExerciseLogEntry[]
+  waterEntries    WaterLogEntry[]
 
   @@unique([userId, date]) // A user can only have one master log per day
 }
@@ -299,5 +302,17 @@ model ExerciseLogEntry {
   durationMinutes Int
   caloriesBurned  Float
   
+  @@index([dailyLogId])
+}
+
+model WaterLogEntry {
+  id          String   @id @default(cuid())
+  dailyLogId  String
+  dailyLog    DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  
+  amountMl    Int       // Amount logged in millilitres
+  timestamp   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
   @@index([dailyLogId])
 }

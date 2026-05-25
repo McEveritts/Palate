@@ -4,7 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from '@/lib/db';
 import { MacroGlassCard } from '@/components/fitness/MacroGlassCard';
 import { ContributionGrid } from '@/components/fitness/ContributionGrid';
-import { Utensils, Droplet, Flame, Dumbbell, Clock } from 'lucide-react';
+import { HydrationEnergyRow } from '@/components/fitness/HydrationEnergyRow';
+import { Utensils, Dumbbell, Clock } from 'lucide-react';
 import type { DailyLog, FoodLogEntry, ExerciseLogEntry, UserProfile } from '@prisma/client';
 import { DiaryClientWrapper } from './DiaryClientWrapper';
 
@@ -158,26 +159,11 @@ export default async function DiaryPage() {
             
             {/* Active Energy + Hydration Widget */}
             <div className="p-5 rounded-3xl bg-slate-900/30 backdrop-blur-2xl border border-white/5 flex items-center justify-between shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                  <Droplet size={20} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-slate-200">Hydration</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Track in settings</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-                  <Flame size={20} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-slate-200">Active Energy</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {totalExerciseCalories > 0 ? `${totalExerciseCalories.toLocaleString()} kcal Burned` : 'No exercise logged'}
-                  </p>
-                </div>
-              </div>
+              <HydrationEnergyRow
+                initialWaterMl={dailyLog?.waterIntakeMl ?? 0}
+                initialTargetMl={userProfile?.targetWaterMl ?? 1893}
+                totalExerciseCalories={totalExerciseCalories}
+              />
             </div>
           </div>
         </div>

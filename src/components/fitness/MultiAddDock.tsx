@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Camera, Zap, ScanLine, Dumbbell } from 'lucide-react';
+import { Plus, Search, Camera, Zap, ScanLine, Dumbbell, Droplet } from 'lucide-react';
 import FoodSearch from './FoodSearch';
 import BarcodeScanner from './BarcodeScanner';
 import ExerciseLogger from './ExerciseLogger';
@@ -120,6 +120,16 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
                 { label: 'Quick Calories', icon: <Zap size={16} />, color: 'text-amber-400 bg-amber-500/15 border-amber-400/30' },
                 { label: 'Search Food', icon: <Search size={16} />, color: 'text-indigo-400 bg-indigo-500/15 border-indigo-400/30', action: () => setShowFoodSearch(true) },
                 { label: 'Log Exercise', icon: <Dumbbell size={16} />, color: 'text-emerald-400 bg-emerald-500/15 border-emerald-400/30', action: () => setShowExercise(true) },
+                { label: 'Log Water', icon: <Droplet size={16} />, color: 'text-cyan-400 bg-cyan-500/15 border-cyan-400/30', action: async () => {
+                  try {
+                    await fetch('/api/hydration', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ amountMl: 250 }),
+                    });
+                    onFoodLogged?.(); // Triggers diary refresh
+                  } catch {}
+                }},
               ].map((item) => (
                 <button
                   key={item.label}
