@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Camera, Zap, ScanLine, Dumbbell, Droplet } from 'lucide-react';
 import FoodSearch from './FoodSearch';
 import BarcodeScanner from './BarcodeScanner';
+import MealScanner from './MealScanner';
 import ExerciseLogger from './ExerciseLogger';
 import { QuickCaloriesModal } from './QuickCaloriesModal';
 
@@ -20,6 +21,7 @@ export interface MultiAddDockProps {
 export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockProps) => {
   const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [showBarcode, setShowBarcode] = useState(false);
+  const [showMealScanner, setShowMealScanner] = useState(false);
   const [showExercise, setShowExercise] = useState(false);
   const [showQuickCalories, setShowQuickCalories] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
@@ -41,6 +43,15 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
         onClose={() => setShowBarcode(false)}
         onProductFound={() => {
           setShowBarcode(false);
+          onFoodLogged?.();
+        }}
+      />
+
+      <MealScanner
+        isOpen={showMealScanner}
+        onClose={() => setShowMealScanner(false)}
+        onMealLogged={() => {
+          setShowMealScanner(false);
           onFoodLogged?.();
         }}
       />
@@ -83,11 +94,7 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
             icon={<Camera size={20} />}
             label="Scan Meal"
             color="text-fuchsia-400"
-            onClick={() => {
-              // Opens the Sage image analysis via the main chat
-              const sageHero = document.querySelector<HTMLElement>('[data-sage-upload]');
-              if (sageHero) sageHero.click();
-            }}
+            onClick={() => setShowMealScanner(true)}
           />
 
           {/* Primary Action Button (Glowing) */}
