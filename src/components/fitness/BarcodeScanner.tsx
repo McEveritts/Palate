@@ -99,14 +99,30 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
 
     const setupDetector = async () => {
       try {
+        let initialized = false;
         if ('BarcodeDetector' in window) {
-          console.log('[BarcodeScanner] Using native browser BarcodeDetector');
-          setDetectorSupported(true);
-          setBarcodeDetectorInstance(new window.BarcodeDetector({
-            formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
-          }));
-        } else {
-          console.log('[BarcodeScanner] Native BarcodeDetector not supported. Dynamically loading polyfill...');
+          console.log('[BarcodeScanner] Attempting native browser BarcodeDetector...');
+          try {
+            const nativeDetector = new window.BarcodeDetector({
+              formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
+            });
+            // Try a quick dry-run scan on a dummy canvas to verify the detection service is functional
+            const dummyCanvas = document.createElement('canvas');
+            dummyCanvas.width = 1;
+            dummyCanvas.height = 1;
+            await nativeDetector.detect(dummyCanvas);
+            
+            setBarcodeDetectorInstance(nativeDetector);
+            setDetectorSupported(true);
+            initialized = true;
+            console.log('[BarcodeScanner] Native BarcodeDetector is fully functional!');
+          } catch (nativeErr) {
+            console.warn('[BarcodeScanner] Native BarcodeDetector is in window but service is unavailable. Falling back to polyfill...', nativeErr);
+          }
+        }
+
+        if (!initialized) {
+          console.log('[BarcodeScanner] Loading pure WebAssembly/JS barcode polyfill...');
           const { BarcodeDetector: PolyfillDetector } = await import('barcode-detector');
           setDetectorSupported(true);
           setBarcodeDetectorInstance(new PolyfillDetector({
