@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { WeightChart } from '@/components/fitness/WeightChart';
 import { MultiAddDock } from '@/components/fitness/MultiAddDock';
 import ProfileOnboarding from '@/components/fitness/ProfileOnboarding';
+import SageWellnessCoach from '@/components/fitness/SageWellnessCoach';
 import { ChevronDown, ChevronUp, Activity } from 'lucide-react';
 
 interface DiaryClientWrapperProps {
@@ -26,6 +27,7 @@ interface DiaryClientWrapperProps {
  * Client-side wrapper for the diary page.
  * Renders interactive components that require 'use client':
  * - Fitness Profile (collapsible ProfileOnboarding)
+ * - SageWellnessCoach (expandable wellness coach telemetry and AI analysis)
  * - WeightChart (fetches data, handles state)
  * - MultiAddDock (modal state management)
  */
@@ -63,6 +65,9 @@ export function DiaryClientWrapper({ userProfile }: DiaryClientWrapperProps) {
         )}
       </div>
 
+      {/* Sage Holistic Wellness Coach Section */}
+      <SageWellnessCoach />
+
       {/* Weight & Progress Chart */}
       <div className="space-y-3">
         <h2 className="text-xl font-medium text-white/90 px-1 pt-2 border-b border-white/10 pb-2">
@@ -79,3 +84,4 @@ export function DiaryClientWrapper({ userProfile }: DiaryClientWrapperProps) {
     </>
   );
 }
+

@@ -1000,4 +1000,142 @@ export async function deleteChatSession(sessionId: string) {
   }
 }
 
+export async function getWorkoutTelemetry() {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    const now = new Date();
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+    // Fetch all logs from the past 14 days
+    const dailyLogs = await prisma.dailyLog.findMany({
+      where: {
+        userId,
+        date: { gte: fourteenDaysAgo },
+      },
+      include: {
+        exerciseEntries: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    // 1. Session Frequency (active exercise days in last 14 days)
+    const activeDays = dailyLogs.filter(log => log.exerciseEntries.length > 0).length;
+    const sessionFrequencyStr = `${activeDays} / 14 days`;
+
+    // 2. Training Volume & Cardio vs. Strength classification
+    let totalDuration = 0;
+    let totalCalories = 0;
+    let cardioDuration = 0;
+    let strengthDuration = 0;
+    let cardioCalories = 0;
+    let strengthCalories = 0;
+
+    const strengthKeywords = [
+      'lift', 'strength', 'squat', 'bench', 'press', 'dumbbell', 'barbell', 'hypertrophy', 
+      'abs', 'core', 'resistance', 'weight', 'pullup', 'pushup', 'deadlift', 'kettlebell', 
+      'bodybuilding', 'powerlifting', 'calisthenics', 'plank'
+    ];
+
+    const cardioKeywords = [
+      'run', 'jog', 'cycle', 'bike', 'swim', 'row', 'treadmill', 'hiit', 'cardio', 'walk', 
+      'hike', 'elliptical', 'spin', 'aerobic', 'jump rope', 'stair', 'climb', 'dance', 'zumba'
+    ];
+
+    const allExercises: Array<{
+      id: string;
+      exerciseName: string;
+      durationMinutes: number;
+      caloriesBurned: number;
+      date: string;
+      category: 'Cardio' | 'Strength' | 'Other';
+    }> = [];
+
+    dailyLogs.forEach(log => {
+      const dateStr = log.date.toISOString().slice(0, 10);
+      log.exerciseEntries.forEach(ex => {
+        const name = ex.exerciseName.toLowerCase();
+        let category: 'Cardio' | 'Strength' | 'Other' = 'Other';
+
+        const isStrength = strengthKeywords.some(kw => name.includes(kw));
+        const isCardio = cardioKeywords.some(kw => name.includes(kw));
+
+        if (isStrength) {
+          category = 'Strength';
+          strengthDuration += ex.durationMinutes;
+          strengthCalories += ex.caloriesBurned;
+        } else if (isCardio) {
+          category = 'Cardio';
+          cardioDuration += ex.durationMinutes;
+          cardioCalories += ex.caloriesBurned;
+        } else {
+          // If unclassified, classify by intensity rate
+          const intensity = ex.caloriesBurned / Math.max(ex.durationMinutes, 1);
+          if (intensity > 6) {
+            category = 'Cardio';
+            cardioDuration += ex.durationMinutes;
+            cardioCalories += ex.caloriesBurned;
+          } else {
+            category = 'Strength';
+            strengthDuration += ex.durationMinutes;
+            strengthCalories += ex.caloriesBurned;
+          }
+        }
+
+        totalDuration += ex.durationMinutes;
+        totalCalories += ex.caloriesBurned;
+
+        allExercises.push({
+          id: ex.id,
+          exerciseName: ex.exerciseName,
+          durationMinutes: ex.durationMinutes,
+          caloriesBurned: ex.caloriesBurned,
+          date: dateStr,
+          category,
+        });
+      });
+    });
+
+    // 3. Cardio vs Strength Split Percentages
+    const totalCategorizedDuration = cardioDuration + strengthDuration;
+    const cardioPct = totalCategorizedDuration > 0 ? Math.round((cardioDuration / totalCategorizedDuration) * 100) : 0;
+    const strengthPct = totalCategorizedDuration > 0 ? Math.round((strengthDuration / totalCategorizedDuration) * 100) : 0;
+
+    // 4. Training Load Score (CDC guideline of 150 mins per week, or 300 mins per 14 days)
+    const averageMinPerWeek = totalDuration / 2;
+    const avgCalorieBurnRate = totalDuration > 0 ? totalCalories / totalDuration : 0;
+
+    const durationWeight = (averageMinPerWeek / 150) * 50; // Max 50
+    const intensityWeight = (avgCalorieBurnRate / 10) * 50; // Max 50
+    const trainingLoadScore = Math.min(100, Math.round(durationWeight + intensityWeight));
+
+    return {
+      success: true,
+      telemetry: {
+        sessionFrequency: activeDays,
+        sessionFrequencyStr,
+        totalDuration,
+        totalCalories,
+        cardioDuration,
+        strengthDuration,
+        cardioPct,
+        strengthPct,
+        trainingLoadScore,
+        history: allExercises.slice(0, 10),
+      }
+    };
+  } catch (error) {
+    console.error("getWorkoutTelemetry error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+
 
