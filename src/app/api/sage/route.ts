@@ -2,7 +2,7 @@ import { streamSage } from "@/lib/sage";
 import { getAllRecipes } from "@/lib/vault";
 import { getVaultRecipes, compileVaultContextString } from "@/lib/vaultParser";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { decryptKey } from "@/lib/encryption";
 import { analyzeDietaryPatterns, buildProactiveContext } from "@/lib/patternAnalysis";

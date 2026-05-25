@@ -5,7 +5,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import yaml from 'js-yaml';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getHouseholdId } from "@/lib/household";
 import { globalMacroCache, MacroData } from './macroCache';

@@ -1,16 +1,32 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AuthProvider } from "@/components/layout/AuthProvider";
+import { PWARegistration } from "@/components/pwa/PWARegistration";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "Palate - Your AI Sous-Chef",
   description: "Local-first AI recipe engine powered by Sage",
   icons: {
     icon: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Palate',
   },
 };
 
@@ -23,6 +39,9 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="fixed inset-0 bg-slate-950 text-white overflow-hidden lg:flex lg:flex-row" suppressHydrationWarning>
         <AuthProvider>
+          {/* PWA Updates and Install Banners */}
+          <PWARegistration />
+
           {/* Aurora Background to highlight Glassmorphism - respects existing glass physics */}
           <div className="fixed -top-[20%] -left-[10%] w-[80vw] h-[60vh] bg-[radial-gradient(ellipse,rgba(99,102,241,0.4)_0%,transparent_60%)] blur-[100px] z-0 pointer-events-none animate-aurora-1 opacity-80"></div>
           <div className="fixed top-[20%] -right-[20%] w-[70vw] h-[80vh] bg-[radial-gradient(ellipse,rgba(217,70,239,0.35)_0%,transparent_60%)] blur-[120px] z-0 pointer-events-none animate-aurora-2 opacity-80"></div>
@@ -44,3 +63,4 @@ export default function RootLayout({
     </html>
   );
 }
+
