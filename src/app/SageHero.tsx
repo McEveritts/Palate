@@ -118,11 +118,11 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         const { getChatSession } = await import("./actions");
         const res = await getChatSession(sessionId);
         if (res.success && res.session && active) {
-          const dbMsgs = res.session.messages.map((m: { id: string; role: string; content: string; thought?: string }) => ({
+          const dbMsgs = res.session.messages.map((m: { id: string; role: string; content: string; thought: string | null }) => ({
             id: m.id,
             role: m.role as "user" | "sage",
             content: m.content,
-            thoughts: m.thought || undefined,
+            thoughts: m.thought ?? undefined,
             isStreaming: false
           }));
           setMessages(dbMsgs);

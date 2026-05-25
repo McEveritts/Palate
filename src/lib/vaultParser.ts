@@ -27,7 +27,7 @@ export interface VaultRecipe {
   date?: string;
 }
 
-function mapDbRecipeToVaultRecipe(r: { id: string; content: string; path: string; frontmatter: unknown }): VaultRecipe {
+function mapDbRecipeToVaultRecipe(r: { id: string; slug: string; title: string; markdown: string; frontmatter: unknown }): VaultRecipe {
   const data = (r.frontmatter as Record<string, unknown>) || {};
   const category = data.category || 'mains';
   const slug = r.slug;
@@ -243,7 +243,7 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
 
     return recipes
       .filter(r => {
-        const cat = (r.frontmatter as Record<string, unknown>)?.category;
+        const cat = (r.frontmatter as Record<string, unknown>)?.category as string;
         return categoriesToScan.includes(cat);
       })
       .map(r => mapDbRecipeToVaultRecipe(r));

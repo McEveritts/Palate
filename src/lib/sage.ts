@@ -117,7 +117,7 @@ async function fetchMacros(ingredient_names: string[]) {
   
   try {
     const cache = globalMacroCache.get(macrosDir);
-    const results: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+    const results: Record<string, any> = {};
 
     for (const ingredient_name of ingredient_names) {
       let bestMatch = null;
@@ -148,14 +148,14 @@ async function fetchMacros(ingredient_names: string[]) {
             const nutrients = food.foodNutrients || [];
             
             const findNutrient = (nameRegex: RegExp, id?: number) => {
-              const n = nutrients.find((x: { nutrientId: number, value: number }) => 
+              const n = nutrients.find((x: { nutrientId: number, value: number, nutrientName?: string }) => 
                 (id && x.nutrientId === id) || 
                 (x.nutrientName && nameRegex.test(x.nutrientName))
               );
               return n ? n.value : undefined;
             };
             
-            const caloriesNutrient = nutrients.find((x: { nutrientId: number, value: number }) => 
+            const caloriesNutrient = nutrients.find((x: { nutrientId: number, value: number, nutrientName?: string, unitName?: string }) => 
               (x.nutrientId === 1008 || (x.nutrientName && /Energy/i.test(x.nutrientName))) &&
               (x.unitName && /KCAL/i.test(x.unitName))
             );
@@ -309,8 +309,8 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
       const isSage = h.role === 'sage' || h.role === 'model';
       const role = isSage ? 'model' : 'user';
       let text = h.content || "";
-      if (isSage && h.thought) {
-        text = `<thought>\n${h.thought}\n</thought>\n${text}`;
+      if (isSage && (h as any).thought) {
+        text = `<thought>\n${(h as any).thought}\n</thought>\n${text}`;
       } else if (isSage && h.thoughts) {
         text = `<thought>\n${h.thoughts}\n</thought>\n${text}`;
       }
