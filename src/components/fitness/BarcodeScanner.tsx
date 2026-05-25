@@ -43,6 +43,44 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   const [cameraError, setCameraError] = useState(false);
   const [selectingMeal, setSelectingMeal] = useState(false);
   const [added, setAdded] = useState(false);
+
+  // ── UPC Lookup ─────────────────────────────────────────────
+  const handleLookup = useCallback(async (code?: string) => {
+    const barcode = (code || upcInput).trim();
+    if (!barcode) return;
+
+    setLoading(true);
+    setError(null);
+    setProduct(null);
+
+    try {
+      const res = await fetch(`/api/food-search?upc=${encodeURIComponent(barcode)}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.results?.length) {
+        setError('No product found for this barcode. Try searching by name instead.');
+        return;
+      }
+
+      const r = data.results[0];
+      setProduct({
+        name: r.name,
+        brand: r.brand,
+        calories: r.calories,
+        protein: r.protein,
+        carbs: r.carbs,
+        fat: r.fat,
+        fiber: r.fiber,
+        barcode: r.barcode || barcode,
+        servingSize: r.servingSize,
+      });
+    } catch {
+      setError('Unable to look up product. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  }, [upcInput]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [detectorSupported, setDetectorSupported] = useState(false);
@@ -153,42 +191,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
     return () => stopCamera();
   }, [isOpen, startCamera, stopCamera]);
 
-  // ── UPC Lookup ─────────────────────────────────────────────
-  const handleLookup = useCallback(async (code?: string) => {
-    const barcode = (code || upcInput).trim();
-    if (!barcode) return;
 
-    setLoading(true);
-    setError(null);
-    setProduct(null);
-
-    try {
-      const res = await fetch(`/api/food-search?upc=${encodeURIComponent(barcode)}`);
-      const data = await res.json();
-
-      if (!res.ok || !data.results?.length) {
-        setError('No product found for this barcode. Try searching by name instead.');
-        return;
-      }
-
-      const r = data.results[0];
-      setProduct({
-        name: r.name,
-        brand: r.brand,
-        calories: r.calories,
-        protein: r.protein,
-        carbs: r.carbs,
-        fat: r.fat,
-        fiber: r.fiber,
-        barcode: r.barcode || barcode,
-        servingSize: r.servingSize,
-      });
-    } catch {
-      setError('Unable to look up product. Please check your connection.');
-    } finally {
-      setLoading(false);
-    }
-  }, [upcInput]);
 
   // ── Add to Diary ───────────────────────────────────────────
   const handleAddToDiary = useCallback(async (mealType: string) => {
