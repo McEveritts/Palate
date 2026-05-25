@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, CameraOff, X, Loader2, Check, Sparkles, Package, AlertTriangle, ImagePlus } from 'lucide-react';
+import { Camera, X, Loader2, Check, Sparkles, Package, AlertTriangle, ImagePlus } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -50,19 +50,47 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
 
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
 
-  // ── Camera Setup ────────────────────────────────────────────
+  // ── Camera Setup with Multi-Stage Constraints ────────────────────────────────
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported or insecure HTTP context.');
+      }
+
+      let stream: MediaStream;
+      try {
+        // 1. Try back-facing environment camera with ideal HD resolution
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (err) {
+        console.warn('[MealScanner] Failed ideal constraints, trying basic environment camera:', err);
+        try {
+          // 2. Fall back to simple back-facing camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+          });
+        } catch (err2) {
+          console.warn('[MealScanner] Failed environment camera fallback, trying any camera:', err2);
+          // 3. Fall back to any video camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+        }
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Explicitly trigger play() to bypass iOS autoplay/PWA stand-by policies
+        videoRef.current.play().catch((playErr) => {
+          console.warn('[MealScanner] HTMLVideoElement play blocked by browser policy:', playErr);
+        });
       }
       setCameraActive(true);
       setCameraError(false);
-    } catch {
+    } catch (err) {
+      console.error('[MealScanner] Critical camera startup error:', err);
       setCameraError(true);
       setCameraActive(false);
     }
@@ -77,19 +105,28 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
   }, []);
 
   // Manage camera on open/close state
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (isOpen) {
-      startCamera();
-      setProduct(null);
-      setError(null);
-      setSelectingMeal(false);
-      setAdded(false);
-      setCapturedImage(null);
+      // Decouple camera startup and initial state resets from synchronous render/hydration
+      timer = setTimeout(() => {
+        startCamera();
+        setProduct(null);
+        setError(null);
+        setSelectingMeal(false);
+        setAdded(false);
+        setCapturedImage(null);
+      }, 0);
     } else {
       stopCamera();
     }
-    return () => stopCamera();
+    return () => {
+      if (timer) clearTimeout(timer);
+      stopCamera();
+    };
   }, [isOpen, startCamera, stopCamera]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Capture Image ───────────────────────────────────────────
   const capturePhoto = () => {

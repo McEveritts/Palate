@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ScanLine, X, Camera, CameraOff, Loader2, Check, Search, AlertTriangle, Package } from 'lucide-react';
+import { ScanLine, X, Camera, Loader2, Check, Search, AlertTriangle, Package } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -83,22 +83,47 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [detectorSupported, setDetectorSupported] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [barcodeDetectorInstance, setBarcodeDetectorInstance] = useState<any>(null);
   const lookupRef = useRef<((code?: string) => Promise<void>) | null>(null);
 
   useEffect(() => {
     lookupRef.current = handleLookup;
   }, [handleLookup]);
 
+  // Client-side initialization of Native or Polyfilled BarcodeDetector
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-      setDetectorSupported(true);
-    }
+    if (typeof window === 'undefined') return;
+
+    const setupDetector = async () => {
+      try {
+        if ('BarcodeDetector' in window) {
+          console.log('[BarcodeScanner] Using native browser BarcodeDetector');
+          setDetectorSupported(true);
+          setBarcodeDetectorInstance(new window.BarcodeDetector({
+            formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
+          }));
+        } else {
+          console.log('[BarcodeScanner] Native BarcodeDetector not supported. Dynamically loading polyfill...');
+          const { BarcodeDetector: PolyfillDetector } = await import('barcode-detector');
+          setDetectorSupported(true);
+          setBarcodeDetectorInstance(new PolyfillDetector({
+            formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
+          }));
+        }
+      } catch (err) {
+        console.warn('[BarcodeScanner] Failed to initialize native or polyfilled BarcodeDetector:', err);
+      }
+    };
+
+    setupDetector();
   }, []);
 
-  // Real-time automatic barcode/QR detector loop
+  // Live-detection scan loop running in requestAnimationFrame
   useEffect(() => {
-    if (!cameraActive || !isOpen) return;
+    if (!cameraActive || !isOpen || !barcodeDetectorInstance) return;
 
     let active = true;
     let animationFrameId: number;
@@ -107,30 +132,26 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
       if (!active) return;
 
       const video = videoRef.current;
-      if (video && video.readyState >= 2 && 'BarcodeDetector' in window) {
+      if (video && video.readyState >= 2) {
         try {
-          // @ts-ignore
-          const detector = new window.BarcodeDetector({
-            formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
-          });
-          const barcodes = await detector.detect(video);
+          const barcodes = await barcodeDetectorInstance.detect(video);
           if (active && barcodes && barcodes.length > 0) {
             const rawValue = barcodes[0].rawValue;
             console.log('[BarcodeScanner] Live-detected barcode/QR:', rawValue);
             
-            // Trigger feedback and lookup
+            // Haptic feedback
             if (navigator.vibrate) {
               try { navigator.vibrate(100); } catch {}
             }
             setUpcInput(rawValue);
             lookupRef.current?.(rawValue);
             
-            // Pause detection upon successful detection to prevent double triggering
+            // Deactivate loop to prevent double scanning
             active = false;
             return;
           }
         } catch (err) {
-          console.warn('[BarcodeScanner] BarcodeDetector error:', err);
+          console.warn('[BarcodeScanner] BarcodeDetector runtime scan error:', err);
         }
       }
 
@@ -148,21 +169,49 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
       clearTimeout(startTimeout);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [cameraActive, isOpen]);
+  }, [cameraActive, isOpen, barcodeDetectorInstance]);
 
-  // ── Camera Setup ────────────────────────────────────────────
+  // ── Camera Setup with Multi-Stage Constraints ────────────────────────────────
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported or insecure HTTP context.');
+      }
+
+      let stream: MediaStream;
+      try {
+        // 1. Try back-facing environment camera with ideal HD resolution
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (err) {
+        console.warn('[BarcodeScanner] Failed ideal constraints, trying basic environment camera:', err);
+        try {
+          // 2. Fall back to simple back-facing camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+          });
+        } catch (err2) {
+          console.warn('[BarcodeScanner] Failed environment camera fallback, trying any camera:', err2);
+          // 3. Fall back to any video camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+        }
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Explicitly trigger play() to bypass iOS autoplay/PWA stand-by policies
+        videoRef.current.play().catch((playErr) => {
+          console.warn('[BarcodeScanner] HTMLVideoElement play blocked by browser policy:', playErr);
+        });
       }
       setCameraActive(true);
       setCameraError(false);
-    } catch {
+    } catch (err) {
+      console.error('[BarcodeScanner] Critical camera startup error:', err);
       setCameraError(true);
       setCameraActive(false);
     }
@@ -177,21 +226,91 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   }, []);
 
   // Start camera on open, stop on close
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (isOpen) {
-      startCamera();
-      setUpcInput('');
-      setProduct(null);
-      setError(null);
-      setSelectingMeal(false);
-      setAdded(false);
+      // Decouple camera startup and initial state resets from synchronous render/hydration
+      timer = setTimeout(() => {
+        startCamera();
+        setUpcInput('');
+        setProduct(null);
+        setError(null);
+        setSelectingMeal(false);
+        setAdded(false);
+      }, 0);
     } else {
       stopCamera();
     }
-    return () => stopCamera();
+    return () => {
+      if (timer) clearTimeout(timer);
+      stopCamera();
+    };
   }, [isOpen, startCamera, stopCamera]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Client-Side Decoders for File Upload / Photo Snapping
+  const handleImageSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    setLoading(true);
+    setError(null);
+    setProduct(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          let detector = barcodeDetectorInstance;
+          if (!detector) {
+            const { BarcodeDetector: PolyfillDetector } = await import('barcode-detector');
+            detector = new PolyfillDetector({
+              formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
+            });
+          }
+
+          const barcodes = await detector.detect(img);
+          if (barcodes && barcodes.length > 0) {
+            const rawValue = barcodes[0].rawValue;
+            console.log('[BarcodeScanner] Image-detected barcode/QR:', rawValue);
+            
+            if (navigator.vibrate) {
+              try { navigator.vibrate(100); } catch {}
+            }
+            
+            setUpcInput(rawValue);
+            
+            if (lookupRef.current) {
+              await lookupRef.current(rawValue);
+            } else {
+              await handleLookup(rawValue);
+            }
+          } else {
+            setError('Could not detect any barcode or QR code in the uploaded image. Please ensure the code is clear and centered.');
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error('[BarcodeScanner] Image detection error:', err);
+          setError('Failed to scan the image. Ensure the barcode is clear and try again.');
+          setLoading(false);
+        }
+      };
+      img.onerror = () => {
+        setError('Failed to process the selected image.');
+        setLoading(false);
+      };
+      img.src = dataUrl;
+    };
+    reader.onerror = () => {
+      setError('Failed to read the selected file.');
+      setLoading(false);
+    };
+    reader.readAsDataURL(file);
+  }, [barcodeDetectorInstance, handleLookup]);
 
   // ── Add to Diary ───────────────────────────────────────────
   const handleAddToDiary = useCallback(async (mealType: string) => {
@@ -274,9 +393,17 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                 )}
 
                 {cameraError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <CameraOff className="h-8 w-8 text-slate-500" />
-                    <p className="text-xs text-slate-400">Camera not available</p>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/65 p-4 text-center cursor-pointer hover:bg-slate-950/75 transition-all duration-300 group shadow-inner"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 group-hover:scale-105 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-all duration-300 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                      <Camera className="h-5.5 w-5.5 animate-pulse" />
+                    </div>
+                    <span className="text-xs font-semibold text-white/90 tracking-wide">PWA Camera Mode Active</span>
+                    <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
+                      Tap anywhere here to take a live photo of your barcode/QR using your camera or upload from library.
+                    </span>
                   </div>
                 )}
 
@@ -308,8 +435,27 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                   ? (detectorSupported 
                       ? '🌿 Live scanner active! Align barcode or QR code inside viewfinder.' 
                       : 'Point camera at barcode, then enter the number below')
-                  : 'Enter the barcode number manually'}
+                  : 'Take a photo / upload an image or enter the number manually'}
               </p>
+
+              {/* Hidden File Input for Image Scanning */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                className="hidden"
+              />
+
+              {(!cameraActive || cameraError) && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
+                >
+                  <Camera className="h-4 w-4 text-blue-400 animate-pulse" />
+                  Scan from Camera or Photo Library
+                </button>
+              )}
 
               {/* Manual UPC Input */}
               <div className="flex gap-2">
