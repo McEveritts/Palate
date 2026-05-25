@@ -15,7 +15,7 @@ export default function ZeroWastePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [openThoughts, setOpenThoughts] = useState(true);
+  const [openThoughts, setOpenThoughts] = useState<boolean | null>(null);
   const [rawMode, setRawMode] = useState(false);
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
@@ -28,6 +28,10 @@ export default function ZeroWastePage() {
 
   const { thoughts, content } = parseSageStream(response || "", !isGenerating);
   const { frontmatter, markdown } = parseMessageContent(content);
+
+  const isThoughtsOpen = openThoughts !== null 
+    ? openThoughts 
+    : (isGenerating && !content);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,7 +57,7 @@ export default function ZeroWastePage() {
 
     setIsGenerating(true);
     setResponse("");
-    setOpenThoughts(true);
+    setOpenThoughts(null);
     setRawMode(false);
 
     const payload = { 
@@ -291,31 +295,31 @@ export default function ZeroWastePage() {
                  </div>
                ) : (
                  <div className="flex flex-col gap-4">
-                   {/* Render thoughts block if any thoughts exist */}
-                   {thoughts && (
-                     <div className="w-full border border-white/5 rounded-xl bg-black/20 overflow-hidden shadow-sm">
-                       <button
-                         type="button"
-                         onClick={() => setOpenThoughts(!openThoughts)}
-                         className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors"
-                       >
-                         <div className="flex items-center gap-2">
-                           {isGenerating && !content ? (
-                             <Brain size={16} className="text-emerald-400 animate-pulse" />
-                           ) : (
-                             <CheckCircle2 size={16} className="text-emerald-400" />
-                           )}
-                           <span>{isGenerating && !content ? "Thinking" : "Thoughts"}</span>
-                         </div>
-                         <span className="text-xs font-mono">{openThoughts ? "HIDE" : "SHOW"}</span>
-                       </button>
-                       {openThoughts && (
-                         <div className="px-4 py-4 text-xs font-mono text-slate-500 border-t border-white/5 whitespace-pre-wrap">
-                           {thoughts}
-                         </div>
-                       )}
-                     </div>
-                   )}
+                    {/* Render thoughts block if any thoughts exist */}
+                    {thoughts && (
+                      <div className="w-full border border-white/5 rounded-xl bg-black/20 overflow-hidden shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setOpenThoughts(isThoughtsOpen ? false : true)}
+                          className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isGenerating && !content ? (
+                              <Brain size={16} className="text-emerald-400 animate-pulse" />
+                            ) : (
+                              <CheckCircle2 size={16} className="text-emerald-400" />
+                            )}
+                            <span>{isGenerating && !content ? "Thinking" : "Thoughts"}</span>
+                          </div>
+                          <span className="text-xs font-mono">{isThoughtsOpen ? "HIDE" : "SHOW"}</span>
+                        </button>
+                        {isThoughtsOpen && (
+                          <div className="px-4 py-4 text-xs font-mono text-slate-500 border-t border-white/5 whitespace-pre-wrap">
+                            {thoughts}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                    {/* Render frontmatter details block if they exist */}
                    {frontmatter && (

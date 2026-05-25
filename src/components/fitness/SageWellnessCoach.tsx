@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { getWorkoutTelemetry } from '@/app/actions';
 import { useAppStore } from '@/lib/store';
+import { parseSageStream } from '@/lib/parser';
 
 interface ExerciseHistoryItem {
   id: string;
@@ -50,7 +51,11 @@ export default function SageWellnessCoach() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [analysisText, setAnalysisText] = useState('');
   const [thoughtsText, setThoughtsText] = useState('');
-  const [openThoughts, setOpenThoughts] = useState(false);
+  const [openThoughts, setOpenThoughts] = useState<boolean | null>(null);
+
+  const isThoughtsOpen = openThoughts !== null 
+    ? openThoughts 
+    : (isGenerating && !analysisText);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
@@ -106,7 +111,7 @@ export default function SageWellnessCoach() {
     setIsGenerating(true);
     setAnalysisText('');
     setThoughtsText('');
-    setOpenThoughts(true);
+    setOpenThoughts(null);
 
     try {
       const res = await fetch('/api/sage/wellness', {
@@ -148,32 +153,16 @@ export default function SageWellnessCoach() {
         if (value) {
           fullText += decoder.decode(value, { stream: true });
 
-          // Parse streaming text into thoughts and final content
-          let parsedThoughts = '';
-          let parsedContent = '';
-
-          if (fullText.includes('<thought>')) {
-            const thoughtStart = fullText.indexOf('<thought>');
-            if (fullText.includes('</thought>')) {
-              const thoughtEnd = fullText.indexOf('</thought>');
-              parsedThoughts = fullText.substring(thoughtStart + 9, thoughtEnd).trim();
-              parsedContent = fullText.substring(thoughtEnd + 10).trim();
-            } else {
-              parsedThoughts = fullText.substring(thoughtStart + 9).trim();
-            }
-          } else {
-            parsedContent = fullText.trim();
-          }
-
-          setThoughtsText(parsedThoughts);
-          setAnalysisText(parsedContent);
-
-          // Close thoughts once streaming content starts (avoiding stale closures)
-          if (parsedContent.length > 5) {
-            setOpenThoughts((prev) => (prev ? false : prev));
-          }
+          const parsed = parseSageStream(fullText, done);
+          setThoughtsText(parsed.thoughts);
+          setAnalysisText(parsed.content);
         }
       }
+
+      // Final parse step to guarantee the parser processes the text with isDone = true
+      const finalParsed = parseSageStream(fullText, true);
+      setThoughtsText(finalParsed.thoughts);
+      setAnalysisText(finalParsed.content);
     } catch (err) {
       console.error('[SageWellnessCoach] Streaming failed:', err);
       setAnalysisText('⚠️ Failed to compile recovery analysis. Ensure your Gemini API Key is configured in settings.');
@@ -385,7 +374,7 @@ export default function SageWellnessCoach() {
                       {thoughtsText && (
                         <div className="w-full border border-white/10 rounded-2xl bg-slate-950/45 backdrop-blur-xl shadow-lg overflow-hidden relative">
                           <button
-                            onClick={() => setOpenThoughts(!openThoughts)}
+                            onClick={() => setOpenThoughts(isThoughtsOpen ? false : true)}
                             className="w-full px-5 py-3.5 flex items-center justify-between text-xs font-bold text-slate-300 hover:text-white transition-colors focus:outline-none"
                           >
                             <div className="flex items-center gap-2">
@@ -399,12 +388,12 @@ export default function SageWellnessCoach() {
                               </span>
                             </div>
                             <span className="font-mono text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
-                              {openThoughts ? 'CLOSE LOG' : 'EXPAND LOG'}
+                              {isThoughtsOpen ? 'CLOSE LOG' : 'EXPAND LOG'}
                             </span>
                           </button>
 
                           <AnimatePresence>
-                            {openThoughts && (
+                            {isThoughtsOpen && (
                               <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}

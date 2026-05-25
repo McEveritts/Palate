@@ -329,6 +329,16 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         }
       }
 
+      // Final parse step to guarantee the parser processes the text with isDone = true
+      const finalParsed = parseSageStream(fullText, true);
+      finalThoughts = finalParsed.thoughts;
+      finalContent = finalParsed.content;
+
+      setMessages(prev => prev.map(msg => {
+        if (msg.id !== sageMessageId) return msg;
+        return { ...msg, thoughts: finalThoughts, content: finalContent, isStreaming: false };
+      }));
+
       // Save assistant message to Database or localStorage
       if (status === "authenticated") {
         const { saveChatMessage } = await import("./actions");
@@ -573,6 +583,10 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                   ? parseMessageContent(msg.content)
                   : { frontmatter: null, markdown: msg.content };
 
+                const isThoughtsOpen = openThoughts[msg.id] !== undefined 
+                  ? openThoughts[msg.id] 
+                  : (msg.isStreaming && !msg.content);
+
                 return (
                 <motion.div 
                   key={msg.id}
@@ -594,7 +608,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                         </div>
                       )}
                     </div>
-
+ 
                     {/* Message Bubble */}
                     <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-full group`}>
                       {msg.role === 'sage' && msg.thoughts && (
@@ -637,13 +651,13 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-colors">
-                                {openThoughts[msg.id] ? "CLOSE" : "EXPAND"}
+                                {isThoughtsOpen ? "CLOSE" : "EXPAND"}
                               </span>
                             </div>
                           </button>
                           
                           <AnimatePresence initial={false}>
-                            {openThoughts[msg.id] && (
+                            {isThoughtsOpen && (
                               <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
