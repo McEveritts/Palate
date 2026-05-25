@@ -19,7 +19,7 @@ def run(cmd, timeout=300):
 NVM = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
 
 print("=== Pulling latest changes from GitHub ===")
-run(f'cd ~/Palate && git stash && git pull origin master && git stash pop || true')
+run(f'cd ~/Palate && git fetch origin && git reset --hard origin/master')
 
 print("=== Syncing database schema ===")
 run(f'{NVM} && cd ~/Palate && npx prisma db push')
