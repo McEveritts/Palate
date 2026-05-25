@@ -85,6 +85,35 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── Today's Fitness Context (non-fatal) ──────────────────
+    if (userId) {
+      try {
+        const today = new Date();
+        const todayStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+        const todayLog = await prisma.dailyLog.findFirst({
+          where: { userId, date: { gte: todayStart } },
+          include: { exerciseEntries: true },
+        });
+        if (todayLog) {
+          const exerciseTotal = todayLog.exerciseEntries.reduce((s: number, e: { caloriesBurned: number }) => s + e.caloriesBurned, 0);
+          vaultContext += `\n\n[TODAY'S FITNESS DATA]`;
+          vaultContext += `\nExercise entries today: ${todayLog.exerciseEntries.map((e: { exerciseName: string; durationMinutes: number; caloriesBurned: number }) => `${e.exerciseName} (${e.durationMinutes}min, ${e.caloriesBurned}kcal)`).join(', ') || 'None'}`;
+          vaultContext += `\nTotal exercise calories: ${exerciseTotal} kcal`;
+          vaultContext += `\nWater intake today: ${todayLog.waterIntakeMl} ml`;
+        }
+        const latestWeight = await prisma.weightLog.findFirst({
+          where: { userId },
+          orderBy: { measuredAt: 'desc' },
+          select: { weightKg: true, measuredAt: true },
+        });
+        if (latestWeight) {
+          vaultContext += `\nLatest weight: ${latestWeight.weightKg} kg (recorded ${latestWeight.measuredAt.toISOString().slice(0, 10)})`;
+        }
+      } catch (err) {
+        console.warn('[SageAI] Fitness context fetch failed (non-fatal):', err);
+      }
+    }
+
     let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
 
     if (!clientApiKey && userId) {
@@ -96,7 +125,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history);
+    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history, userId);
 
     // Discard key immediately after calling the stream function
     clientApiKey = undefined;

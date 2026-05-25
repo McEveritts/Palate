@@ -42,10 +42,44 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const [rawMode, setRawMode] = useState<Record<string, boolean>>({});
   const [showCopyOptions, setShowCopyOptions] = useState<string | null>(null);
+  const [diaryTotals, setDiaryTotals] = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
   const isGuest = useAppStore((state) => state.isGuest);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
   const setMeasurementSystem = useAppStore((state) => state.setMeasurementSystem);
+
+  // Fetch today's diary totals for Sage context
+  useEffect(() => {
+    const fetchTotals = async () => {
+      try {
+        const res = await fetch('/api/diary');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.dailyLog) {
+            setDiaryTotals({
+              calories: data.dailyLog.totalCalories || 0,
+              protein: data.dailyLog.totalProtein || 0,
+              carbs: data.dailyLog.totalCarbs || 0,
+              fat: data.dailyLog.totalFat || 0,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[SageHero] Failed to fetch diary totals:', e);
+      }
+    };
+    fetchTotals();
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => setShowToast(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
 
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +92,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   const [openThoughts, setOpenThoughts] = useState<Record<string, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     const handleClickOutside = () => setShowCopyOptions(null);
@@ -82,7 +118,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         const { getChatSession } = await import("./actions");
         const res = await getChatSession(sessionId);
         if (res.success && res.session && active) {
-          const dbMsgs = res.session.messages.map((m: any) => ({
+          const dbMsgs = res.session.messages.map((m: { id: string; role: string; content: string; thought?: string }) => ({
             id: m.id,
             role: m.role as "user" | "sage",
             content: m.content,
@@ -175,7 +211,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
             carbs: userProfile.targetCarbs,
             fat: userProfile.targetFat,
           } : undefined,
-          currentTotals: undefined, // TODO: Wire up from diary state
+          currentTotals: diaryTotals || undefined,
         }),
       });
 
@@ -201,28 +237,85 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         if (value) {
           fullText += decoder.decode(value, { stream: true });
 
-          // Intercept ___TOOL_CALL_LOG_FOOD___ token before the parser sees it
-          const toolCallMarker = '___TOOL_CALL_LOG_FOOD___';
-          if (fullText.includes(toolCallMarker)) {
-            const markerIndex = fullText.indexOf(toolCallMarker);
-            const afterMarker = fullText.substring(markerIndex + toolCallMarker.length);
-            const newlineIndex = afterMarker.indexOf('\n\n');
-            if (newlineIndex !== -1) {
-              // Full terminator present – safe to parse and strip
-              try {
-                const jsonStr = afterMarker.substring(0, newlineIndex).trim();
-                const foodData = JSON.parse(jsonStr);
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('[SageAI] Food logged:', foodData);
+          // Intercept tool call tokens before the parser sees them
+          const toolMarkers = [
+            { marker: '___TOOL_CALL_LOG_FOOD___', handler: async (data: { food_name: string; calories: number; protein: number; carbs: number; fat: number }) => {
+              const hour = new Date().getHours();
+              const mealType = hour < 11 ? 'Breakfast' : hour < 15 ? 'Lunch' : hour < 20 ? 'Dinner' : 'Snack';
+              fetch('/api/diary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  customFoodName: data.food_name,
+                  calories: Math.round(data.calories || 0),
+                  protein: Math.round(data.protein || 0),
+                  carbs: Math.round(data.carbs || 0),
+                  fat: Math.round(data.fat || 0),
+                  mealType,
+                }),
+              }).then(res => {
+                if (res.ok) {
+                  setDiaryTotals(prev => prev ? {
+                    calories: prev.calories + Math.round(data.calories || 0),
+                    protein: prev.protein + Math.round(data.protein || 0),
+                    carbs: prev.carbs + Math.round(data.carbs || 0),
+                    fat: prev.fat + Math.round(data.fat || 0),
+                  } : { calories: Math.round(data.calories || 0), protein: Math.round(data.protein || 0), carbs: Math.round(data.carbs || 0), fat: Math.round(data.fat || 0) });
                 }
-                // TODO: Dispatch to diary state / show toast notification
-              } catch {
-                // Malformed JSON – strip the marker anyway to avoid flash
+              }).catch(err => console.error('[SageHero] Failed to persist food log:', err));
+              setToastMessage(`✅ Logged: ${data.food_name} (${Math.round(data.calories)} kcal)`);
+              setShowToast(true);
+            }},
+            { marker: '___TOOL_CALL_LOG_EXERCISE___', handler: async (data: { exercise_name: string; duration_minutes: number; calories_burned: number }) => {
+              fetch('/api/exercise', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  exerciseName: data.exercise_name,
+                  durationMinutes: Math.round(data.duration_minutes || 0),
+                  caloriesBurned: Math.round(data.calories_burned || 0),
+                }),
+              }).catch(err => console.error('[SageHero] Failed to persist exercise:', err));
+              setToastMessage(`🏋️ Logged: ${data.exercise_name} (${Math.round(data.calories_burned)} kcal burned)`);
+              setShowToast(true);
+            }},
+            { marker: '___TOOL_CALL_LOG_HYDRATION___', handler: async (data: { amount_ml: number }) => {
+              fetch('/api/hydration', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amountMl: Math.round(data.amount_ml || 0) }),
+              }).catch(err => console.error('[SageHero] Failed to persist hydration:', err));
+              setToastMessage(`💧 Logged: ${Math.round(data.amount_ml)}ml water`);
+              setShowToast(true);
+            }},
+            { marker: '___TOOL_CALL_LOG_WEIGHT___', handler: async (data: { weight_kg: number }) => {
+              fetch('/api/weight', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ weightKg: data.weight_kg }),
+              }).catch(err => console.error('[SageHero] Failed to persist weight:', err));
+              setToastMessage(`⚖️ Logged: ${data.weight_kg} kg`);
+              setShowToast(true);
+            }},
+          ];
+
+          for (const { marker, handler } of toolMarkers) {
+            if (fullText.includes(marker)) {
+              const markerIndex = fullText.indexOf(marker);
+              const afterMarker = fullText.substring(markerIndex + marker.length);
+              const newlineIndex = afterMarker.indexOf('\n\n');
+              if (newlineIndex !== -1) {
+                try {
+                  const jsonStr = afterMarker.substring(0, newlineIndex).trim();
+                  const parsedData = JSON.parse(jsonStr);
+                  handler(parsedData);
+                } catch {
+                  // Malformed JSON – strip the marker anyway to avoid flash
+                }
+                const regex = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\\n]*\\n\\n', 'g');
+                fullText = fullText.replace(regex, '');
               }
-              fullText = fullText.replace(/___TOOL_CALL_LOG_FOOD___[^\n]*\n\n/g, '');
             }
-            // else: terminator not yet received – leave fullText intact
-            // so the marker accumulates until the next chunk completes it
           }
 
           const parsed = parseSageStream(fullText, done);
@@ -258,7 +351,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
       // Dispatch sidebar update
       window.dispatchEvent(new CustomEvent("palate-chat-sessions-updated"));
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (process.env.NODE_ENV === 'development') console.error(err);
       setMessages(prev => prev.map(msg => 
         msg.id === sageMessageId ? { ...msg, content: "⚠️ Failed to connect to Sage." } : msg
@@ -269,7 +362,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         msg.id === sageMessageId ? { ...msg, isStreaming: false } : msg
       ));
     }
-  }, [sessionId, geminiApiKey, measurementSystem, status]);
+  }, [sessionId, geminiApiKey, measurementSystem, status, diaryTotals]);
 
   // Trigger reply generation automatically when a new user message lands at the end of stack
   useEffect(() => {
@@ -347,7 +440,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
       } else {
         const newSessionId = `guest-session-${Date.now()}`;
         const storedSessions = localStorage.getItem("palate_guest_sessions");
-        let sessionsList: any[] = [];
+        let sessionsList: { id: string; title: string; createdAt: string }[] = [];
         try { sessionsList = storedSessions ? JSON.parse(storedSessions) : []; } catch { /* corrupted – reset */ }
         
         sessionsList.unshift({
@@ -800,6 +893,20 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                 )}
               </button>
             </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl bg-emerald-500/20 backdrop-blur-2xl border border-emerald-500/30 text-emerald-300 text-sm font-medium shadow-[0_8px_32px_rgba(16,185,129,0.3)]"
+          >
+            {toastMessage}
           </motion.div>
         )}
       </AnimatePresence>

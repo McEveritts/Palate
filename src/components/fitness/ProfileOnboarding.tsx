@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppStore } from "@/lib/store";
 import {
   ChevronRight,
   ChevronLeft,
@@ -280,6 +281,19 @@ export default function ProfileOnboarding({ onComplete, existingProfile }: Profi
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to save profile.");
       }
+      // Sync Zustand store so SageHero has fresh profile data immediately
+      useAppStore.getState().setUserProfile({
+        gender: GENDER_API_MAP[gender] as 'Male' | 'Female' | 'Other',
+        activityLevel: ACTIVITY_LEVEL_API_MAP[activityLevel] as any,
+        goal: GOAL_API_MAP[goal] as 'Lose' | 'Maintain' | 'Gain',
+        dateOfBirth,
+        weightKg: parseFloat(weightKg),
+        heightCm: parseFloat(heightCm),
+        targetCalories: nutrition.targetCalories,
+        targetProtein: nutrition.proteinG,
+        targetCarbs: nutrition.carbsG,
+        targetFat: nutrition.fatG,
+      });
       setSubmitted(true);
       setTimeout(() => onComplete?.(), 1500);
     } catch (err: any) {

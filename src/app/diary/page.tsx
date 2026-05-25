@@ -5,13 +5,15 @@ import { prisma } from '@/lib/db';
 import { MacroGlassCard } from '@/components/fitness/MacroGlassCard';
 import { ContributionGrid } from '@/components/fitness/ContributionGrid';
 import { HydrationEnergyRow } from '@/components/fitness/HydrationEnergyRow';
-import { Utensils, Dumbbell, Clock } from 'lucide-react';
+import { Utensils, Dumbbell, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DeleteEntryButton } from '@/components/fitness/DeleteEntryButton';
+import Link from 'next/link';
 import type { DailyLog, FoodLogEntry, ExerciseLogEntry, UserProfile } from '@prisma/client';
 import { DiaryClientWrapper } from './DiaryClientWrapper';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DiaryPage() {
+export default async function DiaryPage({ searchParams }: { searchParams?: Promise<{ date?: string }> }) {
   // ── Authentication ──────────────────────────────────────
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
@@ -24,9 +26,30 @@ export default async function DiaryPage() {
     );
   }
 
-  const today = new Date();
-  const todayStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+  // ── Date Resolution ────────────────────────────────────
+  const resolvedParams = await (searchParams ?? Promise.resolve({} as { date?: string }));
+  const dateParam = resolvedParams.date;
+  let selectedDate: Date;
+  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    selectedDate = new Date(`${dateParam}T00:00:00.000Z`);
+    if (isNaN(selectedDate.getTime())) {
+      selectedDate = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+    }
+  } else {
+    const now = new Date();
+    selectedDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const selectedStr = selectedDate.toISOString().slice(0, 10);
+  const isToday = todayStr === selectedStr;
+
+  // Prev/Next dates
+  const prevDate = new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const nextDate = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const canGoForward = !isToday;
+
+  const tomorrowStart = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
 
   let dailyLog: (DailyLog & { entries: FoodLogEntry[]; exerciseEntries: ExerciseLogEntry[] }) | null = null;
   let entries: FoodLogEntry[] = [];
@@ -42,7 +65,7 @@ export default async function DiaryPage() {
       where: {
         userId: userId,
         date: {
-          gte: todayStart,
+          gte: selectedDate,
           lt: tomorrowStart,
         },
       },
@@ -68,7 +91,7 @@ export default async function DiaryPage() {
     pastWeekLogs = await prisma.dailyLog.findMany({
       where: {
         userId,
-        date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        date: { gte: new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000) },
       },
       select: { date: true, totalCalories: true },
       orderBy: { date: 'asc' },
@@ -140,14 +163,46 @@ export default async function DiaryPage() {
     <div className="relative min-h-screen w-full p-6 pb-32">
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
         
-        {/* Header */}
+        {/* Header + Date Navigation */}
         <div className="flex flex-col gap-2 pt-4 pb-2">
           <h1 className="text-3xl font-light text-white tracking-tight">
             Sage <span className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-fuchsia-400 drop-shadow-sm">Fitness</span>
           </h1>
-          <p className="text-slate-400 text-sm">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/diary?date=${prevDate}`}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft size={18} />
+            </Link>
+            <p className="text-slate-400 text-sm">
+              {isToday ? (
+                <>{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })} <span className="text-indigo-400 text-xs ml-1">(Today)</span></>
+              ) : (
+                selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })
+              )}
+            </p>
+            {canGoForward ? (
+              <Link
+                href={`/diary?date=${nextDate}`}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                aria-label="Next day"
+              >
+                <ChevronRight size={18} />
+              </Link>
+            ) : (
+              <div className="p-1.5 text-slate-700"><ChevronRight size={18} /></div>
+            )}
+            {!isToday && (
+              <Link
+                href="/diary"
+                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors ml-auto"
+              >
+                ← Today
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Top Widgets Grid */}
@@ -195,9 +250,12 @@ export default async function DiaryPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-lg font-semibold text-emerald-400">-{Math.round(ex.caloriesBurned)}</span>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest ml-1">kcal</span>
+                  <div className="text-right flex items-center gap-2">
+                    <div>
+                      <span className="text-lg font-semibold text-emerald-400">-{Math.round(ex.caloriesBurned)}</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest ml-1">kcal</span>
+                    </div>
+                    <DeleteEntryButton entryId={ex.id} entryType="exercise" />
                   </div>
                 </div>
               ))}
@@ -247,13 +305,16 @@ export default async function DiaryPage() {
                             <span className="text-amber-300 font-medium">{entry.fat}g F</span>
                           </div>
                         </div>
-                        <div className="text-right flex flex-col items-end justify-center">
-                          <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
-                            {entry.calories}
-                          </span>
-                          <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
-                            kcal
-                          </span>
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
+                              {entry.calories}
+                            </span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 block">
+                              kcal
+                            </span>
+                          </div>
+                          <DeleteEntryButton entryId={entry.id} entryType="food" />
                         </div>
                       </div>
                     ))}

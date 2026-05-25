@@ -11,7 +11,7 @@ const foodEntrySchema = z.object({
   mealType: z.enum(["Breakfast", "Lunch", "Dinner", "Snack"]),
   customFoodName: z.string().optional(),
   recipeId: z.string().optional(),
-  amountConsumed: z.number().min(0, "amountConsumed must be >= 0"),
+  amountConsumed: z.number().min(0, "amountConsumed must be >= 0").default(1),
   calories: z.number().min(0, "calories must be >= 0"),
   protein: z.number().min(0, "protein must be >= 0"),
   carbs: z.number().min(0, "carbs must be >= 0"),

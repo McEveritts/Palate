@@ -27,8 +27,8 @@ export interface VaultRecipe {
   date?: string;
 }
 
-function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
-  const data = (r.frontmatter as any) || {};
+function mapDbRecipeToVaultRecipe(r: { id: string; content: string; path: string; frontmatter: unknown }): VaultRecipe {
+  const data = (r.frontmatter as Record<string, unknown>) || {};
   const category = data.category || 'mains';
   const slug = r.slug;
   
@@ -48,7 +48,7 @@ function mapDbRecipeToVaultRecipe(r: any): VaultRecipe {
     id: `${category}-${slug}`,
     slug,
     title: r.title,
-    category: category as any,
+    category: category as VaultRecipe['category'],
     tags,
     macros: macrosStr,
     content: r.markdown,
@@ -243,7 +243,7 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
 
     return recipes
       .filter(r => {
-        const cat = (r.frontmatter as any)?.category;
+        const cat = (r.frontmatter as Record<string, unknown>)?.category;
         return categoriesToScan.includes(cat);
       })
       .map(r => mapDbRecipeToVaultRecipe(r));
@@ -278,7 +278,7 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
           id: `${category}-${file.replace('.md', '')}`,
           slug: file.replace('.md', ''),
           title: data.recipe || data.title || file.replace('.md', ''),
-          category: category as any,
+          category: category as VaultRecipe['category'],
           tags,
           macros: macrosStr,
           content: content.trim()
@@ -311,7 +311,7 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
       console.warn("Could not read current curated files from disk:", e);
     }
 
-    const dbCuratedCurrent = recipes.filter(r => (r.frontmatter as any)?.category === 'curated-current');
+    const dbCuratedCurrent = recipes.filter(r => (r.frontmatter as Record<string, unknown>)?.category === 'curated-current');
     const dbSlugs = new Set(dbCuratedCurrent.map(r => r.slug));
 
     const isOutOfSync = diskSlugs.length > 0 && (
@@ -327,12 +327,12 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
     }
 
     const categoryName = `curated-${type}`;
-    const curated = recipes.filter(r => (r.frontmatter as any)?.category === categoryName);
+    const curated = recipes.filter(r => (r.frontmatter as Record<string, unknown>)?.category === categoryName);
     
     // Sort by date ascending (chronological order) with createdAt as fallback
     curated.sort((a, b) => {
-      const dateA = (a.frontmatter as any)?.date;
-      const dateB = (b.frontmatter as any)?.date;
+      const dateA = (a.frontmatter as Record<string, unknown>)?.date as string | undefined;
+      const dateB = (b.frontmatter as Record<string, unknown>)?.date as string | undefined;
       if (dateA && dateB) {
         return String(dateA).localeCompare(String(dateB));
       }

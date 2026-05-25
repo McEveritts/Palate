@@ -6,6 +6,7 @@ import { Plus, Search, Camera, Zap, ScanLine, Dumbbell, Droplet } from 'lucide-r
 import FoodSearch from './FoodSearch';
 import BarcodeScanner from './BarcodeScanner';
 import ExerciseLogger from './ExerciseLogger';
+import { QuickCaloriesModal } from './QuickCaloriesModal';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
   const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [showBarcode, setShowBarcode] = useState(false);
   const [showExercise, setShowExercise] = useState(false);
+  const [showQuickCalories, setShowQuickCalories] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
 
   return (
@@ -49,6 +51,14 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
         onLogged={() => {
           setShowExercise(false);
           onExerciseLogged?.();
+        }}
+      />
+
+      <QuickCaloriesModal
+        isOpen={showQuickCalories}
+        onClose={() => setShowQuickCalories(false)}
+        onSuccess={() => {
+          onFoodLogged?.();
         }}
       />
 
@@ -117,7 +127,7 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 flex gap-3"
             >
               {[
-                { label: 'Quick Calories', icon: <Zap size={16} />, color: 'text-amber-400 bg-amber-500/15 border-amber-400/30' },
+                { label: 'Quick Calories', icon: <Zap size={16} />, color: 'text-amber-400 bg-amber-500/15 border-amber-400/30', action: () => setShowQuickCalories(true) },
                 { label: 'Search Food', icon: <Search size={16} />, color: 'text-indigo-400 bg-indigo-500/15 border-indigo-400/30', action: () => setShowFoodSearch(true) },
                 { label: 'Log Exercise', icon: <Dumbbell size={16} />, color: 'text-emerald-400 bg-emerald-500/15 border-emerald-400/30', action: () => setShowExercise(true) },
                 { label: 'Log Water', icon: <Droplet size={16} />, color: 'text-cyan-400 bg-cyan-500/15 border-cyan-400/30', action: async () => {

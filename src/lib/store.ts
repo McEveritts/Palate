@@ -14,16 +14,26 @@ export interface UserProfileState {
   targetFat: number;
 }
 
+export interface DiaryTotals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 interface AppState {
   isGuest: boolean;
   geminiApiKey: string;
   measurementSystem: 'metric' | 'imperial';
   userProfile: UserProfileState | null;
+  diaryTotals: DiaryTotals | null;
   setGuest: (guest: boolean) => void;
   setGeminiApiKey: (key: string) => void;
   setMeasurementSystem: (system: 'metric' | 'imperial') => void;
   setUserProfile: (profile: UserProfileState | null) => void;
   updateProfile: (partial: Partial<UserProfileState>) => void;
+  setDiaryTotals: (totals: DiaryTotals | null) => void;
+  incrementDiaryTotals: (added: DiaryTotals) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -33,6 +43,7 @@ export const useAppStore = create<AppState>()(
       geminiApiKey: '',
       measurementSystem: 'metric',
       userProfile: null,
+      diaryTotals: null,
       setGuest: (guest) => set({ isGuest: guest }),
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       setMeasurementSystem: (system) => set({ measurementSystem: system }),
@@ -44,6 +55,15 @@ export const useAppStore = create<AppState>()(
         }
         return { userProfile: { ...state.userProfile, ...partial } };
       }),
+      setDiaryTotals: (totals) => set({ diaryTotals: totals }),
+      incrementDiaryTotals: (added) => set((state) => ({
+        diaryTotals: state.diaryTotals ? {
+          calories: state.diaryTotals.calories + added.calories,
+          protein: state.diaryTotals.protein + added.protein,
+          carbs: state.diaryTotals.carbs + added.carbs,
+          fat: state.diaryTotals.fat + added.fat,
+        } : { ...added },
+      })),
     }),
     {
       name: 'palate-storage',

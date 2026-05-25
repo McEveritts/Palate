@@ -18,11 +18,17 @@ def run(cmd, timeout=300):
 
 NVM = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
 
+print("=== Pulling latest changes from GitHub ===")
+run(f'cd ~/Palate && git stash && git pull origin master && git stash pop || true')
+
+print("=== Syncing database schema ===")
+run(f'{NVM} && cd ~/Palate && npx prisma db push')
+
 print("=== Installing ALL deps (including dev for build) ===")
 run(f'{NVM} && cd ~/Palate && npm install && npx prisma generate')
 
 print("=== Building production bundle ===")
-run(f'{NVM} && cd ~/Palate && npx next build', timeout=300)
+run(f'{NVM} && cd ~/Palate && npm run build', timeout=300)
 
 print("=== Restarting server ===")
 run('screen -X -S palate quit || true')

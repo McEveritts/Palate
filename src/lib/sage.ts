@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Part } from "@google/generative-ai";
-import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { globalMacroCache } from './macroCache';
 
@@ -60,6 +60,55 @@ const logFoodConsumptionDeclaration: FunctionDeclaration = {
   },
 };
 
+const logExerciseDeclaration: FunctionDeclaration = {
+  name: "log_exercise",
+  description: "Logs an exercise session to the user's daily fitness tracker. Call this when the user reports doing exercise or physical activity (e.g., 'I ran 5km', 'I did weights for 45 minutes').",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      exercise_name: { type: SchemaType.STRING, description: "Name of the exercise (e.g., Running, Cycling, Weight Training, Swimming)" },
+      duration_minutes: { type: SchemaType.NUMBER, description: "Duration of the exercise in minutes" },
+      calories_burned: { type: SchemaType.NUMBER, description: "Estimated calories burned during the exercise" },
+    },
+    required: ["exercise_name", "duration_minutes", "calories_burned"],
+  },
+};
+
+const logHydrationDeclaration: FunctionDeclaration = {
+  name: "log_hydration",
+  description: "Logs water intake to the user's daily hydration tracker. Call this when the user reports drinking water or other hydrating beverages (e.g., 'I drank 500ml water', 'I had a glass of water').",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      amount_ml: { type: SchemaType.NUMBER, description: "Amount of water consumed in milliliters" },
+    },
+    required: ["amount_ml"],
+  },
+};
+
+const logWeightDeclaration: FunctionDeclaration = {
+  name: "log_weight",
+  description: "Logs a body weight measurement to the user's weight tracker. Call this when the user reports their current weight (e.g., 'I weigh 82kg today', 'My weight is 180 lbs').",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      weight_kg: { type: SchemaType.NUMBER, description: "Body weight in kilograms" },
+    },
+    required: ["weight_kg"],
+  },
+};
+
+const getFitnessSummaryDeclaration: FunctionDeclaration = {
+  name: "get_fitness_summary",
+  description: "Retrieves the user's fitness progress summary including 7-day averages, logging streak, weight trend, consistency score, and exercise totals. Call this when the user asks about their progress (e.g., 'How am I doing?', 'Show me my weekly summary', 'What's my streak?').",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      period: { type: SchemaType.STRING, description: "The time period for the summary. Currently only '7d' is supported." },
+    },
+  },
+};
+
 async function fetchMacros(ingredient_names: string[]) {
   console.log(`[Tool Call] Fetching macros for: ${ingredient_names.join(', ')}`);
   const macrosDir = path.join(process.cwd(), 'vault', 'macros');
@@ -68,7 +117,7 @@ async function fetchMacros(ingredient_names: string[]) {
   
   try {
     const cache = globalMacroCache.get(macrosDir);
-    const results: any = {};
+    const results: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
 
     for (const ingredient_name of ingredient_names) {
       let bestMatch = null;
@@ -99,14 +148,14 @@ async function fetchMacros(ingredient_names: string[]) {
             const nutrients = food.foodNutrients || [];
             
             const findNutrient = (nameRegex: RegExp, id?: number) => {
-              const n = nutrients.find((x: any) => 
+              const n = nutrients.find((x: { nutrientId: number, value: number }) => 
                 (id && x.nutrientId === id) || 
                 (x.nutrientName && nameRegex.test(x.nutrientName))
               );
               return n ? n.value : undefined;
             };
             
-            const caloriesNutrient = nutrients.find((x: any) => 
+            const caloriesNutrient = nutrients.find((x: { nutrientId: number, value: number }) => 
               (x.nutrientId === 1008 || (x.nutrientName && /Energy/i.test(x.nutrientName))) &&
               (x.unitName && /KCAL/i.test(x.unitName))
             );
@@ -151,19 +200,22 @@ async function fetchMacros(ingredient_names: string[]) {
             };
             
             // Save back to USDA_Imports.md
-            if (!fs.existsSync(macrosDir)) {
-              fs.mkdirSync(macrosDir, { recursive: true });
+            try {
+              await fsPromises.access(macrosDir);
+            } catch {
+              await fsPromises.mkdir(macrosDir, { recursive: true });
             }
             
-            // M-10 Fix: Use appendFileSync for existing files to avoid read-modify-write race conditions
+            // M-10 Fix: Use appendFile for existing files to avoid read-modify-write race conditions
             const newRow = `| ${description} | ${caloriesStr}kcal | ${proteinStr}g | ${carbsStr}g | ${fatStr}g | ${fiberStr}g | ${sugarStr}g | ${sodiumStr}mg | ${commonPortions} |\n`;
-            if (fs.existsSync(importsFilePath)) {
-              fs.appendFileSync(importsFilePath, newRow, 'utf8');
-            } else {
+            try {
+              await fsPromises.access(importsFilePath);
+              await fsPromises.appendFile(importsFilePath, newRow, 'utf8');
+            } catch {
               const header = "# USDA Imports\n" +
                             "| **Ingredient** | **Calories** | **Protein** | **Carbs** | **Fat** | **Fiber** | **Sugar** | **Sodium** | **Common Portions** |\n" +
                             "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n";
-              fs.writeFileSync(importsFilePath, header + newRow, 'utf8');
+              await fsPromises.writeFile(importsFilePath, header + newRow, 'utf8');
             }
             
             globalMacroCache.invalidate();
@@ -216,7 +268,7 @@ export async function askSage(prompt: string, context?: string, clientApiKey?: s
   return result.response.text();
 }
 
-export async function* streamSage(prompt: string, context?: string, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: any[]) {
+export async function* streamSage(prompt: string, context?: string, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: { role: string; content: string; thoughts?: string }[], userId?: string | null) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
@@ -232,10 +284,17 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
     model: modelName,
     systemInstruction: systemInstruction,
     generationConfig: { temperature: 0.7 },
-    tools: [{ functionDeclarations: [getIngredientsMacrosDeclaration, logFoodConsumptionDeclaration] }]
+    tools: [{ functionDeclarations: [
+      getIngredientsMacrosDeclaration,
+      logFoodConsumptionDeclaration,
+      logExerciseDeclaration,
+      logHydrationDeclaration,
+      logWeightDeclaration,
+      getFitnessSummaryDeclaration,
+    ] }]
   });
 
-  const chatHistory: any[] = [
+  const chatHistory: { role: string; parts: { text: string }[] }[] = [
     { role: "user", parts: [{ text: "Create a simple salad recipe." }] },
     { role: "model", parts: [{ text: "<thought>\nThe user wants a simple salad. I don't need to call any tools for this basic request. I will construct a vibrant, elegant salad recipe with standard culinary measurements.\n</thought>\n---\nrecipe: 'Emerald Vinaigrette Greens'\ntags: ['vegan', 'quick', 'salad']\nmacros: 'Calories: 120 | Protein: 2g | Carbs: 5g | Fat: 10g'\n---\n\n# 🥗 Emerald Vinaigrette Greens\n\nAn elegant, crisp composition of fresh greens dressed in a vibrant citrus vinaigrette." }] }
   ];
@@ -279,60 +338,179 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
   const sanitizedPrompt = prompt.replace(/<\/user_input>/gi, '');
   promptParts.push({ text: `<user_input>\n${sanitizedPrompt}\n</user_input>` });
 
-  let streamResult = await chat.sendMessageStream(promptParts);
-  
-  for await (const chunk of streamResult.stream) {
-    const calls = typeof chunk.functionCalls === 'function' ? chunk.functionCalls() : chunk.functionCalls;
-    if (calls && calls.length > 0) {
-      // M-7 Fix: Handle ALL function calls in the response, not just the first
-      for (const call of calls) {
-        if (call.name === "get_ingredients_macros") {
-          const args = call.args as any;
-          const macroData = await fetchMacros(args.ingredient_names || []);
+  const streamResult = await chat.sendMessageStream(promptParts);
 
-          // Send the function response back to the model
-          streamResult = await chat.sendMessageStream([{
-            functionResponse: {
-              name: "get_ingredients_macros",
-              response: macroData
+  // Recursive tool-call loop (max depth 5) — fixes M-8 chained tool call limitation
+  const MAX_TOOL_DEPTH = 5;
+  let toolCallDepth = 0;
+
+  const processStream = async function* (stream: typeof streamResult): AsyncGenerator<string> {
+    for await (const chunk of stream.stream) {
+      const calls = typeof chunk.functionCalls === 'function' ? chunk.functionCalls() : chunk.functionCalls;
+      if (calls && calls.length > 0) {
+        // M-7 Fix: Handle ALL function calls in the response, not just the first
+        for (const call of calls) {
+          if (call.name === "get_ingredients_macros") {
+            const args = call.args as { ingredient_names?: string[] };
+            const macroData = await fetchMacros(args.ingredient_names || []);
+
+            // Send the function response back to the model
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "get_ingredients_macros",
+                response: macroData
+              }
+            }]);
+
+            // Recursively process the follow-up stream for chained tool calls
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
             }
-          }]);
+          } else if (call.name === "log_food_consumption") {
+            const args = call.args as { food_name: string; calories?: number; protein?: number; carbs?: number; fat?: number };
+            console.log(`[Tool Call] Logging food: ${args.food_name}`);
 
-          // Yield the response from the follow-up stream
-          for await (const followUpChunk of streamResult.stream) {
-            if (followUpChunk.text) {
-              yield followUpChunk.text();
+            // Yield a special UI token so the client can update the tracker immediately
+            yield `\n\n___TOOL_CALL_LOG_FOOD___${JSON.stringify(args)}\n\n`;
+
+            // Send the function response back to the model
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "log_food_consumption",
+                response: { status: "success", message: `Successfully logged ${args.food_name}` }
+              }
+            }]);
+
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
             }
-          }
-        } else if (call.name === "log_food_consumption") {
-          const args = call.args as any;
-          console.log(`[Tool Call] Logging food: ${args.food_name}`);
+          } else if (call.name === "log_exercise") {
+            const args = call.args as { exercise_name: string; duration_minutes: number; calories_burned: number };
+            console.log(`[Tool Call] Logging exercise: ${args.exercise_name}`);
 
-          // Yield a special UI token so the client can update the tracker immediately
-          yield `\n\n___TOOL_CALL_LOG_FOOD___${JSON.stringify(args)}\n\n`;
+            // Yield a special UI token so the client can persist the exercise
+            yield `\n\n___TOOL_CALL_LOG_EXERCISE___${JSON.stringify(args)}\n\n`;
 
-          // Send the function response back to the model
-          streamResult = await chat.sendMessageStream([{
-            functionResponse: {
-              name: "log_food_consumption",
-              response: { status: "success", message: `Successfully logged ${args.food_name}` }
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "log_exercise",
+                response: { status: "success", message: `Successfully logged ${args.exercise_name} (${args.duration_minutes} min, ${args.calories_burned} kcal burned)` }
+              }
+            }]);
+
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
             }
-          }]);
+          } else if (call.name === "log_hydration") {
+            const args = call.args as { amount_ml: number };
+            console.log(`[Tool Call] Logging hydration: ${args.amount_ml}ml`);
 
-          // Yield the response from the follow-up stream
-          for await (const followUpChunk of streamResult.stream) {
-            if (followUpChunk.text) {
-              yield followUpChunk.text();
+            // Yield a special UI token so the client can persist the hydration
+            yield `\n\n___TOOL_CALL_LOG_HYDRATION___${JSON.stringify(args)}\n\n`;
+
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "log_hydration",
+                response: { status: "success", message: `Successfully logged ${args.amount_ml}ml water intake` }
+              }
+            }]);
+
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
+            }
+          } else if (call.name === "log_weight") {
+            const args = call.args as { weight_kg: number };
+            console.log(`[Tool Call] Logging weight: ${args.weight_kg}kg`);
+
+            // Yield a special UI token so the client can persist the weight
+            yield `\n\n___TOOL_CALL_LOG_WEIGHT___${JSON.stringify(args)}\n\n`;
+
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "log_weight",
+                response: { status: "success", message: `Successfully logged weight: ${args.weight_kg} kg` }
+              }
+            }]);
+
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
+            }
+          } else if (call.name === "get_fitness_summary") {
+            console.log(`[Tool Call] Fetching fitness summary`);
+
+            let summaryData: Record<string, unknown> = { status: "error", message: "No user session — cannot retrieve fitness data." };
+
+            // Server-side data fetch — no UI token needed, data goes back to model
+            if (userId) {
+              try {
+                const { analyzeDietaryPatterns } = await import('./patternAnalysis');
+                const { prisma } = await import('./db');
+                const profile = await prisma.userProfile.findUnique({ where: { userId } });
+                const patterns = await analyzeDietaryPatterns(
+                  userId,
+                  profile?.targetCalories,
+                  profile?.targetProtein
+                );
+                summaryData = {
+                  status: "success",
+                  ...patterns,
+                  targetCalories: profile?.targetCalories ?? 2000,
+                  targetProtein: profile?.targetProtein ?? 150,
+                };
+              } catch (err) {
+                console.warn('[SageAI] Fitness summary fetch failed:', err);
+                summaryData = { status: "error", message: "Failed to retrieve fitness data." };
+              }
+            }
+
+            const followUpStream = await chat.sendMessageStream([{
+              functionResponse: {
+                name: "get_fitness_summary",
+                response: summaryData
+              }
+            }]);
+
+            if (toolCallDepth < MAX_TOOL_DEPTH) {
+              toolCallDepth++;
+              yield* processStream(followUpStream);
+            } else {
+              for await (const followUpChunk of followUpStream.stream) {
+                if (followUpChunk.text) yield followUpChunk.text();
+              }
             }
           }
         }
+      } else if (chunk.text) {
+        yield chunk.text();
       }
-      // M-8: Known limitation (V1) — follow-up streams after tool responses are not
-      // checked for *chained* tool calls. A full recursive tool-call loop will be
-      // implemented in a future version.
-    } else if (chunk.text) {
-      yield chunk.text();
     }
-  }
+  };
+
+  yield* processStream(streamResult);
 }
 
