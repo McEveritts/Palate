@@ -45,6 +45,72 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   const [added, setAdded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [detectorSupported, setDetectorSupported] = useState(false);
+  const lookupRef = useRef(handleLookup);
+
+  useEffect(() => {
+    lookupRef.current = handleLookup;
+  }, [handleLookup]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      setDetectorSupported(true);
+    }
+  }, []);
+
+  // Real-time automatic barcode/QR detector loop
+  useEffect(() => {
+    if (!cameraActive || !isOpen) return;
+
+    let active = true;
+    let animationFrameId: number;
+
+    const detectLoop = async () => {
+      if (!active) return;
+
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && 'BarcodeDetector' in window) {
+        try {
+          // @ts-ignore
+          const detector = new window.BarcodeDetector({
+            formats: ['qr_code', 'upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39']
+          });
+          const barcodes = await detector.detect(video);
+          if (active && barcodes && barcodes.length > 0) {
+            const rawValue = barcodes[0].rawValue;
+            console.log('[BarcodeScanner] Live-detected barcode/QR:', rawValue);
+            
+            // Trigger feedback and lookup
+            if (navigator.vibrate) {
+              try { navigator.vibrate(100); } catch {}
+            }
+            setUpcInput(rawValue);
+            lookupRef.current(rawValue);
+            
+            // Pause detection upon successful detection to prevent double triggering
+            active = false;
+            return;
+          }
+        } catch (err) {
+          console.warn('[BarcodeScanner] BarcodeDetector error:', err);
+        }
+      }
+
+      if (active) {
+        animationFrameId = requestAnimationFrame(detectLoop);
+      }
+    };
+
+    const startTimeout = setTimeout(() => {
+      detectLoop();
+    }, 1000);
+
+    return () => {
+      active = false;
+      clearTimeout(startTimeout);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [cameraActive, isOpen]);
 
   // ── Camera Setup ────────────────────────────────────────────
   const startCamera = useCallback(async () => {
@@ -235,7 +301,11 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
               </div>
 
               <p className="text-center text-xs text-slate-500">
-                {cameraActive ? 'Point camera at barcode, then enter the number below' : 'Enter the barcode number manually'}
+                {cameraActive 
+                  ? (detectorSupported 
+                      ? '🌿 Live scanner active! Align barcode or QR code inside viewfinder.' 
+                      : 'Point camera at barcode, then enter the number below')
+                  : 'Enter the barcode number manually'}
               </p>
 
               {/* Manual UPC Input */}

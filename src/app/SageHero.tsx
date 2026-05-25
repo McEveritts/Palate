@@ -507,6 +507,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
         className="hidden" 
         accept="image/*" 
         onChange={handleImageSelect} 
+        data-sage-upload
       />
       <AnimatePresence mode="wait">
         {!hasStarted ? (
