@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ScanLine, X, Camera, Loader2, Check, Search, AlertTriangle, Package } from 'lucide-react';
+import { ScanLine, X, Camera, Loader2, Check, Search, AlertTriangle, Package, ImagePlus } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,8 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
   const [detectorSupported, setDetectorSupported] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [barcodeDetectorInstance, setBarcodeDetectorInstance] = useState<any>(null);
@@ -410,7 +411,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
 
                 {cameraError && (
                   <div
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => cameraInputRef.current?.click()}
                     className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/65 p-4 text-center cursor-pointer hover:bg-slate-950/75 transition-all duration-300 group shadow-inner"
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 group-hover:scale-105 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-all duration-300 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
@@ -418,7 +419,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                     </div>
                     <span className="text-xs font-semibold text-white/90 tracking-wide">PWA Camera Mode Active</span>
                     <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
-                      Tap anywhere here to take a live photo of your barcode/QR using your camera or upload from library.
+                      Tap anywhere here to snap a photo of your barcode/QR using your camera.
                     </span>
                   </div>
                 )}
@@ -451,26 +452,43 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                   ? (detectorSupported 
                       ? '🌿 Live scanner active! Align barcode or QR code inside viewfinder.' 
                       : 'Point camera at barcode, then enter the number below')
-                  : 'Take a photo / upload an image or enter the number manually'}
+                  : 'Snap a picture, upload an image or enter the number manually'}
               </p>
 
-              {/* Hidden File Input for Image Scanning */}
+              {/* Hidden Inputs for Direct Camera vs Library picker */}
               <input
                 type="file"
-                ref={fileInputRef}
+                ref={cameraInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={libraryInputRef}
                 onChange={handleImageSelect}
                 accept="image/*"
                 className="hidden"
               />
 
               {(!cameraActive || cameraError) && (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
-                >
-                  <Camera className="h-4 w-4 text-blue-400 animate-pulse" />
-                  Scan from Camera or Photo Library
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-[0_0_15px_rgba(59,130,246,0.25)] transition-all cursor-pointer"
+                  >
+                    <Camera className="h-4 w-4 animate-pulse" />
+                    Snap Barcode Photo
+                  </button>
+                  <button
+                    onClick={() => libraryInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
+                  >
+                    <ImagePlus className="h-4 w-4 text-blue-400" />
+                    Upload from Gallery
+                  </button>
+                </div>
               )}
 
               {/* Manual UPC Input */}

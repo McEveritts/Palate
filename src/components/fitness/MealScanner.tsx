@@ -46,7 +46,8 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   const geminiApiKey = useAppStore((state) => state.geminiApiKey);
 
@@ -59,16 +60,20 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
 
       let stream: MediaStream;
       try {
-        // 1. Try back-facing environment camera with ideal HD resolution
+        // 1. Try back-facing environment camera with ideal HD resolution and ideal facingMode
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         });
       } catch (err) {
         console.warn('[MealScanner] Failed ideal constraints, trying basic environment camera:', err);
         try {
-          // 2. Fall back to simple back-facing camera
+          // 2. Fall back to simple back-facing camera with ideal facingMode
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
+            video: { facingMode: { ideal: 'environment' } },
           });
         } catch (err2) {
           console.warn('[MealScanner] Failed environment camera fallback, trying any camera:', err2);
@@ -290,7 +295,7 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                   />
                 ) : cameraError ? (
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => cameraInputRef.current?.click()}
                     className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/65 p-4 text-center cursor-pointer hover:bg-slate-950/75 transition-all duration-300 group shadow-inner"
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 group-hover:scale-105 group-hover:bg-fuchsia-500/20 group-hover:border-fuchsia-500/40 transition-all duration-300 shadow-[0_0_20px_rgba(217,70,239,0.15)]">
@@ -298,7 +303,7 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                     </div>
                     <span className="text-xs font-semibold text-white/90 tracking-wide">PWA Camera Mode Active</span>
                     <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
-                      Tap anywhere here to take a live photo using your camera or upload from your library.
+                      Tap anywhere here to snap a photo of your plate using your camera.
                     </span>
                   </div>
                 ) : (
@@ -329,22 +334,39 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                 </p>
               </div>
 
+              {/* Hidden Inputs for Direct Camera vs Library picker */}
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={libraryInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                className="hidden"
+              />
+
               {/* Action Trigger Buttons */}
               {!capturedImage && (
-                <div className="flex gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageSelect}
-                    accept="image/*"
-                    className="hidden"
-                  />
+                <div className="flex flex-col sm:flex-row gap-2.5 w-full">
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-[0_0_15px_rgba(217,70,239,0.25)] transition-all cursor-pointer"
+                  >
+                    <Camera className="h-4 w-4 animate-pulse" />
+                    Snap Plate Photo
+                  </button>
+                  <button
+                    onClick={() => libraryInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
                   >
                     <ImagePlus className="h-4 w-4 text-fuchsia-400" />
-                    Upload Photo
+                    Upload from Gallery
                   </button>
                 </div>
               )}
