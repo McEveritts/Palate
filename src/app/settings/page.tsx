@@ -24,7 +24,12 @@ export default function SettingsPage() {
   const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState("create_sage_calendar");
   const [hasCalendarScope, setHasCalendarScope] = useState(false);
-  const [googleCalendars, setGoogleCalendars] = useState<any[]>([]);
+  interface GoogleCalendar {
+    id: string;
+    summary: string;
+    primary?: boolean;
+  }
+  const [googleCalendars, setGoogleCalendars] = useState<GoogleCalendar[]>([]);
   const [backfilling, setBackfilling] = useState(false);
   const [backfillMessage, setBackfillMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -59,12 +64,15 @@ export default function SettingsPage() {
   } | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) setMounted(true);
+    });
     if (session?.user) {
       fetch("/api/settings")
         .then((res) => res.json())
         .then((data) => {
-          if (data.success) {
+          if (data.success && active) {
             setMeasurementSystem(data.metricSystem ? "metric" : "imperial");
             if (data.hasKey) {
               setKeyInput("••••••••••••••••");
@@ -77,10 +85,17 @@ export default function SettingsPage() {
             setGoogleCalendars(data.googleCalendars || []);
           }
         })
-        .catch((err) => console.error("Failed to load user settings:", err));
+        .catch((err) => {
+          console.error("Failed to load user settings:", err);
+        });
     } else {
-      setKeyInput(geminiApiKey);
+      requestAnimationFrame(() => {
+        if (active) setKeyInput(geminiApiKey);
+      });
     }
+    return () => {
+      active = false;
+    };
   }, [session, geminiApiKey, setMeasurementSystem]);
 
   // Load household info
@@ -116,8 +131,16 @@ export default function SettingsPage() {
   }, [session]);
 
   useEffect(() => {
-    loadHousehold();
-    loadFitnessProfile();
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) {
+        loadHousehold();
+        loadFitnessProfile();
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [loadHousehold, loadFitnessProfile]);
 
   const handleCreateInvite = async () => {
@@ -161,7 +184,7 @@ export default function SettingsPage() {
       } else {
         setRedeemMessage({ type: "error", text: data.error });
       }
-    } catch (err) {
+    } catch {
       setRedeemMessage({ type: "error", text: "Failed to redeem invite code." });
     }
   };
@@ -266,7 +289,7 @@ export default function SettingsPage() {
         } else {
           setKeyVerification({ status: "error", message: data.error || "Failed to verify API key." });
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to save settings to server:", err);
         setKeyVerification({ status: "error", message: "Failed to connect to the server." });
       } finally {
@@ -294,7 +317,7 @@ export default function SettingsPage() {
           const errMsg = errData.error?.message || "Invalid API key.";
           setKeyVerification({ status: "error", message: `Google API Error: ${errMsg}` });
         }
-      } catch (e) {
+      } catch {
         setKeyVerification({ status: "error", message: "Failed to connect to Google API for verification." });
       } finally {
         setSaving(false);
@@ -650,7 +673,7 @@ export default function SettingsPage() {
                           Leave Household
                         </h3>
                         <p className="text-slate-400 text-sm mt-1">
-                          Your recipes will stay with the current household. You'll get a new personal kitchen.
+                          Your recipes will stay with the current household. You&apos;ll get a new personal kitchen.
                         </p>
                       </div>
                       <button

@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, Brain, CheckCircle2, Activity, Dumbbell, 
+  Sparkles, Brain, CheckCircle2, Dumbbell, 
   Calendar, Flame, Clock, HeartPulse, ChevronDown, 
-  ChevronUp, RefreshCw, Scale, AlertCircle 
+  ChevronUp, RefreshCw, AlertCircle 
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -59,7 +59,6 @@ export default function SageWellnessCoach() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const measurementSystem = useAppStore((state) => state.measurementSystem);
-  const geminiApiKey = useAppStore((state) => state.geminiApiKey);
 
   // Fetch telemetry from server action
   const loadTelemetry = useCallback(async () => {
@@ -100,9 +99,15 @@ export default function SageWellnessCoach() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     if (isOpen && !telemetry) {
-      loadTelemetry();
+      requestAnimationFrame(() => {
+        if (active) loadTelemetry();
+      });
     }
+    return () => {
+      active = false;
+    };
   }, [isOpen, telemetry, loadTelemetry]);
 
   // Handle AI analysis streaming
@@ -308,17 +313,19 @@ export default function SageWellnessCoach() {
                   </p>
                   
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                    {[
-                      { label: 'Rest Day / Active Recovery', icon: '🧘' },
-                      { label: 'High-Intensity Cardio', icon: '🏃' },
-                      { label: 'High-Intensity Strength', icon: '🏋️' },
-                      { label: 'High-Intensity Hybrid (HIIT)', icon: '⚡' }
-                    ].map((item) => {
+                    {(
+                      [
+                        { label: 'Rest Day / Active Recovery', icon: '🧘' },
+                        { label: 'High-Intensity Cardio', icon: '🏃' },
+                        { label: 'High-Intensity Strength', icon: '🏋️' },
+                        { label: 'High-Intensity Hybrid (HIIT)', icon: '⚡' }
+                      ] as const
+                    ).map((item) => {
                       const isActive = todayWorkout === item.label;
                       return (
                         <button
                           key={item.label}
-                          onClick={() => setTodayWorkout(item.label as any)}
+                          onClick={() => setTodayWorkout(item.label)}
                           className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center gap-2 cursor-pointer ${
                             isActive
                               ? 'bg-indigo-600/15 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.25)]'

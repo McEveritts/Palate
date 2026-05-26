@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplet, History, X, Check } from 'lucide-react';
-import useSWR, { mutate as globalMutate } from 'swr';
+import useSWR from 'swr';
 import { useAppStore } from '@/lib/store';
 import { HydrationHistory } from './HydrationHistory';
 

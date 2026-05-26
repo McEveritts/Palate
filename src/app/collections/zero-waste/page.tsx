@@ -140,6 +140,7 @@ export default function ZeroWastePage() {
                     className="absolute bottom-full left-0 mb-3 p-2 bg-slate-800/80 backdrop-blur-md rounded-xl border border-white/10 shadow-xl z-20"
                   >
                     <div className="relative group/preview">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
                       <button 
                         type="button"

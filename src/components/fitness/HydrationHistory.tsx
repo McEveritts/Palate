@@ -92,7 +92,6 @@ export const HydrationHistory: React.FC<HydrationHistoryProps> = ({ isOpen, onCl
 
   // ── Data cache: Record<YYYY-MM-DD, DayData> ──────────
   const [dayCache, setDayCache] = useState<Record<string, DayData>>({});
-  const [monthLoading, setMonthLoading] = useState(false);
 
   // Reset selected day when month changes
   const navigateMonth = useCallback(
@@ -122,7 +121,6 @@ export const HydrationHistory: React.FC<HydrationHistoryProps> = ({ isOpen, onCl
     if (!isOpen) return;
 
     let cancelled = false;
-    setMonthLoading(true);
 
     fetch(`/api/hydration?month=${monthKey}`)
       .then((res) => res.json())
@@ -158,7 +156,6 @@ export const HydrationHistory: React.FC<HydrationHistoryProps> = ({ isOpen, onCl
         // Silently fail — calendar will show empty dots
       })
       .finally(() => {
-        if (!cancelled) setMonthLoading(false);
       });
 
     return () => {

@@ -65,8 +65,8 @@ export default function UploadPage() {
         title: data.title
       });
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsParsing(false);
     }
@@ -90,8 +90,8 @@ export default function UploadPage() {
         setInput("");
       }, 2000);
       
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsSaving(false);
     }
@@ -143,6 +143,7 @@ export default function UploadPage() {
                     className="absolute bottom-full left-0 mb-4 p-2 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl z-20"
                   >
                     <div className="relative group/preview">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={imagePreview} alt="Preview" className="h-32 w-auto rounded-xl object-cover" />
                       <button 
                         type="button"
