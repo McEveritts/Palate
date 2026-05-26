@@ -20,7 +20,7 @@ export interface VaultRecipe {
   id: string;
   slug: string;
   title: string;
-  category: 'mains' | 'sides' | 'appetizers' | 'desserts' | 'curated-current' | 'curated-archive';
+  category: 'mains' | 'sides' | 'appetizers' | 'desserts' | 'beverages' | 'curated-current' | 'curated-archive';
   tags: string[];
   macros: string;
   content: string;
@@ -56,7 +56,7 @@ function mapDbRecipeToVaultRecipe(r: { id: string; slug: string; title: string; 
   };
 }
 
-async function seedCategoryForHousehold(householdId: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts') {
+async function seedCategoryForHousehold(householdId: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts' | 'beverages') {
   const dirPath = path.join(process.cwd(), 'vault', category);
   try {
     const files = await fs.readdir(dirPath);
@@ -102,7 +102,7 @@ async function seedCategoryForHousehold(householdId: string, category: 'mains' |
 
 async function seedRecipesForHousehold(householdId: string) {
   // Read mains, sides, appetizers & desserts
-  const categories: ('mains' | 'sides' | 'appetizers' | 'desserts')[] = ['mains', 'sides', 'appetizers', 'desserts'];
+  const categories: ('mains' | 'sides' | 'appetizers' | 'desserts' | 'beverages')[] = ['mains', 'sides', 'appetizers', 'desserts', 'beverages'];
   for (const category of categories) {
     await seedCategoryForHousehold(householdId, category);
   }
@@ -119,6 +119,24 @@ async function seedRecipesForHousehold(householdId: string) {
       householdId,
       slug: '__seeded_desserts',
       title: 'System Seeded Desserts',
+      markdown: 'System record',
+      frontmatter: { category: 'system' }
+    },
+    update: {}
+  });
+
+  // Create the beverages seeded sentinel so we never re-seed it
+  await prisma.recipe.upsert({
+    where: {
+      householdId_slug: {
+        householdId,
+        slug: '__seeded_beverages',
+      }
+    },
+    create: {
+      householdId,
+      slug: '__seeded_beverages',
+      title: 'System Seeded Beverages',
       markdown: 'System record',
       frontmatter: { category: 'system' }
     },
@@ -188,7 +206,7 @@ async function getCurrentUserId(): Promise<string | null> {
 
 export async function getVaultRecipes(userCategories?: string[]): Promise<VaultRecipe[]> {
   const userId = await getCurrentUserId();
-  const categoriesToScan = userCategories || ['mains', 'sides', 'appetizers', 'desserts'];
+  const categoriesToScan = userCategories || ['mains', 'sides', 'appetizers', 'desserts', 'beverages'];
 
   if (userId) {
     const householdId = await getHouseholdId(userId);
@@ -229,6 +247,46 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
             householdId,
             slug: '__seeded_desserts',
             title: 'System Seeded Desserts',
+            markdown: 'System record',
+            frontmatter: { category: 'system' }
+          },
+          update: {}
+        });
+      }
+
+      // Dynamic incremental seeding of beverages
+      const wasBeveragesSeeded = await prisma.recipe.findUnique({
+        where: {
+          householdId_slug: {
+            householdId,
+            slug: '__seeded_beverages'
+          }
+        }
+      });
+      if (!wasBeveragesSeeded) {
+        const beverageCount = await prisma.recipe.count({
+          where: {
+            householdId,
+            frontmatter: {
+              path: ['category'],
+              equals: 'beverages'
+            }
+          }
+        });
+        if (beverageCount === 0) {
+          await seedCategoryForHousehold(householdId, 'beverages');
+        }
+        await prisma.recipe.upsert({
+          where: {
+            householdId_slug: {
+              householdId,
+              slug: '__seeded_beverages'
+            }
+          },
+          create: {
+            householdId,
+            slug: '__seeded_beverages',
+            title: 'System Seeded Beverages',
             markdown: 'System record',
             frontmatter: { category: 'system' }
           },

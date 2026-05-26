@@ -47,13 +47,13 @@ describe('vaultParser', () => {
   });
 
   it('should parse recipes from mains and sides directories', async () => {
-    vi.mocked(fs.readdir).mockImplementation(async (dir: string) => {
+    vi.mocked(fs.readdir as any).mockImplementation(async (dir: string) => {
       if (dir.includes('mains')) return ['test-main.md'];
       if (dir.includes('sides')) return ['test-side.md'];
       return [];
     });
     
-    vi.mocked(fs.readFile).mockImplementation(async (filePath: string) => {
+    vi.mocked(fs.readFile as any).mockImplementation(async (filePath: string) => {
       if (filePath.includes('test-main.md')) {
         return `---\nrecipe: 'Main Dish'\ntags: ['dinner']\nmacros: 'Calories: 500'\n---\n# Content`;
       }
@@ -85,7 +85,7 @@ describe('vaultParser', () => {
             tags: ['dinner'],
             macros: { protein: '30g', carbs: '20g', fat: '10g', calories: 300 }
           }
-        }
+        } as any
       ]);
 
       const recipes = await getVaultRecipes();
@@ -103,18 +103,18 @@ describe('vaultParser', () => {
       vi.mocked(getServerSession).mockResolvedValue({ user: { id: 'user-123' } });
       
       let countCall = 0;
-      vi.mocked(prisma.recipe.count).mockImplementation(async () => {
+      vi.mocked(prisma.recipe.count as any).mockImplementation(async () => {
         countCall++;
         if (countCall === 1) return 5;
         if (countCall === 2) return 0;
         return 0;
       });
 
-      vi.mocked(fs.readdir).mockImplementation(async (dir: string) => {
+      vi.mocked(fs.readdir as any).mockImplementation(async (dir: string) => {
         if (dir.includes('desserts')) return ['matcha-chia-pudding.md'];
         return [];
       });
-      vi.mocked(fs.readFile).mockImplementation(async (filePath: string) => {
+      vi.mocked(fs.readFile as any).mockImplementation(async (filePath: string) => {
         if (filePath.includes('matcha-chia-pudding.md')) {
           return `---\nrecipe: 'Matcha Chia Pudding'\ntags: ['sweet']\nmacros: 'Protein: 5g'\n---\n# Delicious green tea pudding`;
         }
@@ -131,7 +131,7 @@ describe('vaultParser', () => {
             tags: ['sweet'],
             macros: { protein: '5g' }
           }
-        }
+        } as any
       ]);
 
       const recipes = await getVaultRecipes();

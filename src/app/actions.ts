@@ -99,6 +99,8 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     const isSide = /side/i.test(sanitizedFileContent) || tags.includes('side') || tags.includes('sides');
     const isDessert = /dessert/i.test(sanitizedFileContent) || tags.includes('dessert') || tags.includes('desserts') || tags.includes('sweet') || tags.includes('sweets');
 
+    const isBeverage = /beverage/i.test(sanitizedFileContent) || /smoothie/i.test(sanitizedFileContent) || tags.includes('beverage') || tags.includes('beverages') || tags.includes('smoothie') || tags.includes('smoothies') || tags.includes('drink') || tags.includes('drinks');
+
     let category = 'mains';
     if (isDessert) {
       category = 'desserts';
@@ -106,6 +108,8 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
       category = 'appetizers';
     } else if (isSide) {
       category = 'sides';
+    } else if (isBeverage) {
+      category = 'beverages';
     }
 
     if (userId) {
@@ -168,10 +172,10 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
   }
 }
 
-export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts', title: string) {
+export async function saveParsedRecipe(markdown: string, category: 'mains' | 'sides' | 'appetizers' | 'desserts' | 'beverages', title: string) {
   try {
-    if (category !== 'mains' && category !== 'sides' && category !== 'appetizers' && category !== 'desserts') {
-      throw new Error('Invalid category. Must be mains, sides, appetizers or desserts.');
+    if (category !== 'mains' && category !== 'sides' && category !== 'appetizers' && category !== 'desserts' && category !== 'beverages') {
+      throw new Error('Invalid category. Must be mains, sides, appetizers, desserts or beverages.');
     }
 
     validateContentLength(markdown);
@@ -190,6 +194,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
       const isAppetizer = /appetizer/i.test(markdown) || tags.includes('appetizer') || tags.includes('appetizers');
       const isSide = /side/i.test(markdown) || tags.includes('side') || tags.includes('sides');
       const isDessert = /dessert/i.test(markdown) || tags.includes('dessert') || tags.includes('desserts') || tags.includes('sweet') || tags.includes('sweets');
+      const isBeverage = /beverage/i.test(markdown) || /smoothie/i.test(markdown) || tags.includes('beverage') || tags.includes('beverages') || tags.includes('smoothie') || tags.includes('smoothies') || tags.includes('drink') || tags.includes('drinks');
 
       let finalCategory = category;
       if (isDessert) {
@@ -198,6 +203,8 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
         finalCategory = 'appetizers';
       } else if (isSide) {
         finalCategory = 'sides';
+      } else if (isBeverage) {
+        finalCategory = 'beverages';
       }
 
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -236,6 +243,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
     const isAppetizer = /appetizer/i.test(markdown) || tags.includes('appetizer') || tags.includes('appetizers');
     const isSide = /side/i.test(markdown) || tags.includes('side') || tags.includes('sides');
     const isDessert = /dessert/i.test(markdown) || tags.includes('dessert') || tags.includes('desserts') || tags.includes('sweet') || tags.includes('sweets');
+    const isBeverage = /beverage/i.test(markdown) || /smoothie/i.test(markdown) || tags.includes('beverage') || tags.includes('beverages') || tags.includes('smoothie') || tags.includes('smoothies') || tags.includes('drink') || tags.includes('drinks');
 
     let finalCategory = category;
     if (isDessert) {
@@ -244,6 +252,8 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
       finalCategory = 'appetizers';
     } else if (isSide) {
       finalCategory = 'sides';
+    } else if (isBeverage) {
+      finalCategory = 'beverages';
     }
 
     const cleanContent = markdown.trim();
@@ -485,6 +495,8 @@ export async function deleteRecipeFromVault(id: string) {
         slug = id.substring('appetizers-'.length);
       } else if (id.startsWith('desserts-')) {
         slug = id.substring('desserts-'.length);
+      } else if (id.startsWith('beverages-')) {
+        slug = id.substring('beverages-'.length);
       } else {
         throw new Error(`Invalid recipe ID format: ${id}`);
       }
@@ -515,6 +527,8 @@ export async function deleteRecipeFromVault(id: string) {
         category = 'appetizers';
       } else if (id.startsWith('desserts-')) {
         category = 'desserts';
+      } else if (id.startsWith('beverages-')) {
+        category = 'beverages';
       } else {
         throw new Error(`Invalid recipe ID format: ${id}`);
       }
@@ -554,6 +568,9 @@ export async function deleteRecipeFromVault(id: string) {
     } else if (id.startsWith('desserts-')) {
       category = 'desserts';
       slug = id.substring('desserts-'.length);
+    } else if (id.startsWith('beverages-')) {
+      category = 'beverages';
+      slug = id.substring('beverages-'.length);
     } else {
       throw new Error(`Invalid recipe ID format: ${id}`);
     }

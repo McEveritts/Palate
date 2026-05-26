@@ -141,6 +141,7 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
     });
     return {
       date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
       completed: hasLog,
     };
   });
@@ -223,7 +224,9 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
             <ContributionGrid days={pastDays} title="Weekly Consistency" />
             
             {/* Active Energy + Hydration Widget */}
-            <div className="p-5 rounded-3xl bg-slate-900/30 backdrop-blur-2xl border border-white/5 flex items-center justify-between shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+            <div className="p-6 rounded-3xl bg-slate-900/40 backdrop-blur-3xl border border-white/5 flex items-center justify-between shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative overflow-hidden group">
+              {/* speculative glowing spot */}
+              <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-[50px] transition-opacity duration-500 group-hover:opacity-100" />
               <HydrationEnergyRow
                 initialWaterMl={dailyLog?.waterIntakeMl ?? 0}
                 initialTargetMl={userProfile?.targetWaterMl ?? 1893}

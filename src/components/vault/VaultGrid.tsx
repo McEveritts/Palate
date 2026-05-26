@@ -72,7 +72,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides' | 'appetizers' | 'desserts'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'mains' | 'sides' | 'appetizers' | 'desserts' | 'beverages' | 'smoothies'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -130,7 +130,8 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
         });
         const isSide = !isDessert && recipe.tags.some(t => t.toLowerCase().includes('side') || t.toLowerCase().includes('sides'));
         const isAppetizer = !isDessert && recipe.tags.some(t => t.toLowerCase().includes('appetizer') || t.toLowerCase().includes('appetizers'));
-        const isMain = !isSide && !isAppetizer && !isDessert;
+        const isBeverage = !isDessert && recipe.tags.some(t => t.toLowerCase().includes('beverage') || t.toLowerCase().includes('smoothie') || t.toLowerCase().includes('drink'));
+        const isMain = !isSide && !isAppetizer && !isDessert && !isBeverage;
 
         if (activeCategory === 'sides') {
           matchesCategory = isSide;
@@ -138,9 +139,15 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
           matchesCategory = isAppetizer;
         } else if (activeCategory === 'desserts') {
           matchesCategory = isDessert;
+        } else if (activeCategory === 'beverages') {
+          matchesCategory = isBeverage;
+        } else if (activeCategory === 'smoothies') {
+          matchesCategory = isBeverage && recipe.tags.some(t => t.toLowerCase().includes('smoothie'));
         } else {
           matchesCategory = isMain;
         }
+      } else if (activeCategory === 'smoothies') {
+        matchesCategory = recipe.category === 'beverages' && recipe.tags.some(t => t.toLowerCase().includes('smoothie'));
       } else {
         matchesCategory = recipe.category === (activeCategory as string);
       }

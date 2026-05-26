@@ -18,7 +18,7 @@ describe('vault - getAllRecipes self-healing', () => {
 
   it('should return normal recipes as is when no thought tags are present', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockImplementation((dirPath: string) => {
+    vi.mocked(fs.readdirSync as any).mockImplementation((dirPath: string) => {
       if (dirPath.endsWith('mains')) return ['perfect-recipe.md'];
       return [];
     });
@@ -37,7 +37,7 @@ Delicious dinner.`);
 
   it('should detect thought tags, sanitize in-memory, and NOT rewrite file to disk (M8 fix)', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockImplementation((dirPath: string) => {
+    vi.mocked(fs.readdirSync as any).mockImplementation((dirPath: string) => {
       if (dirPath.endsWith('mains')) return ['bad-recipe.md'];
       return [];
     });

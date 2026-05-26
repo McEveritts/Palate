@@ -123,7 +123,7 @@ export const MacroGlassCard: React.FC<MacroGlassCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       style={{ willChange: 'transform, opacity' }}
-      className="relative w-full max-w-md p-6 overflow-hidden rounded-3xl"
+      className="relative w-full p-6 overflow-hidden rounded-3xl"
     >
       {/* Extreme Glassmorphism Base layer */}
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-3xl z-0 pointer-events-none" />

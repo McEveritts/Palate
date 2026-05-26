@@ -25,7 +25,7 @@ describe('MacroCache', () => {
     const cache = new MacroCache(1000); // 1 second TTL
     
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md'] as any);
     vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     const result = cache.get('/fake/dir');
@@ -40,7 +40,7 @@ describe('MacroCache', () => {
     const cache = new MacroCache(1000); 
     
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md'] as any);
     vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); // first call
@@ -55,7 +55,7 @@ describe('MacroCache', () => {
     const cache = new MacroCache(1000); 
     
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md'] as any);
     vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); 
@@ -72,7 +72,7 @@ describe('MacroCache', () => {
     const cache = new MacroCache(1000); 
     
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md'] as any);
     vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); 

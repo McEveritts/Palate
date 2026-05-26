@@ -10,11 +10,11 @@ import matter from 'gray-matter';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function GET() {
-  return POST();
+export async function GET(req: Request) {
+  return POST(req);
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     // Determine if we're in DB mode or filesystem mode
     const session = await getServerSession(authOptions).catch(() => null);

@@ -130,6 +130,8 @@ or
 [CATEGORY: side]
 or
 [CATEGORY: dessert]
+or
+[CATEGORY: beverage]
 Choose the most appropriate category based on the dish.
 
 <user_input>
@@ -160,11 +162,11 @@ ${sanitizedInput}
     generatedText = generatedText.replace(/<(?:thought|thinking)>\s*[\s\S]*?(?=---)/gi, '').trim();
 
     // Extract the category block
-    const categoryMatch = generatedText.match(/\[CATEGORY:\s*(main|side|dessert)\]/i);
+    const categoryMatch = generatedText.match(/\[CATEGORY:\s*(main|side|dessert|beverage)\]/i);
     const category = categoryMatch ? categoryMatch[1].toLowerCase() : 'mains';
 
     // Remove the category block from the markdown output
-    const cleanMarkdown = generatedText.replace(/\[CATEGORY:\s*(main|side|dessert)\]/gi, '').trim();
+    const cleanMarkdown = generatedText.replace(/\[CATEGORY:\s*(main|side|dessert|beverage)\]/gi, '').trim();
     
     // Extract title from YAML
     const titleMatch = cleanMarkdown.match(/(?:recipe|title):\s*['"]?(.*?)['"]?(?:\n|$)/);
@@ -173,7 +175,7 @@ ${sanitizedInput}
     return NextResponse.json({ 
       success: true, 
       markdown: cleanMarkdown, 
-      category: category === 'side' ? 'sides' : category === 'dessert' ? 'desserts' : 'mains',
+      category: category === 'side' ? 'sides' : category === 'dessert' ? 'desserts' : category === 'beverage' ? 'beverages' : 'mains',
       title: title
     });
 
