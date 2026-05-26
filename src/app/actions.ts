@@ -12,7 +12,8 @@ import { getHouseholdId } from "@/lib/household";
 import matter from "gray-matter";
 import { getAllRecipes } from "../lib/vault";
 import lockfile from 'proper-lockfile';
-import { MealType, ChatRole } from '@prisma/client';
+import { MealType, ChatRole, Prisma } from '@prisma/client';
+import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
 
 async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
@@ -649,7 +650,7 @@ export async function scheduleMeal(
               slug: localRecipe.slug,
               title: localRecipe.frontmatter.title || localRecipe.slug,
               markdown: localRecipe.content,
-              frontmatter: localRecipe.frontmatter as Record<string, unknown>,
+              frontmatter: localRecipe.frontmatter as unknown as Prisma.InputJsonValue,
             }
           });
         }

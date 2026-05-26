@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -62,6 +63,7 @@ export default function ExerciseLogger({ isOpen, onClose, onLogged }: ExerciseLo
   }, [selectedPreset, durationMinutes, manualCalories]);
 
   // Reset form when modal opens
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       setExerciseName('');
@@ -72,6 +74,7 @@ export default function ExerciseLogger({ isOpen, onClose, onLogged }: ExerciseLo
       setIsSubmitting(false);
     }
   }, [isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handlePresetSelect = useCallback((label: string) => {
     setSelectedPreset(label);

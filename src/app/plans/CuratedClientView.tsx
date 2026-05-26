@@ -14,7 +14,7 @@ interface CuratedClientViewProps {
   vaultRecipes: VaultRecipe[];
 }
 
-export default function CuratedClientView({ currentRecipes, archiveRecipes, vaultRecipes }: CuratedClientViewProps) {
+export default function CuratedClientView({ currentRecipes, archiveRecipes }: CuratedClientViewProps) {
   const [view, setView] = useState<'editorial' | 'timeline'>('editorial');
   const router = useRouter();
 

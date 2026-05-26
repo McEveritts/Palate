@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resolveTemporalQuery, resolveMealTypeAndDate, calendarToolsDeclarations } from './calendarAgent';
 import { scheduleMeal, getScheduledMeals, moveScheduledMeal, cancelScheduledMeal } from '../app/actions';

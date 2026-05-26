@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/sw.js",
+    "inspector-shim.js",
+    "patch-next-inspector.js",
+    "test_inspector.js",
   ]),
 ]);
 

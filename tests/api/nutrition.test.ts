@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from '@/app/api/nutrition/route';
-import { globalMacroCache } from '@/lib/macroCache';
+import { globalMacroCache, MacroData } from '@/lib/macroCache';
 import fs, { mkdir } from 'fs/promises';
 
 vi.mock('@/lib/macroCache', () => ({
@@ -57,10 +57,10 @@ describe('GET /api/nutrition', () => {
   });
 
   it('should return macro from local cache if found', async () => {
-    const mockCacheData = [
+    const mockCacheData: MacroData[] = [
       { ingredient_matched: 'Granulated Sugar', calories: '385', protein: '0.0', carbs: '99.6', fat: '0.3' }
     ];
-    vi.mocked(globalMacroCache.get).mockReturnValue(mockCacheData as any);
+    vi.mocked(globalMacroCache.get).mockReturnValue(mockCacheData);
 
     const req = new Request('http://localhost/api/nutrition?ingredient=sugar');
     const res = await GET(req);
@@ -94,7 +94,7 @@ describe('GET /api/nutrition', () => {
     });
 
     // Mock fs write (mkdir is a named import, fs.access rejects = file doesn't exist)
-    vi.mocked(mkdir).mockResolvedValueOnce(undefined as any);
+    vi.mocked(mkdir).mockResolvedValueOnce(undefined as unknown as string);
     vi.mocked(fs.access).mockRejectedValueOnce(new Error('not exists'));
     vi.mocked(fs.writeFile).mockResolvedValueOnce();
 
@@ -126,7 +126,7 @@ describe('GET /api/nutrition', () => {
     });
 
     // Mock fs write (mkdir is a named import, fs.access rejects = file doesn't exist)
-    vi.mocked(mkdir).mockResolvedValueOnce(undefined as any);
+    vi.mocked(mkdir).mockResolvedValueOnce(undefined as unknown as string);
     vi.mocked(fs.access).mockRejectedValueOnce(new Error('not exists'));
     vi.mocked(fs.writeFile).mockResolvedValueOnce();
 

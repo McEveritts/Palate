@@ -1,3 +1,4 @@
+/* eslint-disable */
 const mod = require('module');
 const originalRequire = mod.prototype.require;
 

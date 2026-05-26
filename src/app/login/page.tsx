@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogIn, User } from "lucide-react";
+import { User } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {

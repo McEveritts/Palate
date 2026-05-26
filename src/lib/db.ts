@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -14,12 +15,7 @@ function getPrismaClient(): PrismaClient {
     return _prismaInstance;
   }
 
-  interface CustomPrismaOptions extends Prisma.PrismaClientOptions {
-    accelerateUrl?: string;
-    adapter?: unknown;
-  }
-
-  const prismaOptions: CustomPrismaOptions = {
+  const prismaOptions: any = {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   };
 

@@ -56,6 +56,7 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
   }, []);
 
   // Reset on close
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
@@ -65,6 +66,7 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
       setAddedId(null);
     }
   }, [isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Debounced search
   const handleSearch = useCallback((q: string) => {

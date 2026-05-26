@@ -3,11 +3,12 @@ import type { SerwistGlobalConfig } from "serwist";
 import { Serwist, NetworkOnly, NetworkFirst } from "serwist";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface WorkerGlobalScope extends SerwistGlobalConfig {}
 }
 
 const serwist = new Serwist({
-  precacheEntries: (self as any).__SW_MANIFEST,
+  precacheEntries: (self as unknown as { __SW_MANIFEST: Array<{ url: string; revision: string | null }> }).__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   runtimeCaching: [

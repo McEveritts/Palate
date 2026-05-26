@@ -284,7 +284,7 @@ export default function ProfileOnboarding({ onComplete, existingProfile }: Profi
       // Sync Zustand store so SageHero has fresh profile data immediately
       useAppStore.getState().setUserProfile({
         gender: GENDER_API_MAP[gender] as 'Male' | 'Female' | 'Other',
-        activityLevel: ACTIVITY_LEVEL_API_MAP[activityLevel] as any,
+        activityLevel: ACTIVITY_LEVEL_API_MAP[activityLevel] as 'Sedentary' | 'Light' | 'Moderate' | 'Active' | 'VeryActive',
         goal: GOAL_API_MAP[goal] as 'Lose' | 'Maintain' | 'Gain',
         dateOfBirth,
         weightKg: parseFloat(weightKg),
@@ -296,8 +296,9 @@ export default function ProfileOnboarding({ onComplete, existingProfile }: Profi
       });
       setSubmitted(true);
       setTimeout(() => onComplete?.(), 1500);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(errMsg);
     } finally {
       setSubmitting(false);
     }
