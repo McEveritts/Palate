@@ -88,7 +88,14 @@ export default withAuth(
         // Guest cookie only allows access to page routes.
         const { pathname } = req.nextUrl;
         const isApiRoute = pathname.startsWith('/api/');
-        if (isApiRoute) return !!token;
+        if (isApiRoute) {
+          // Allow guest access to Sage AI API routes
+          if (pathname.startsWith('/api/sage')) {
+            const isGuest = req.cookies.get("palate_guest")?.value === "true";
+            return !!token || isGuest;
+          }
+          return !!token;
+        }
         const isGuest = req.cookies.get("palate_guest")?.value === "true";
         return !!token || isGuest;
       },
