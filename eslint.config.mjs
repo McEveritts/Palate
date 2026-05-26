@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "inspector-shim.js",
     "patch-next-inspector.js",
     "test_inspector.js",
+    "seed_earth_fare.js",
   ]),
 ]);
 
