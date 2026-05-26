@@ -1,8 +1,9 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Play, Square, Award, Edit2, Check, X, History, Trash2, ShieldAlert } from 'lucide-react';
+import { Clock, Play, Square, Award, Edit2, Check, History, Trash2 } from 'lucide-react';
 import useSWR from 'swr';
 
 // ── Types ──────────────────────────────────────────────────
