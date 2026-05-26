@@ -16,6 +16,9 @@ const foodEntrySchema = z.object({
   protein: z.number().min(0, "protein must be >= 0"),
   carbs: z.number().min(0, "carbs must be >= 0"),
   fat: z.number().min(0, "fat must be >= 0"),
+  fiber: z.number().min(0).optional().default(0),
+  sugar: z.number().min(0).optional().default(0),
+  sodium: z.number().min(0).optional().default(0),
 });
 
 // ---------------------------------------------------------------------------
@@ -39,7 +42,7 @@ function resolveDate(dateParam: string | null): Date {
 async function recalcAggregates(dailyLogId: string) {
   const entries = await prisma.foodLogEntry.findMany({
     where: { dailyLogId },
-    select: { calories: true, protein: true, carbs: true, fat: true },
+    select: { calories: true, protein: true, carbs: true, fat: true, fiber: true, sugar: true, sodium: true },
   });
 
   const totals = entries.reduce(
@@ -48,8 +51,11 @@ async function recalcAggregates(dailyLogId: string) {
       totalProtein: acc.totalProtein + e.protein,
       totalCarbs: acc.totalCarbs + e.carbs,
       totalFat: acc.totalFat + e.fat,
+      totalFiber: acc.totalFiber + e.fiber,
+      totalSugar: acc.totalSugar + e.sugar,
+      totalSodium: acc.totalSodium + e.sodium,
     }),
-    { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 },
+    { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, totalFiber: 0, totalSugar: 0, totalSodium: 0 },
   );
 
   return prisma.dailyLog.update({
@@ -95,6 +101,9 @@ export async function GET(req: Request) {
           totalProtein: 0,
           totalCarbs: 0,
           totalFat: 0,
+          totalFiber: 0,
+          totalSugar: 0,
+          totalSodium: 0,
           entries: [],
           exerciseEntries: [],
         },
@@ -152,6 +161,9 @@ export async function POST(req: Request) {
         totalProtein: 0,
         totalCarbs: 0,
         totalFat: 0,
+        totalFiber: 0,
+        totalSugar: 0,
+        totalSodium: 0,
       },
     });
 
@@ -167,6 +179,9 @@ export async function POST(req: Request) {
         protein: data.protein,
         carbs: data.carbs,
         fat: data.fat,
+        fiber: data.fiber ?? 0,
+        sugar: data.sugar ?? 0,
+        sodium: data.sodium ?? 0,
       },
     });
 

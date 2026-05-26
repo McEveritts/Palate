@@ -5,11 +5,13 @@ import { prisma } from '@/lib/db';
 import { MacroGlassCard } from '@/components/fitness/MacroGlassCard';
 import { ContributionGrid } from '@/components/fitness/ContributionGrid';
 import { HydrationEnergyRow } from '@/components/fitness/HydrationEnergyRow';
+import { MicroNutrientCard } from '@/components/fitness/MicroNutrientCard';
 import { Utensils, Dumbbell, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DeleteEntryButton } from '@/components/fitness/DeleteEntryButton';
 import Link from 'next/link';
 import type { DailyLog, FoodLogEntry, ExerciseLogEntry, UserProfile } from '@prisma/client';
 import { DiaryClientWrapper } from './DiaryClientWrapper';
+import { FastingTimer } from '@/components/fitness/FastingTimer';
 
 export const dynamic = 'force-dynamic';
 
@@ -207,7 +209,15 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
 
         {/* Top Widgets Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <MacroGlassCard {...macroData} />
+          <div className="flex flex-col gap-6">
+            <MacroGlassCard {...macroData} />
+            <MicroNutrientCard
+              fiber={dailyLog?.totalFiber ?? 0}
+              sugar={dailyLog?.totalSugar ?? 0}
+              sodium={dailyLog?.totalSodium ?? 0}
+              gender={userProfile?.gender || 'Other'}
+            />
+          </div>
           
           <div className="flex flex-col gap-6">
             <ContributionGrid days={pastDays} title="Weekly Consistency" />
@@ -220,6 +230,8 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
                 totalExerciseCalories={totalExerciseCalories}
               />
             </div>
+            
+            <FastingTimer />
           </div>
         </div>
 

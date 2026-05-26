@@ -16,6 +16,8 @@ interface MealScanResult {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
+  sodium?: number;
   servingSize?: string;
 }
 
@@ -221,6 +223,9 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
           protein: product.protein,
           carbs: product.carbs,
           fat: product.fat,
+          fiber: product.fiber ?? 0,
+          sugar: product.sugar ?? 0,
+          sodium: product.sodium ?? 0,
         }),
       });
 

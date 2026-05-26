@@ -14,6 +14,8 @@ interface ProductResult {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
+  sodium?: number;
   barcode: string;
   servingSize?: string;
 }
@@ -71,6 +73,8 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
         carbs: r.carbs,
         fat: r.fat,
         fiber: r.fiber,
+        sugar: r.sugar,
+        sodium: r.sodium,
         barcode: r.barcode || barcode,
         servingSize: r.servingSize,
       });
@@ -344,6 +348,9 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
           protein: product.protein,
           carbs: product.carbs,
           fat: product.fat,
+          fiber: product.fiber ?? 0,
+          sugar: product.sugar ?? 0,
+          sodium: product.sodium ?? 0,
         }),
       });
 

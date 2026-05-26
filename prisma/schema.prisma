@@ -81,6 +81,7 @@ model User {
   profile       UserProfile?
   dailyLogs     DailyLog[]
   weightLogs    WeightLog[]
+  fastingLogs   FastingLog[]
   
   createdAt     DateTime        @default(now())
 }
@@ -256,6 +257,9 @@ model DailyLog {
   totalProtein    Float          @default(0)
   totalCarbs      Float          @default(0)
   totalFat        Float          @default(0)
+  totalFiber      Float          @default(0)
+  totalSugar      Float          @default(0)
+  totalSodium     Float          @default(0)
   waterIntakeMl   Int            @default(0)  // Aggregated daily water intake in ml
   
   entries         FoodLogEntry[]
@@ -286,6 +290,9 @@ model FoodLogEntry {
   protein         Float
   carbs           Float
   fat             Float
+  fiber           Float    @default(0)
+  sugar           Float    @default(0)
+  sodium          Float    @default(0)
 
   @@index([dailyLogId])
 }
@@ -315,4 +322,19 @@ model WaterLogEntry {
   createdAt   DateTime  @default(now())
 
   @@index([dailyLogId])
+}
+
+model FastingLog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  targetHours Int       @default(16)
+  completed   Boolean   @default(false)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, startTime])
 }

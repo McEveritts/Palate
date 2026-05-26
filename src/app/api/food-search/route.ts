@@ -17,6 +17,8 @@ interface FoodSearchResult {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
+  sodium?: number;
   servingSize?: string;
   barcode?: string;
 }
@@ -44,6 +46,8 @@ function parseCacheToResults(cache: MacroData[], query: string, limit = 5): Food
       carbs: parseFloat(item.carbs) || 0,
       fat: parseFloat(item.fat) || 0,
       fiber: item.fiber ? parseFloat(item.fiber) : undefined,
+      sugar: item.sugar ? parseFloat(item.sugar) : undefined,
+      sodium: item.sodium ? parseFloat(item.sodium) : undefined,
       servingSize: item.common_portions || '100g',
     }));
 }
@@ -53,7 +57,7 @@ function extractNutrient(nutrients: { nutrientId: number; value: number }[], id:
   return n ? +n.value.toFixed(1) : 0;
 }
 
-async function appendToVaultCache(name: string, calories: number, protein: number, carbs: number, fat: number, fiber?: number): Promise<void> {
+async function appendToVaultCache(name: string, calories: number, protein: number, carbs: number, fat: number, fiber?: number, sugar?: number, sodium?: number): Promise<void> {
   try {
     // M-20: Sanitize product name before writing to Markdown table
     const safeName = name.replace(/[|\n\r]/g, ' ').trim();
@@ -76,7 +80,7 @@ async function appendToVaultCache(name: string, calories: number, protein: numbe
       content = `${header}\n${sep}\n${content}`;
     }
 
-    const row = `| ${safeName} | ${calories}kcal | ${protein}g | ${carbs}g | ${fat}g | ${fiber ?? 0}g | — | — | 100g |`;
+    const row = `| ${safeName} | ${calories}kcal | ${protein}g | ${carbs}g | ${fat}g | ${fiber ?? 0}g | ${sugar ?? 0}g | ${sodium ?? 0}mg | 100g |`;
     content = content.trimEnd() + '\n' + row + '\n';
 
     await fs.writeFile(USDA_IMPORTS_FILE, content, 'utf8');
@@ -137,6 +141,10 @@ export async function GET(request: NextRequest) {
         }
 
         const nutriments = product.nutriments || {};
+        const sugarVal = nutriments['sugars_100g'] ?? nutriments['sugars'] ?? 0;
+        const sodiumGrams = nutriments['sodium_100g'] ?? nutriments['sodium'] ?? 0;
+        const sodiumVal = Math.round(sodiumGrams * 1000); // convert to mg
+
         const result: FoodSearchResult = {
           id: `off-${upc}`,
           name: product.product_name,
@@ -147,6 +155,8 @@ export async function GET(request: NextRequest) {
           carbs: nutriments['carbohydrates_100g'] ?? 0,
           fat: nutriments['fat_100g'] ?? 0,
           fiber: nutriments['fiber_100g'] ?? undefined,
+          sugar: sugarVal,
+          sodium: sodiumVal,
           servingSize: product.serving_size || '100g',
           barcode: upc,
         };
@@ -158,7 +168,9 @@ export async function GET(request: NextRequest) {
           result.protein,
           result.carbs,
           result.fat,
-          result.fiber
+          result.fiber,
+          result.sugar,
+          result.sodium
         );
 
         return NextResponse.json({ success: true, results: [result], source: 'openfoodfacts' });
@@ -217,6 +229,8 @@ export async function GET(request: NextRequest) {
             carbs: extractNutrient(nutrients, 1005),
             fat: extractNutrient(nutrients, 1004),
             fiber: extractNutrient(nutrients, 1079) || undefined,
+            sugar: extractNutrient(nutrients, 2000) || undefined,
+            sodium: extractNutrient(nutrients, 1093) || undefined,
             servingSize: food.servingSize ? `${food.servingSize}${food.servingSizeUnit || 'g'}` : '100g',
           });
         }

@@ -16,6 +16,8 @@ interface FoodResult {
   carbs: number;
   fat: number;
   fiber?: number;
+  sugar?: number;
+  sodium?: number;
   servingSize?: string;
 }
 
@@ -109,6 +111,9 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
           protein: food.protein,
           carbs: food.carbs,
           fat: food.fat,
+          fiber: food.fiber ?? 0,
+          sugar: food.sugar ?? 0,
+          sodium: food.sodium ?? 0,
         }),
       });
 
