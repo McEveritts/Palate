@@ -18,6 +18,7 @@ vi.mock('@/lib/db', () => ({
       create: vi.fn(),
       upsert: vi.fn(),
       delete: vi.fn(),
+      deleteMany: vi.fn(),
       update: vi.fn(),
     },
     user: {

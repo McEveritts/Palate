@@ -210,6 +210,19 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
 
   if (userId) {
     const householdId = await getHouseholdId(userId);
+    
+    // Proactively eradicate legacy mock recipes from household database if they exist
+    if (typeof prisma.recipe.deleteMany === 'function') {
+      await prisma.recipe.deleteMany({
+        where: {
+          householdId,
+          slug: {
+            in: ['matcha-chia-pudding', 'algorithmic-salmon-bowl', 'optimized-tonkotsu-matrix']
+          }
+        }
+      });
+    }
+
     const count = await prisma.recipe.count({ where: { householdId } });
     if (count === 0) {
       await seedRecipesForHousehold(householdId);
