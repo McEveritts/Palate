@@ -51,11 +51,35 @@ export function parseSageStream(fullText: string, isDone: boolean): { thoughts: 
     // Total fallback: Model completely ignored <thought> tags
     // We only do this if no thoughts were found at all to prevent
     // grabbing normal text when the model correctly used tags.
-    const delimiterMatch = content.match(/---|```yaml|^#\s/m);
     
-    if (delimiterMatch) {
+    // Convert "```yaml" wrapper blocks into standard frontmatter blocks if present
+    let tempContent = content;
+    if (tempContent.includes('```yaml')) {
+      tempContent = tempContent.replace(/```yaml/g, '---').replace(/```/g, '---');
+    }
+
+    const recipeMatch = tempContent.match(/^[ \t]{0,2}(?:recipe|title):\s*["']?[^"'\n]+/im);
+    let delimiterIndex = -1;
+    
+    if (recipeMatch) {
+      const recipeIndex = recipeMatch.index!;
+      const precedingText = tempContent.substring(0, recipeIndex);
+      const lastDashIndex = precedingText.lastIndexOf('---');
+      if (lastDashIndex !== -1) {
+        delimiterIndex = lastDashIndex;
+      } else {
+        delimiterIndex = recipeIndex;
+      }
+    } else {
+      const delimiterMatch = content.match(/---|```yaml|^#\s/m);
+      if (delimiterMatch) {
+        delimiterIndex = delimiterMatch.index!;
+      }
+    }
+    
+    if (delimiterIndex !== -1) {
       // A delimiter was found. Everything before it is rogue reasoning.
-      let preamble = content.substring(0, delimiterMatch.index!).trim();
+      let preamble = content.substring(0, delimiterIndex).trim();
       // Clean up markdown block wrapping if it just wrapped the yaml
       preamble = preamble.replace(/^```(markdown|yaml)?\n?/, '').trim();
       
@@ -63,7 +87,7 @@ export function parseSageStream(fullText: string, isDone: boolean): { thoughts: 
         thoughts = preamble;
       }
       // Content is everything from the delimiter onwards
-      content = content.substring(delimiterMatch.index!).trim();
+      content = content.substring(delimiterIndex).trim();
     } else {
       // No delimiter found yet.
       if (!isDone) {
@@ -104,6 +128,27 @@ export function parseMessageContent(content: string) {
 
   if (cleanContent.startsWith('```markdown')) {
     cleanContent = cleanContent.replace(/^```markdown\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  // Convert standard "```yaml" wrapper block into standard "---" frontmatter block if generated
+  if (cleanContent.includes('```yaml')) {
+    cleanContent = cleanContent.replace(/```yaml/g, '---').replace(/```/g, '---');
+  }
+
+  // Backward-Scanning Delimiter Locator:
+  // 1. Locate the first actual recipe title property in the YAML block (unindented)
+  const yamlRecipeMatch = cleanContent.match(/^[ \t]{0,2}(?:recipe|title):\s*["']?[^"'\n]+/im);
+  if (yamlRecipeMatch) {
+    const recipeIndex = yamlRecipeMatch.index;
+    // 2. Scan backwards from the recipe key to find the preceding "---"
+    const precedingText = cleanContent.substring(0, recipeIndex!);
+    const lastDashIndex = precedingText.lastIndexOf('---');
+    if (lastDashIndex !== -1) {
+      cleanContent = cleanContent.substring(lastDashIndex).trim();
+    } else {
+      // Fallback: If no dashes were found before the recipe key, inject them
+      cleanContent = '---\n' + cleanContent.substring(recipeIndex!).trim();
+    }
   }
 
   const match = cleanContent.match(/---\n([\s\S]*?)\n---/);
