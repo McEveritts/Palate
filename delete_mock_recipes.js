@@ -25,11 +25,14 @@ function loadEnv() {
 
 loadEnv();
 
-const dbUrl = process.env.DATABASE_URL;
-const prismaOptions = {};
+let dbUrl = process.env.DATABASE_URL;
 if (dbUrl && dbUrl.startsWith('prisma+postgres')) {
-  prismaOptions.accelerateUrl = dbUrl;
-} else if (dbUrl) {
+  // Fall back to direct TCP URL for prisma dev locally
+  dbUrl = "postgres://postgres:postgres@localhost:51214/template1?sslmode=disable";
+}
+
+const prismaOptions = {};
+if (dbUrl) {
   const pool = new Pool({ connectionString: dbUrl });
   const adapter = new PrismaPg(pool);
   prismaOptions.adapter = adapter;
