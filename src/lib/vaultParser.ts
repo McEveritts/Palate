@@ -143,6 +143,24 @@ async function seedRecipesForHousehold(householdId: string) {
     update: {}
   });
 
+  // Create the earth fare seeded sentinel so we never re-seed it
+  await prisma.recipe.upsert({
+    where: {
+      householdId_slug: {
+        householdId,
+        slug: '__seeded_earth_fare',
+      }
+    },
+    create: {
+      householdId,
+      slug: '__seeded_earth_fare',
+      title: 'System Seeded Earth Fare',
+      markdown: 'System record',
+      frontmatter: { category: 'system' }
+    },
+    update: {}
+  });
+
   // Read curated current & archive
   const curatedTypes: ('current' | 'archive')[] = ['current', 'archive'];
   for (const type of curatedTypes) {
@@ -300,6 +318,37 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
             householdId,
             slug: '__seeded_beverages',
             title: 'System Seeded Beverages',
+            markdown: 'System record',
+            frontmatter: { category: 'system' }
+          },
+          update: {}
+        });
+      }
+
+      // Dynamic incremental seeding of Earth Fare clean-eating recipes (all categories)
+      const wasEarthFareSeeded = await prisma.recipe.findUnique({
+        where: {
+          householdId_slug: {
+            householdId,
+            slug: '__seeded_earth_fare'
+          }
+        }
+      });
+      if (!wasEarthFareSeeded) {
+        // Run full database seeding for all categories to pull in new recipes on disk
+        await seedRecipesForHousehold(householdId);
+        
+        await prisma.recipe.upsert({
+          where: {
+            householdId_slug: {
+              householdId,
+              slug: '__seeded_earth_fare'
+            }
+          },
+          create: {
+            householdId,
+            slug: '__seeded_earth_fare',
+            title: 'System Seeded Earth Fare',
             markdown: 'System record',
             frontmatter: { category: 'system' }
           },
