@@ -256,9 +256,22 @@ interface CalendarAgentResponse {
   response: string;
   toolCallExecuted?: {
     name: string;
-    args: any;
-    result: any;
+    args: Record<string, unknown>;
+    result: unknown;
   };
+}
+
+interface CalendarToolArgs {
+  recipeId?: string;
+  dateStr?: string;
+  mealType?: string;
+  plannedYield?: number;
+  parentMealId?: string;
+  startDateStr?: string;
+  endDateStr?: string;
+  mealId?: string;
+  newDateStr?: string;
+  newMealType?: string;
 }
 
 /**
@@ -308,10 +321,10 @@ export async function runCalendarAgent(
   if (functionCalls && functionCalls.length > 0) {
     const call = functionCalls[0];
     const name = call.name;
-    const args = call.args as any;
+    const args = call.args as unknown as CalendarToolArgs;
     
-    let actionResult: any;
-    let resolvedArgs = { ...args };
+    let actionResult: unknown;
+    const resolvedArgs: Record<string, unknown> = { ...args as unknown as Record<string, unknown> };
 
     try {
       if (name === "schedule_meal") {
@@ -321,19 +334,19 @@ export async function runCalendarAgent(
         resolvedArgs.mealType = args.mealType || mealType || "Dinner";
         
         actionResult = await scheduleMeal(
-          resolvedArgs.recipeId,
-          resolvedArgs.dateStr,
-          resolvedArgs.mealType,
-          resolvedArgs.plannedYield ?? 1.0,
-          resolvedArgs.parentMealId
+          resolvedArgs.recipeId as string,
+          resolvedArgs.dateStr as string,
+          resolvedArgs.mealType as string,
+          (resolvedArgs.plannedYield as number) ?? 1.0,
+          resolvedArgs.parentMealId as string | undefined
         );
       } else if (name === "get_scheduled_meals") {
         resolvedArgs.startDateStr = resolveTemporalQuery(args.startDateStr || "today", baseDate);
         resolvedArgs.endDateStr = resolveTemporalQuery(args.endDateStr || "today", baseDate);
         
         actionResult = await getScheduledMeals(
-          resolvedArgs.startDateStr,
-          resolvedArgs.endDateStr
+          resolvedArgs.startDateStr as string,
+          resolvedArgs.endDateStr as string
         );
       } else if (name === "move_scheduled_meal") {
         const { dateStr, mealType } = resolveMealTypeAndDate(args.newDateStr || "today", baseDate);
@@ -341,12 +354,12 @@ export async function runCalendarAgent(
         resolvedArgs.newMealType = args.newMealType || mealType || "Dinner";
 
         actionResult = await moveScheduledMeal(
-          resolvedArgs.mealId,
-          resolvedArgs.newDateStr,
-          resolvedArgs.newMealType
+          resolvedArgs.mealId as string,
+          resolvedArgs.newDateStr as string,
+          resolvedArgs.newMealType as string
         );
       } else if (name === "cancel_scheduled_meal") {
-        actionResult = await cancelScheduledMeal(resolvedArgs.mealId);
+        actionResult = await cancelScheduledMeal(resolvedArgs.mealId as string);
       } else {
         throw new Error(`Unknown calendar tool: ${name}`);
       }
@@ -355,7 +368,7 @@ export async function runCalendarAgent(
       const followUp = await chat.sendMessage([{
         functionResponse: {
           name,
-          response: actionResult
+          response: actionResult as Record<string, unknown>
         }
       }]);
 
@@ -373,15 +386,16 @@ export async function runCalendarAgent(
         }
       };
 
-    } catch (err: any) {
-      console.error(`Error in runCalendarAgent execution of ${name}:`, err);
+    } catch (err) {
+      const errorObj = err instanceof Error ? err : new Error(String(err));
+      console.error(`Error in runCalendarAgent execution of ${name}:`, errorObj);
       return {
         thought,
-        response: `🌿 I encountered an issue updating your culinary calendar: ${err.message}`,
+        response: `🌿 I encountered an issue updating your culinary calendar: ${errorObj.message}`,
         toolCallExecuted: {
           name,
           args: resolvedArgs,
-          result: { success: false, error: err.message }
+          result: { success: false, error: errorObj.message }
         }
       };
     }

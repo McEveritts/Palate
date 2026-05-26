@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     const userId = session.user.id;
     const body = await req.json();
-    const { action, code, name } = body;
+    const { action, code } = body;
 
     switch (action) {
       case "create-invite": {

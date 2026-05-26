@@ -14,7 +14,13 @@ export default function HomeButtons() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) setMounted(true);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleGuestClick = (e: React.MouseEvent) => {

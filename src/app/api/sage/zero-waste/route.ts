@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 
 export async function POST(req: Request) {
   const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   let body;
   try {
     body = await req.json();
-  } catch (error) {
+  } catch {
     return new Response(JSON.stringify({ error: "Bad Request: Invalid JSON body." }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
@@ -47,7 +47,7 @@ Always wrap your reasoning in <thought> tags before answering. Output the final 
       systemInstruction
     });
 
-    const promptParts: any[] = [];
+    const promptParts: Part[] = [];
     if (image) {
       const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
       if (mimeTypeMatch) {

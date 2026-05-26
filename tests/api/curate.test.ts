@@ -27,7 +27,7 @@ vi.mock('@google/generative-ai', () => {
 
 describe('POST /api/curate', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     process.env.GEMINI_API_KEY = "test-key";
   });
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -14,7 +14,12 @@ function getPrismaClient(): PrismaClient {
     return _prismaInstance;
   }
 
-  const prismaOptions: any = {
+  interface CustomPrismaOptions extends Prisma.PrismaClientOptions {
+    accelerateUrl?: string;
+    adapter?: unknown;
+  }
+
+  const prismaOptions: CustomPrismaOptions = {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   };
 

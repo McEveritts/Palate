@@ -24,9 +24,9 @@ describe('MacroCache', () => {
   it('should load data from disk on first call (Cache Miss)', () => {
     const cache = new MacroCache(1000); // 1 second TTL
     
-    (fs.existsSync as any).mockReturnValue(true);
-    (fs.readdirSync as any).mockReturnValue(['test.md']);
-    (fs.readFileSync as any).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     const result = cache.get('/fake/dir');
     
@@ -39,9 +39,9 @@ describe('MacroCache', () => {
   it('should return cached data on subsequent calls within TTL (Cache Hit)', () => {
     const cache = new MacroCache(1000); 
     
-    (fs.existsSync as any).mockReturnValue(true);
-    (fs.readdirSync as any).mockReturnValue(['test.md']);
-    (fs.readFileSync as any).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); // first call
     const result = cache.get('/fake/dir'); // second call
@@ -54,9 +54,9 @@ describe('MacroCache', () => {
   it('should load from disk again after TTL expires', () => {
     const cache = new MacroCache(1000); 
     
-    (fs.existsSync as any).mockReturnValue(true);
-    (fs.readdirSync as any).mockReturnValue(['test.md']);
-    (fs.readFileSync as any).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); 
     
@@ -71,9 +71,9 @@ describe('MacroCache', () => {
   it('should explicitly invalidate cache', () => {
     const cache = new MacroCache(1000); 
     
-    (fs.existsSync as any).mockReturnValue(true);
-    (fs.readdirSync as any).mockReturnValue(['test.md']);
-    (fs.readFileSync as any).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readdirSync).mockReturnValue(['test.md']);
+    vi.mocked(fs.readFileSync).mockReturnValue('| Apple | 52 | 0.3 | 14 | 0.2 |');
     
     cache.get('/fake/dir'); 
     cache.invalidate();

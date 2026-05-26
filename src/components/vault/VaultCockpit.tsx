@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VaultRecipe } from '@/lib/vaultParser';
-import { Scale, Sparkles, Brain, Check, TrendingUp, Layers, Activity, Info, Network, RotateCcw } from 'lucide-react';
+import { Scale, Sparkles, Layers, Activity, Info, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { extractMacrosFromString } from '@/lib/parser';
 
@@ -79,20 +79,10 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
 
   // Parse macros from recipes
   const parsedMacros = useMemo(() => {
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFat = 0;
-    let totalCalories = 0;
-
     const recipeBreakdown = recipes.map(recipe => {
       const macrosStr = recipe.macros || '';
       
       const { protein, carbs, fat, calories } = extractMacrosFromString(macrosStr);
-
-      totalProtein += protein;
-      totalCarbs += carbs;
-      totalFat += fat;
-      totalCalories += calories;
 
       return {
         id: recipe.id,
@@ -103,6 +93,11 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
         calories
       };
     });
+
+    const totalProtein = recipeBreakdown.reduce((sum, r) => sum + r.protein, 0);
+    const totalCarbs = recipeBreakdown.reduce((sum, r) => sum + r.carbs, 0);
+    const totalFat = recipeBreakdown.reduce((sum, r) => sum + r.fat, 0);
+    const totalCalories = recipeBreakdown.reduce((sum, r) => sum + r.calories, 0);
 
     const scaledCalories = totalCalories * portionScale;
     const scaledProtein = totalProtein * portionScale;

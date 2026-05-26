@@ -33,7 +33,7 @@ export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }:
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUSDANutrition = async () => {
+  const fetchUSDANutrition = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -52,12 +52,12 @@ export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }:
       } else {
         setError(result.error || `Could not resolve USDA nutrition data.`);
       }
-    } catch (err) {
+    } catch {
       setError("Network error. Unable to fetch USDA data.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [recipeTitle]);
 
   const hasNoMacros = !macros || (macros.calories === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0);
 
@@ -72,7 +72,7 @@ export function RecipeNutritionDetails({ recipeId, recipeTitle, initialMacros }:
       autoFetchAttempted.current = true;
       fetchUSDANutrition();
     }
-  }, [recipeId, recipeTitle, hasNoMacros, isLoading, error]);
+  }, [recipeId, recipeTitle, hasNoMacros, isLoading, error, fetchUSDANutrition]);
 
   return (
     <div className="w-full bg-slate-950/40 border border-white/5 rounded-2xl p-6 relative overflow-hidden backdrop-blur-xl">

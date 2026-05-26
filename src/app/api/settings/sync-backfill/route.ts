@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { syncMealToGoogle } from "@/lib/googleCalendar";
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -50,8 +50,9 @@ export async function POST(req: Request) {
       synced: successCount,
       failed: failureCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST /api/settings/sync-backfill error:", error);
-    return NextResponse.json({ error: error.message || "Failed to backfill calendar sync" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to backfill calendar sync";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

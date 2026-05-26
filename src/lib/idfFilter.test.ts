@@ -5,8 +5,7 @@ import {
   calculateIDF,
   isStaple,
   isSignature,
-  categorizeIngredients,
-  COMMON_STAPLES
+  categorizeIngredients
 } from './idfFilter';
 
 describe('🌿 idfFilter - cleanIngredientName', () => {

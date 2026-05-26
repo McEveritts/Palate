@@ -116,8 +116,20 @@ async function fetchMacros(ingredient_names: string[]) {
   const usdaApiKey = process.env.USDA_API_KEY || "DEMO_KEY";
   
   try {
+    interface USDAMatch {
+      ingredient_matched: string;
+      calories: string;
+      protein: string;
+      carbs: string;
+      fat: string;
+      fiber: string;
+      sugar: string;
+      sodium: string;
+      common_portions: string;
+      status: string;
+    }
     const cache = globalMacroCache.get(macrosDir);
-    const results: Record<string, any> = {};
+    const results: Record<string, USDAMatch | { status: string }> = {};
 
     for (const ingredient_name of ingredient_names) {
       let bestMatch = null;
@@ -305,14 +317,21 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
   }
 
   if (history && history.length > 0) {
+    interface ChatHistoryItem {
+      role: string;
+      content: string;
+      thought?: string;
+      thoughts?: string;
+    }
     for (const h of history) {
       const isSage = h.role === 'sage' || h.role === 'model';
       const role = isSage ? 'model' : 'user';
       let text = h.content || "";
-      if (isSage && (h as any).thought) {
-        text = `<thought>\n${(h as any).thought}\n</thought>\n${text}`;
-      } else if (isSage && h.thoughts) {
-        text = `<thought>\n${h.thoughts}\n</thought>\n${text}`;
+      const historyItem = h as ChatHistoryItem;
+      if (isSage && historyItem.thought) {
+        text = `<thought>\n${historyItem.thought}\n</thought>\n${text}`;
+      } else if (isSage && historyItem.thoughts) {
+        text = `<thought>\n${historyItem.thoughts}\n</thought>\n${text}`;
       }
       chatHistory.push({ role, parts: [{ text }] });
     }

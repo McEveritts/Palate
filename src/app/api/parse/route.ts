@@ -84,7 +84,7 @@ export async function POST(req: Request) {
         }
 
         textToParse = await response.text();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to fetch URL", err);
         return NextResponse.json({ success: false, error: 'Failed to fetch the URL. Ensure it is accessible or paste the raw text instead.' }, { status: 400 });
       }
@@ -177,7 +177,7 @@ ${sanitizedInput}
       title: title
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Parse API Error:", error);
     // M2 Fix: Return generic error to client, log detail server-side
     return NextResponse.json({ success: false, error: "An internal error occurred while parsing." }, { status: 500 });

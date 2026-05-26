@@ -110,7 +110,15 @@ export async function listUserCalendars(userId: string): Promise<GoogleCalendarI
     }
 
     const data = await response.json();
-    return (data.items || []).map((item: any) => ({
+    return (data.items || []).map((item: {
+      id: string;
+      summary: string;
+      description?: string;
+      primary?: boolean;
+      timeZone?: string;
+      backgroundColor?: string;
+      foregroundColor?: string;
+    }) => ({
       id: item.id,
       summary: item.summary,
       description: item.description,
@@ -283,7 +291,17 @@ export async function syncMealToGoogle(userId: string, mealId: string): Promise<
     description += `Planned Portion Yield: ${meal.plannedYield.toFixed(2)}x\n\n`;
 
     // Extract and format macros if available in recipe frontmatter
-    const frontmatter = meal.recipe.frontmatter as any;
+    const frontmatter = meal.recipe.frontmatter as {
+      macros?: string | {
+        calories?: number;
+        cal?: number;
+        protein?: number;
+        pro?: number;
+        carbs?: number;
+        carb?: number;
+        fat?: number;
+      };
+    } | null;
     if (frontmatter && frontmatter.macros) {
       description += `📊 Macronutrient yield (${meal.plannedYield.toFixed(2)}x scaled):\n`;
       try {
@@ -308,7 +326,7 @@ export async function syncMealToGoogle(userId: string, mealId: string): Promise<
           } else {
             description += `- ${rawMacros}\n\n`;
           }
-        } else if (typeof rawMacros === "object") {
+        } else if (typeof rawMacros === "object" && rawMacros !== null) {
           const cal = Math.round((rawMacros.calories || rawMacros.cal || 0) * meal.plannedYield);
           const pro = Math.round((rawMacros.protein || rawMacros.pro || 0) * meal.plannedYield);
           const carb = Math.round((rawMacros.carbs || rawMacros.carb || 0) * meal.plannedYield);
@@ -318,7 +336,7 @@ export async function syncMealToGoogle(userId: string, mealId: string): Promise<
           description += `- Carbs: ${carb}g\n`;
           description += `- Fat: ${fat}g\n\n`;
         }
-      } catch (err) {
+      } catch {
         description += `- ${frontmatter.macros}\n\n`;
       }
     }

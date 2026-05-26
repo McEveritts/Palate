@@ -47,13 +47,13 @@ describe('vaultParser', () => {
   });
 
   it('should parse recipes from mains and sides directories', async () => {
-    (fs.readdir as any).mockImplementation(async (dir: string) => {
+    vi.mocked(fs.readdir).mockImplementation(async (dir: string) => {
       if (dir.includes('mains')) return ['test-main.md'];
       if (dir.includes('sides')) return ['test-side.md'];
       return [];
     });
     
-    (fs.readFile as any).mockImplementation(async (filePath: string) => {
+    vi.mocked(fs.readFile).mockImplementation(async (filePath: string) => {
       if (filePath.includes('test-main.md')) {
         return `---\nrecipe: 'Main Dish'\ntags: ['dinner']\nmacros: 'Calories: 500'\n---\n# Content`;
       }
@@ -73,9 +73,9 @@ describe('vaultParser', () => {
       const { getServerSession } = await import('next-auth/next');
       const { prisma } = await import('@/lib/db');
       
-      (getServerSession as any).mockResolvedValue({ user: { id: 'user-123' } });
-      (prisma.recipe.count as any).mockResolvedValue(5);
-      (prisma.recipe.findMany as any).mockResolvedValue([
+      vi.mocked(getServerSession).mockResolvedValue({ user: { id: 'user-123' } });
+      vi.mocked(prisma.recipe.count).mockResolvedValue(5);
+      vi.mocked(prisma.recipe.findMany).mockResolvedValue([
         {
           slug: 'db-main-recipe',
           title: 'DB Main Recipe',
@@ -100,28 +100,28 @@ describe('vaultParser', () => {
       const { getServerSession } = await import('next-auth/next');
       const { prisma } = await import('@/lib/db');
       
-      (getServerSession as any).mockResolvedValue({ user: { id: 'user-123' } });
+      vi.mocked(getServerSession).mockResolvedValue({ user: { id: 'user-123' } });
       
       let countCall = 0;
-      (prisma.recipe.count as any).mockImplementation(async (args: any) => {
+      vi.mocked(prisma.recipe.count).mockImplementation(async () => {
         countCall++;
         if (countCall === 1) return 5;
         if (countCall === 2) return 0;
         return 0;
       });
 
-      (fs.readdir as any).mockImplementation(async (dir: string) => {
+      vi.mocked(fs.readdir).mockImplementation(async (dir: string) => {
         if (dir.includes('desserts')) return ['matcha-chia-pudding.md'];
         return [];
       });
-      (fs.readFile as any).mockImplementation(async (filePath: string) => {
+      vi.mocked(fs.readFile).mockImplementation(async (filePath: string) => {
         if (filePath.includes('matcha-chia-pudding.md')) {
           return `---\nrecipe: 'Matcha Chia Pudding'\ntags: ['sweet']\nmacros: 'Protein: 5g'\n---\n# Delicious green tea pudding`;
         }
         return '';
       });
 
-      (prisma.recipe.findMany as any).mockResolvedValue([
+      vi.mocked(prisma.recipe.findMany).mockResolvedValue([
         {
           slug: 'matcha-chia-pudding',
           title: 'Matcha Chia Pudding',

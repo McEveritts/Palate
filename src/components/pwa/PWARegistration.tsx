@@ -4,8 +4,13 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share, PlusSquare, Download, X, RefreshCw, Smartphone } from "lucide-react";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+}
+
 export function PWARegistration() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showiOSBanner, setShowiOSBanner] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
@@ -53,15 +58,15 @@ export function PWARegistration() {
       if (lastDismissed && Date.now() - parseInt(lastDismissed) < oneWeek) {
         return;
       }
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowInstallBanner(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     // 3. Detect iOS Safari and display manual instructions if not already standalone
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone;
     
     if (isIOS && !isStandalone) {
       const lastDismissed = localStorage.getItem("palate_pwa_ios_dismissed");
@@ -182,7 +187,7 @@ export function PWARegistration() {
                 <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-indigo-400">
                   <PlusSquare size={14} />
                 </div>
-                <span>Select <strong>"Add to Home Screen"</strong></span>
+                <span>Select <strong>&quot;Add to Home Screen&quot;</strong></span>
               </div>
             </div>
           </motion.div>

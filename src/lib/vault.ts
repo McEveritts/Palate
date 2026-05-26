@@ -48,7 +48,7 @@ export function getAllRecipes(): Recipe[] {
       const fileContent = fs.readFileSync(filePath, 'utf8');
 
       if (/<thought>/i.test(fileContent)) {
-        const { data: sanitizedData, content: sanitizedBody, fileContent: sanitizedFileContent } = sanitizeRecipeContent(fileContent);
+        const { data: sanitizedData, content: sanitizedBody } = sanitizeRecipeContent(fileContent);
         
         // M8 Fix: Removed self-healing write (read operations must not have write side-effects)
         // The sanitized content is used in-memory only. Files can be cleaned via a separate action.

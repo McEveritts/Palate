@@ -11,8 +11,6 @@ import { prisma } from "@/lib/db";
 import { getHouseholdId } from "@/lib/household";
 import matter from "gray-matter";
 import { getAllRecipes } from "../lib/vault";
-import { z } from 'zod/v4';
-import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
 import lockfile from 'proper-lockfile';
 import { MealType, ChatRole } from '@prisma/client';
 
@@ -21,7 +19,7 @@ async function getCurrentUserId(): Promise<string | null> {
   try {
     const session = await getServerSession(authOptions);
     return session?.user ? session.user.id : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -91,7 +89,7 @@ export async function saveRecipeToVault(content: string, format: 'md' | 'txt' = 
     
     // 4. Determine category dynamically
     const tags = Array.isArray(data.tags)
-      ? data.tags.map((t: any) => String(t).toLowerCase())
+      ? data.tags.map((t: unknown) => String(t).toLowerCase())
       : typeof data.tags === 'string'
         ? data.tags.split(',').map((t: string) => t.trim().toLowerCase())
         : [];
@@ -184,7 +182,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
       const { data, content } = matter(markdown);
       
       const tags = Array.isArray(data.tags)
-        ? data.tags.map((t: any) => String(t).toLowerCase())
+        ? data.tags.map((t: unknown) => String(t).toLowerCase())
         : typeof data.tags === 'string'
           ? data.tags.split(',').map((t: string) => t.trim().toLowerCase())
           : [];
@@ -230,7 +228,7 @@ export async function saveParsedRecipe(markdown: string, category: 'mains' | 'si
 
     const { data: fileData } = matter(markdown);
     const tags = Array.isArray(fileData.tags)
-      ? fileData.tags.map((t: any) => String(t).toLowerCase())
+      ? fileData.tags.map((t: unknown) => String(t).toLowerCase())
       : typeof fileData.tags === 'string'
         ? fileData.tags.split(',').map((t: string) => t.trim().toLowerCase())
         : [];
@@ -303,10 +301,10 @@ export async function saveCuratedToVault(id: string) {
         throw new Error(`Recipe with slug ${slug} not found in database.`);
       }
 
-      const frontmatter = (recipe.frontmatter as any) || {};
+      const frontmatter = (recipe.frontmatter as Record<string, unknown> | null) || {};
       const fileContentLower = (recipe.markdown || '').toLowerCase();
       const tags = Array.isArray(frontmatter.tags)
-        ? frontmatter.tags.map((t: any) => String(t).toLowerCase())
+        ? frontmatter.tags.map((t: unknown) => String(t).toLowerCase())
         : typeof frontmatter.tags === 'string'
           ? frontmatter.tags.split(',').map((t: string) => t.trim().toLowerCase())
           : [];
@@ -350,7 +348,9 @@ export async function saveCuratedToVault(id: string) {
       });
 
       // Synchronize file on disk by moving it to the new category folder to prevent re-seeding
-      const [_, type, ...filenameParts] = id.split('-');
+      const parts = id.split('-');
+      const type = parts[1];
+      const filenameParts = parts.slice(2);
       if (type === 'current' || type === 'archive') {
         const rawSlug = filenameParts.join('-');
         const curatedBaseDir = path.join(process.cwd(), 'vault', 'curated', type);
@@ -372,7 +372,7 @@ export async function saveCuratedToVault(id: string) {
           } catch {}
           
           await fs.rename(curatedPath, targetPath);
-        } catch (err) {
+        } catch {
           console.warn(`Curated file not found on disk during saveCuratedToVault: ${curatedPath}`);
         }
       }
@@ -382,12 +382,14 @@ export async function saveCuratedToVault(id: string) {
       return { success: true };
     }
 
-    const [_, type, ...filenameParts] = id.split('-');
+    const parts = id.split('-');
+    const type = parts[1];
+    const filenameParts = parts.slice(2);
     
     if (type !== 'current' && type !== 'archive') {
       throw new Error('Invalid curated type. Must be current or archive.');
     }
-
+ 
     const rawSlug = filenameParts.join('-');
     const curatedBaseDir = path.join(process.cwd(), 'vault', 'curated', type);
     const curatedPath = safeVaultPath(curatedBaseDir, rawSlug);
@@ -401,7 +403,7 @@ export async function saveCuratedToVault(id: string) {
     // Parse tags to support checks
     const { data: fileData } = matter(fileContent);
     const tags = Array.isArray(fileData.tags)
-      ? fileData.tags.map((t: any) => String(t).toLowerCase())
+      ? fileData.tags.map((t: unknown) => String(t).toLowerCase())
       : typeof fileData.tags === 'string'
         ? fileData.tags.split(',').map((t: string) => t.trim().toLowerCase())
         : [];
@@ -521,7 +523,7 @@ export async function deleteRecipeFromVault(id: string) {
       try {
         await fs.access(filePath);
         await fs.unlink(filePath);
-      } catch (err) {
+      } catch {
         console.warn(`File not found on disk during DB recipe delete: ${filePath}`);
       }
 
@@ -573,18 +575,28 @@ export async function deleteRecipeFromVault(id: string) {
 
 const GUEST_MEALS_FILE = path.join(process.cwd(), "vault", "scheduled_meals.json");
 
-async function readGuestMeals(): Promise<any[]> {
+interface GuestMeal {
+  id: string;
+  userId: string;
+  recipeId: string;
+  date: string;
+  mealType: string;
+  plannedYield: number;
+  parentMealId: string | null;
+}
+
+async function readGuestMeals(): Promise<GuestMeal[]> {
   try {
     await fs.mkdir(path.dirname(GUEST_MEALS_FILE), { recursive: true });
     if (!existsSync(GUEST_MEALS_FILE)) return [];
     const data = await fs.readFile(GUEST_MEALS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
+    return JSON.parse(data) as GuestMeal[];
+  } catch {
     return [];
   }
 }
 
-async function writeGuestMeals(meals: any[]): Promise<void> {
+async function writeGuestMeals(meals: GuestMeal[]): Promise<void> {
   await fs.mkdir(path.dirname(GUEST_MEALS_FILE), { recursive: true });
   // M4 Fix: File locking to prevent race conditions
   if (!existsSync(GUEST_MEALS_FILE)) {
@@ -637,7 +649,7 @@ export async function scheduleMeal(
               slug: localRecipe.slug,
               title: localRecipe.frontmatter.title || localRecipe.slug,
               markdown: localRecipe.content,
-              frontmatter: localRecipe.frontmatter as any,
+              frontmatter: localRecipe.frontmatter as Record<string, unknown>,
             }
           });
         }
@@ -734,13 +746,13 @@ export async function getScheduledMeals(startDateStr: string, endDateStr: string
     } else {
       // Guest mode
       const allMeals = await readGuestMeals();
-      const guestMeals = allMeals.filter((meal: any) => {
+      const guestMeals = allMeals.filter((meal: GuestMeal) => {
         const mealDate = new Date(meal.date);
         return mealDate >= start && mealDate <= end;
       });
 
       const localRecipes = getAllRecipes();
-      const mealsWithRecipes = guestMeals.map((meal: any) => {
+      const mealsWithRecipes = guestMeals.map((meal: GuestMeal) => {
         const cleanSlug = meal.recipeId.replace(/^(mains-|sides-|appetizers-|desserts-|curated-current-|curated-archive-)/, "");
         const recipe = localRecipes.find(
           (r) => r.slug === cleanSlug || r.slug === meal.recipeId
@@ -812,7 +824,7 @@ export async function moveScheduledMeal(mealId: string, newDateStr: string, newM
       return { success: true, meal: updated };
     } else {
       const meals = await readGuestMeals();
-      const index = meals.findIndex((m: any) => m.id === mealId);
+      const index = meals.findIndex((m: GuestMeal) => m.id === mealId);
       if (index === -1) {
         return { success: false, error: `Meal ${mealId} not found` };
       }
@@ -860,7 +872,7 @@ export async function cancelScheduledMeal(mealId: string) {
       return { success: true };
     } else {
       const meals = await readGuestMeals();
-      const filtered = meals.filter((m: any) => m.id !== mealId);
+      const filtered = meals.filter((m: GuestMeal) => m.id !== mealId);
       if (filtered.length === meals.length) {
         return { success: false, error: `Meal ${mealId} not found` };
       }
@@ -1007,7 +1019,6 @@ export async function getWorkoutTelemetry() {
       return { success: false, error: "Authentication required" };
     }
 
-    const now = new Date();
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
     fourteenDaysAgo.setHours(0, 0, 0, 0);
@@ -1035,8 +1046,6 @@ export async function getWorkoutTelemetry() {
     let totalCalories = 0;
     let cardioDuration = 0;
     let strengthDuration = 0;
-    let cardioCalories = 0;
-    let strengthCalories = 0;
 
     const strengthKeywords = [
       'lift', 'strength', 'squat', 'bench', 'press', 'dumbbell', 'barbell', 'hypertrophy', 
@@ -1070,22 +1079,18 @@ export async function getWorkoutTelemetry() {
         if (isStrength) {
           category = 'Strength';
           strengthDuration += ex.durationMinutes;
-          strengthCalories += ex.caloriesBurned;
         } else if (isCardio) {
           category = 'Cardio';
           cardioDuration += ex.durationMinutes;
-          cardioCalories += ex.caloriesBurned;
         } else {
           // If unclassified, classify by intensity rate
           const intensity = ex.caloriesBurned / Math.max(ex.durationMinutes, 1);
           if (intensity > 6) {
             category = 'Cardio';
             cardioDuration += ex.durationMinutes;
-            cardioCalories += ex.caloriesBurned;
           } else {
             category = 'Strength';
             strengthDuration += ex.durationMinutes;
-            strengthCalories += ex.caloriesBurned;
           }
         }
 

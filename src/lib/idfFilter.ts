@@ -66,19 +66,22 @@ export function cleanIngredientName(rawIng: string): string {
  * Extracts and cleans the list of ingredient names from a recipe.
  * Supports standard Recipe objects, objects with an ingredients array, or raw markdown strings.
  */
-export function extractIngredients(recipe: any): string[] {
+export function extractIngredients(recipe: unknown): string[] {
   if (!recipe) return [];
   
   if (typeof recipe === 'string') {
     return parseIngredientsFromMarkdown(recipe);
   }
   
-  if (Array.isArray(recipe.ingredients)) {
-    return recipe.ingredients.map(cleanIngredientName).filter(Boolean);
-  }
-  
-  if (recipe.content && typeof recipe.content === 'string') {
-    return parseIngredientsFromMarkdown(recipe.content);
+  if (typeof recipe === 'object' && recipe !== null) {
+    const r = recipe as { ingredients?: unknown; content?: unknown };
+    if (Array.isArray(r.ingredients)) {
+      return r.ingredients.map(ing => cleanIngredientName(String(ing))).filter(Boolean);
+    }
+    
+    if (typeof r.content === 'string') {
+      return parseIngredientsFromMarkdown(r.content);
+    }
   }
   
   return [];
@@ -104,7 +107,7 @@ function parseIngredientsFromMarkdown(content: string): string[] {
  * Computes the Inverse Document Frequency (IDF) of ingredients across the vault.
  * Formula: IDF(t) = ln(1 + N / df(t))
  */
-export function calculateIDF(recipes: any[]): Record<string, number> {
+export function calculateIDF(recipes: unknown[]): Record<string, number> {
   const N = recipes.length;
   if (N === 0) return {};
   
@@ -171,7 +174,7 @@ export function isSignature(ingredient: string, idfMap?: Record<string, number>)
 /**
  * Categorizes ingredients in a set of recipes into Staples and Signatures.
  */
-export function categorizeIngredients(recipes: any[]): { staples: string[]; signatures: string[] } {
+export function categorizeIngredients(recipes: unknown[]): { staples: string[]; signatures: string[] } {
   const idfMap = calculateIDF(recipes);
   const staples: Set<string> = new Set();
   const signatures: Set<string> = new Set();

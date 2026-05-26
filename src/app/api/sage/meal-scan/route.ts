@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 
 export async function POST(req: Request) {
   const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   let body;
   try {
     body = await req.json();
-  } catch (error) {
+  } catch {
     return new Response(JSON.stringify({ error: "Bad Request: Invalid JSON body." }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
@@ -60,7 +60,7 @@ You MUST output your response strictly as a single, valid JSON object matching t
       }
     });
 
-    const promptParts: any[] = [];
+    const promptParts: Part[] = [];
     const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
     if (mimeTypeMatch) {
       promptParts.push({
@@ -87,7 +87,7 @@ You MUST output your response strictly as a single, valid JSON object matching t
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-    } catch (parseError) {
+    } catch {
       console.error("[MealScan API] Failed to parse JSON response:", text);
       return new Response(JSON.stringify({ error: "Internal Server Error: AI response was not valid JSON." }), {
         status: 500,

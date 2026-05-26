@@ -275,8 +275,16 @@ export default function SynergyCanvas({ onSelectNode }: { onSelectNode?: (node: 
     // Listen to tick coordinates from worker
     worker.onmessage = (e) => {
       if (e.data.type === "tick") {
+        interface CoordData {
+          id: string;
+          x: number;
+          y: number;
+          vx?: number;
+          vy?: number;
+          fixed?: boolean;
+        }
         const updatedCoords = e.data.nodes;
-        updatedCoords.forEach((coord: any) => {
+        updatedCoords.forEach((coord: CoordData) => {
           const node = nodesRef.current.find(n => n.id === coord.id);
           if (node) {
             node.x = coord.x;
@@ -316,8 +324,16 @@ export default function SynergyCanvas({ onSelectNode }: { onSelectNode?: (node: 
   // Set portions if selected node changes
   useEffect(() => {
     if (selectedNode) {
-      setPortionsCount(selectedNode.portions || 4);
-      setIsSuccessAction(false);
+      let active = true;
+      requestAnimationFrame(() => {
+        if (active) {
+          setPortionsCount(selectedNode.portions || 4);
+          setIsSuccessAction(false);
+        }
+      });
+      return () => {
+        active = false;
+      };
     }
   }, [selectedNode]);
 
@@ -466,13 +482,10 @@ export default function SynergyCanvas({ onSelectNode }: { onSelectNode?: (node: 
         if (node.type === "ingredient") {
           // Set decay color
           let color = "#10b981"; // emerald-500
-          let glowColor = "rgba(16, 185, 129, 0.25)";
           if (node.decay === "warning") {
             color = "#f59e0b"; // amber-500
-            glowColor = "rgba(245, 158, 11, 0.25)";
           } else if (node.decay === "critical") {
             color = "#f43f5e"; // rose-500
-            glowColor = "rgba(244, 63, 94, 0.25)";
           }
 
           // Expiring (Critical) outer radiant pulsing glow aura

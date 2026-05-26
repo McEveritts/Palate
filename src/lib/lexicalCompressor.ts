@@ -27,20 +27,38 @@ export function stripFillerWords(text: string): string {
  * Stuffs maximum metadata density into minimal tokens by stripping filler,
  * omitting redundant ingredients (staples), and summarizing macros.
  */
-export function compressRecipeForPrompt(recipe: any, idfMap?: Record<string, number>): string {
+export function compressRecipeForPrompt(recipe: unknown, idfMap?: Record<string, number>): string {
   if (!recipe) return '';
 
+  const r = recipe as {
+    title?: string;
+    tags?: string[];
+    macros?: string | Record<string, unknown>;
+    content?: string;
+    frontmatter?: {
+      title?: string;
+      tags?: string[];
+      macros?: string | {
+        protein?: string;
+        carbs?: string;
+        fat?: string;
+        calories?: number;
+      };
+    };
+    ingredients?: string[];
+  };
+
   // 1. Resolve Title
-  const title = recipe.frontmatter?.title || recipe.title || 'Untitled';
+  const title = r.frontmatter?.title || r.title || 'Untitled';
   
   // 2. Resolve Tags
-  const tags = recipe.frontmatter?.tags || recipe.tags || [];
+  const tags = r.frontmatter?.tags || r.tags || [];
   
   // 3. Resolve and Compact Macros
   let macrosStr = '';
-  if (recipe.frontmatter?.macros) {
-    const m = recipe.frontmatter.macros;
-    if (typeof m === 'object') {
+  if (r.frontmatter?.macros) {
+    const m = r.frontmatter.macros;
+    if (typeof m === 'object' && m !== null) {
       const p = m.protein || '0g';
       const c = m.carbs || '0g';
       const f = m.fat || '0g';
@@ -49,18 +67,18 @@ export function compressRecipeForPrompt(recipe: any, idfMap?: Record<string, num
     } else {
       macrosStr = String(m);
     }
-  } else if (recipe.macros) {
-    macrosStr = String(recipe.macros);
+  } else if (r.macros) {
+    macrosStr = String(r.macros);
   }
   
   // 4. Resolve Ingredients (Keep only unique signatures/non-staples)
-  const allIngredients = extractIngredients(recipe);
+  const allIngredients = extractIngredients(r);
   const signatures = Array.from(new Set(
     allIngredients.filter(ing => !isStaple(ing, idfMap))
   ));
   
   // 5. Compress and Truncate Instructions
-  let body = recipe.content || '';
+  let body = r.content || '';
   
   // Strip YAML frontmatter block if it was included in content
   body = body.replace(/^---\n[\s\S]*?\n---\n/i, '');

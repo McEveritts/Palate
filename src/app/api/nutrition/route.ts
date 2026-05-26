@@ -3,8 +3,14 @@ import { globalMacroCache, MacroData } from '@/lib/macroCache';
 import fs, { mkdir } from 'fs/promises';
 import path from 'path';
 
+interface USDANutrient {
+  nutrientId: number;
+  nutrientName: string;
+  value: number;
+}
+
 // Helper to extract a nutrient value by typical IDs or name patterns
-function extractNutrient(nutrients: any[], ids: number[], names: string[]): string {
+function extractNutrient(nutrients: USDANutrient[], ids: number[], names: string[]): string {
   const nutrient = nutrients.find(n => 
     ids.includes(n.nutrientId) || 
     names.some(name => n.nutrientName.toLowerCase().includes(name.toLowerCase()))
@@ -149,7 +155,7 @@ export async function GET(req: Request) {
 
       // 3. Write-back to local vault
       await writeToLocalMacros(newMacro);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.warn(`[USDA API Error]: Request failed for "${trimmedIngredient}". Triggering Gemma fallback.`, error);
 
       try {

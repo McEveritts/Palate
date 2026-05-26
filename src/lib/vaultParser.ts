@@ -95,7 +95,7 @@ async function seedCategoryForHousehold(householdId: string, category: 'mains' |
         }
       });
     }
-  } catch (error) {
+  } catch {
     console.warn(`Could not read directory ${dirPath} for seeding ${category}`);
   }
 }
@@ -170,7 +170,7 @@ async function seedRecipesForHousehold(householdId: string) {
           }
         });
       }
-    } catch (error) {
+    } catch {
       console.warn(`Could not read directory ${dirPath} for seeding`);
     }
   }
@@ -181,7 +181,7 @@ async function getCurrentUserId(): Promise<string | null> {
   try {
     const session = await getServerSession(authOptions);
     return session?.user ? session.user.id : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -284,7 +284,7 @@ export async function getVaultRecipes(userCategories?: string[]): Promise<VaultR
           content: content.trim()
         });
       }
-    } catch (error) {
+    } catch {
       console.warn(`Could not read directory ${dirPath}`);
     }
   }
@@ -380,7 +380,7 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
         mtimeMs: stat.mtimeMs
       });
     }
-  } catch (error) {
+  } catch {
     console.warn(`Could not read directory ${dirPath}`);
   }
 
@@ -392,7 +392,16 @@ export async function getCuratedRecipes(type: 'current' | 'archive'): Promise<Va
     return a.mtimeMs - b.mtimeMs;
   });
 
-  return allCurated.map(({ mtimeMs, ...recipe }) => recipe);
+  return allCurated.map(item => ({
+    id: item.id,
+    slug: item.slug,
+    title: item.title,
+    category: item.category,
+    tags: item.tags,
+    macros: item.macros,
+    content: item.content,
+    date: item.date
+  }));
 }
 
 export async function compileVaultContextString(): Promise<string> {

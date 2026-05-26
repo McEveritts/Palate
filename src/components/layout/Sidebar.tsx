@@ -7,11 +7,17 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Sparkles, BrainCircuit, LibraryBig, UploadCloud, Dumbbell, HeartPulse, Leaf, Settings, Menu, X, Calendar, MessageSquare, History } from "lucide-react";
 
+interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt?: string | Date;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +36,7 @@ export function Sidebar() {
         if (stored && active) {
           try {
             setSessions(JSON.parse(stored));
-          } catch (e) {
+          } catch {
             setSessions([]);
           }
         } else if (active) {

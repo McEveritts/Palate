@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { encryptKey } from "@/lib/encryption";
 import { hasCalendarScope, listUserCalendars } from "@/lib/googleCalendar";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     });
 
     const isCalendarScopeGranted = await hasCalendarScope(userId);
-    let calendars: any[] = [];
+    let calendars: unknown[] = [];
     if (isCalendarScopeGranted) {
       calendars = await listUserCalendars(userId);
     }
@@ -49,7 +49,14 @@ export async function POST(req: Request) {
     const { geminiApiKey, measurementSystem, googleCalendarSyncEnabled, googleCalendarId } = await req.json();
 
     // Prepare update data dynamically
-    const updateData: any = {};
+    const updateData: {
+      metricSystem?: boolean;
+      googleCalendarSyncEnabled?: boolean;
+      googleCalendarId?: string | null;
+      encryptedGcpKey?: string | null;
+      authTag?: string | null;
+      iv?: string | null;
+    } = {};
 
     if (measurementSystem !== undefined) {
       updateData.metricSystem = measurementSystem === "metric";
@@ -87,7 +94,7 @@ export async function POST(req: Request) {
             const errMsg = errData.error?.message || "Invalid API key.";
             return NextResponse.json({ success: false, error: `Google API Error: ${errMsg}` }, { status: 400 });
           }
-        } catch (e) {
+        } catch {
           return NextResponse.json({ success: false, error: "Failed to connect to Google API for verification." }, { status: 400 });
         }
 

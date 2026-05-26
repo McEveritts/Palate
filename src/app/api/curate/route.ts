@@ -10,11 +10,11 @@ import matter from 'gray-matter';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function GET(req: Request) {
-  return POST(req);
+export async function GET() {
+  return POST();
 }
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
     // Determine if we're in DB mode or filesystem mode
     const session = await getServerSession(authOptions).catch(() => null);
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         where: { householdId, frontmatter: { path: ['category'], equals: 'curated-current' } },
       });
       for (const recipe of currentRecipes) {
-        const fm = (recipe.frontmatter as any) || {};
+        const fm = (recipe.frontmatter as Record<string, unknown> | null) || {};
         await prisma.recipe.update({
           where: { id: recipe.id },
           data: { frontmatter: { ...fm, category: 'curated-archive' } },

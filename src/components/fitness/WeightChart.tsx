@@ -92,6 +92,11 @@ const TrendIcon: React.FC<{ trend: WeightStats['trend'] }> = ({ trend }) => {
 /*  Main Component                                                     */
 /* ------------------------------------------------------------------ */
 
+/* ---- Chart geometry constants --------------------------------- */
+const CHART_W = 600;
+const CHART_H = 200;
+const PAD = { top: 20, right: 30, bottom: 30, left: 46 };
+
 export const WeightChart: React.FC<WeightChartProps> = ({ className = '' }) => {
   const [range, setRange] = useState<RangeKey>(30);
   const [data, setData] = useState<WeightAPIResponse | null>(null);
@@ -122,7 +127,13 @@ export const WeightChart: React.FC<WeightChartProps> = ({ className = '' }) => {
   }, [range]);
 
   useEffect(() => {
-    fetchData();
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) fetchData();
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchData]);
 
   /* ---- Submit --------------------------------------------------- */
@@ -148,9 +159,6 @@ export const WeightChart: React.FC<WeightChartProps> = ({ className = '' }) => {
   };
 
   /* ---- Chart geometry ------------------------------------------- */
-  const CHART_W = 600;
-  const CHART_H = 200;
-  const PAD = { top: 20, right: 30, bottom: 30, left: 46 };
 
   const chartMetrics = useMemo(() => {
     if (!data || data.entries.length === 0) return null;

@@ -78,11 +78,23 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) setIsMounted(true);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    setRecipes(initialRecipes);
+    let active = true;
+    requestAnimationFrame(() => {
+      if (active) setRecipes(initialRecipes);
+    });
+    return () => {
+      active = false;
+    };
   }, [initialRecipes]);
 
   useEffect(() => {
@@ -130,7 +142,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
           matchesCategory = isMain;
         }
       } else {
-        matchesCategory = recipe.category === (activeCategory as any);
+        matchesCategory = recipe.category === (activeCategory as string);
       }
 
       const searchLower = searchQuery.toLowerCase();
@@ -175,7 +187,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
         setRecipes(previousRecipes);
         alert(`Failed to delete recipe: ${result.error}`);
       }
-    } catch (err) {
+    } catch {
       setRecipes(previousRecipes);
       alert("An unexpected error occurred while deleting the recipe.");
     } finally {

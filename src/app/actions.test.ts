@@ -46,8 +46,8 @@ describe('actions - deleteRecipeFromVault', () => {
   });
 
   it('should successfully delete a main recipe file', async () => {
-    (fs.access as any).mockResolvedValue(undefined);
-    (fs.unlink as any).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
     const result = await deleteRecipeFromVault('mains-test-recipe');
     
@@ -59,8 +59,8 @@ describe('actions - deleteRecipeFromVault', () => {
   });
 
   it('should successfully delete a curated current recipe file', async () => {
-    (fs.access as any).mockResolvedValue(undefined);
-    (fs.unlink as any).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
     const result = await deleteRecipeFromVault('curated-current-test-curated');
     
@@ -73,7 +73,7 @@ describe('actions - deleteRecipeFromVault', () => {
 
   it('should return error if file does not exist', async () => {
     const error = new Error('ENOENT: no such file or directory');
-    (fs.access as any).mockRejectedValue(error);
+    vi.mocked(fs.access).mockRejectedValue(error);
 
     const result = await deleteRecipeFromVault('sides-nonexistent');
 
@@ -83,8 +83,8 @@ describe('actions - deleteRecipeFromVault', () => {
   });
 
   it('should successfully delete a dessert recipe file', async () => {
-    (fs.access as any).mockResolvedValue(undefined);
-    (fs.unlink as any).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
     const result = await deleteRecipeFromVault('desserts-test-dessert');
     
@@ -103,10 +103,10 @@ describe('actions - saveRecipeToVault', () => {
   });
 
   it('should save a main recipe and cleanly strip thought tags, preambles, and code block formatting', async () => {
-    (fs.mkdir as any).mockResolvedValue(undefined);
-    (fs.writeFile as any).mockResolvedValue(undefined);
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
     // L6 fix: mock access to reject so overwrite prevention uses clean filename
-    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
     const input = `<thought>\nChoosing ingredients for perfect main.\n</thought>\n\`\`\`markdown\n---\ntitle: Lemon Garlic Chicken\ntags: [main, healthy]\n---\nCook chicken...\n\`\`\``;
 
@@ -119,7 +119,7 @@ describe('actions - saveRecipeToVault', () => {
       'utf-8'
     );
     // Ensure thoughts were stripped from the file content written to disk
-    const writtenContent = (fs.writeFile as any).mock.calls[0][1];
+    const writtenContent = vi.mocked(fs.writeFile).mock.calls[0][1] as string;
     expect(writtenContent).not.toContain('<thought>');
     expect(writtenContent).not.toContain('Choosing ingredients');
     expect(writtenContent).not.toContain('```markdown');
@@ -127,10 +127,10 @@ describe('actions - saveRecipeToVault', () => {
   });
 
   it('should save a side recipe when tags contain "side"', async () => {
-    (fs.mkdir as any).mockResolvedValue(undefined);
-    (fs.writeFile as any).mockResolvedValue(undefined);
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
     // L6 fix: mock access to reject so overwrite prevention uses clean filename
-    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
     const input = `---\ntitle: Honey Carrots\ntags: [side]\n---\nCook carrots...`;
 
@@ -145,9 +145,9 @@ describe('actions - saveRecipeToVault', () => {
   });
 
   it('should save a dessert recipe when tags contain "sweet"', async () => {
-    (fs.mkdir as any).mockResolvedValue(undefined);
-    (fs.writeFile as any).mockResolvedValue(undefined);
-    (fs.access as any).mockRejectedValue(new Error('ENOENT'));
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
     const input = `---\ntitle: Chocolate Cake\ntags: [sweet]\n---\nBake cake...`;
 
