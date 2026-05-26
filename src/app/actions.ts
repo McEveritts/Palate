@@ -966,14 +966,16 @@ export async function saveChatMessage(sessionId: string, role: string, content: 
         throw new Error("Chat session not found or unauthorized.");
       }
 
-      if (role !== 'user' && role !== 'model') {
-        throw new Error(`Invalid chat role: ${role}`);
+      const dbRole = role === 'sage' ? 'model' : role;
+
+      if (dbRole !== 'user' && dbRole !== 'model') {
+        throw new Error(`Invalid chat role: ${dbRole}`);
       }
 
       const message = await prisma.chatMessage.create({
         data: {
           sessionId,
-          role: role as ChatRole,
+          role: dbRole as ChatRole,
           content,
           thought: thought || null,
         }

@@ -121,7 +121,7 @@ export function parseMessageContent(content: string) {
     frontmatter: {
       recipe: recipeMatch ? recipeMatch[1].trim().replace(/^['"]|['"]$/g, '') : '',
       tags: tagsMatch ? tagsMatch[1].split(',').map((t: string) => t.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [],
-      macros: macrosMatch ? macrosMatch[1].trim() : ''
+      macros: macrosMatch ? macrosMatch[1].trim().replace(/^['"`]|['"`]$/g, '') : ''
     }
   };
 }
