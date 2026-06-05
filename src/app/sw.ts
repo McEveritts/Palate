@@ -9,7 +9,7 @@ declare global {
 
 const manifest = (self as unknown as { __SW_MANIFEST: Array<{ url: string; revision: string | null }> }).__SW_MANIFEST;
 
-const serwist = new Serwist({
+const serwist: Serwist = new Serwist({
   precacheEntries: manifest,
   skipWaiting: true,
   clientsClaim: true,
