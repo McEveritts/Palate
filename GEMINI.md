@@ -26,5 +26,10 @@
 - **Git Tags:** Create an annotated tag (`v1.3.x`) for each release and push it to origin.
 - **package.json:** Update the `"version"` field in `package.json` to match the new patch version before committing.
 
+## Agent Workflow
+- **Default to Sub-Agents:** Always prefer delegating work to sub-agents (e.g., `research`, `self`) over doing everything inline. Use sub-agents for research, parallel implementation, code exploration, and any task that can be broken into independent units of work.
+- **Parallelism:** When multiple independent tasks exist (e.g., researching + coding, or modifying multiple components), launch them as concurrent sub-agents rather than handling sequentially.
+- **Context Hygiene:** Offload deep research, large file exploration, and broad codebase surveys to sub-agents to keep the main conversation context clean and focused.
+
 ## Completed Phases
 - **Phase 6:** Vault Visualization ✅

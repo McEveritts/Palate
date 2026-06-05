@@ -7,10 +7,13 @@ declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {}
 }
 
+const manifest = (self as unknown as { __SW_MANIFEST: Array<{ url: string; revision: string | null }> }).__SW_MANIFEST;
+
 const serwist = new Serwist({
-  precacheEntries: (self as unknown as { __SW_MANIFEST: Array<{ url: string; revision: string | null }> }).__SW_MANIFEST,
+  precacheEntries: manifest,
   skipWaiting: true,
   clientsClaim: true,
+  navigationPreload: true,
   runtimeCaching: [
     // 1. Strict NetworkOnly for chat/Sage AI dynamic routes to prevent stale AI contexts
     {
@@ -26,11 +29,13 @@ const serwist = new Serwist({
       matcher: ({ request }) => request.mode === "navigate",
       handler: new NetworkFirst({
         cacheName: "pages",
+        networkTimeoutSeconds: 5,
         plugins: [
           {
-            // Fallback to offline.html if network and cache fail
+            // Fallback to precached offline.html if both network and cache miss
             handlerDidError: async () => {
-              return (await caches.match("/offline.html")) || Response.error();
+              const offlineResponse = await serwist.matchPrecache("/offline.html");
+              return offlineResponse || Response.error();
             }
           }
         ]
