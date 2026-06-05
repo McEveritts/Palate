@@ -46,5 +46,5 @@ process.on('uncaughtException', (err) => {
 });
 
 // Run Next.js CLI build
-process.argv = [process.argv[0], process.argv[1], 'build'];
+process.argv = [process.argv[0], process.argv[1], 'build', '--webpack'];
 require('./node_modules/next/dist/bin/next');
