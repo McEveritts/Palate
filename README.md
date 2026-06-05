@@ -189,6 +189,8 @@ Palate will launch on its custom developer port: [http://localhost:28014](http:/
 | `NEXTAUTH_SECRET` | **Required** | Symmetrical hash key used to encrypt user JWT cookies. |
 | `NEXTAUTH_URL` | **Required** | Absolute base URL of the active deployment. |
 | `GEMINI_API_KEY` | *Optional* | Fallback system key for processing guest requests. |
+| `CRON_SECRET` | *Optional* | Shared secret for authenticating scheduled curation requests. When set, the `/api/curate` endpoint requires `Authorization: Bearer <secret>`. |
+| `DEPLOYMENT_URL` | *GitHub Actions* | Base URL of the deployed Palate instance (e.g., `https://palate.example.com`). Required as a GitHub repository secret for the automated curation workflow. |
 
 ---
 
@@ -201,6 +203,38 @@ Palate will launch on its custom developer port: [http://localhost:28014](http:/
 | `npm run start` | Launches the compiled Next.js production web server on port `28014`. |
 | `npm run test` | Executes the complete Vitest automated test suite. |
 | `npx prisma studio` | Launches an interactive database dashboard on port `5555`. |
+
+---
+
+## 🌿 Automated Curation (Curated By Sage)
+
+Palate includes an automated **Curated By Sage** system that generates 3 themed recipes (1 hero main + 2 elevated sides) every Monday, Wednesday, and Friday via the `/api/curate` endpoint.
+
+### GitHub Actions (Recommended)
+A GitHub Actions workflow (`.github/workflows/curate.yml`) handles scheduling automatically. To enable it:
+
+1. Navigate to your repository's **Settings → Secrets and variables → Actions**
+2. Add the following repository secrets:
+   - `DEPLOYMENT_URL` — Your deployed Palate URL (e.g., `https://palate.example.com`)
+   - `CRON_SECRET` — A strong random string (e.g., `openssl rand -hex 32`)
+3. Add the same `CRON_SECRET` value to your server's `.env.local` file
+4. The workflow runs at **6:59 AM UTC** on Mon/Wed/Fri and can also be triggered manually from the **Actions** tab
+
+### Self-Hosted Crontab (Alternative)
+If you're running Palate on your own server, you can use a system crontab instead:
+```bash
+# Generate curation secret
+export CRON_SECRET=$(openssl rand -hex 32)
+
+# Add to crontab (adjust port to match your deployment)
+(crontab -l 2>/dev/null; echo '59 6 * * 1,3,5 curl -s -X POST -H "Authorization: Bearer '"$CRON_SECRET"'" http://localhost:28014/api/curate > /dev/null') | crontab -
+```
+
+### Manual Trigger
+You can also trigger curation manually at any time:
+```bash
+curl -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" http://localhost:28014/api/curate
+```
 
 ---
 

@@ -16,6 +16,18 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    // Authenticate cron requests via CRON_SECRET
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+    }
+
     // Determine if we're in DB mode or filesystem mode
     const session = await getServerSession(authOptions).catch(() => null);
     const userId = session?.user ? session.user.id : null;
