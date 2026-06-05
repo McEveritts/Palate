@@ -10,7 +10,7 @@ interface FoodResult {
   id: string;
   name: string;
   brand?: string;
-  source: 'usda' | 'openfoodfacts' | 'cache';
+  source: 'usda' | 'openfoodfacts' | 'cache' | 'sage';
   calories: number;
   protein: number;
   carbs: number;
@@ -19,6 +19,8 @@ interface FoodResult {
   sugar?: number;
   sodium?: number;
   servingSize?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  description?: string;
 }
 
 export interface FoodSearchProps {
@@ -39,6 +41,7 @@ const SOURCE_BADGES: Record<string, { label: string; className: string }> = {
   usda: { label: 'USDA', className: 'text-emerald-300 bg-emerald-500/15 border-emerald-400/20' },
   cache: { label: 'Cached', className: 'text-indigo-300 bg-indigo-500/15 border-indigo-400/20' },
   openfoodfacts: { label: 'OFF', className: 'text-amber-300 bg-amber-500/15 border-amber-400/20' },
+  sage: { label: '🌿 Sage', className: 'text-emerald-200 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-400/30' },
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -191,6 +194,7 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <Loader2 className="h-6 w-6 text-indigo-400 animate-spin" />
                   <p className="text-sm text-slate-400 animate-pulse">Searching databases...</p>
+                  <p className="text-[10px] text-slate-500">🌿 Sage will estimate if no matches are found</p>
                 </div>
               )}
 
@@ -223,8 +227,23 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
                         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${badge.className}`}>
                           {badge.label}
                         </span>
+                        {food.confidence && (
+                          <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+                            food.confidence === 'high' ? 'text-emerald-400 bg-emerald-500/10' :
+                            food.confidence === 'medium' ? 'text-amber-400 bg-amber-500/10' :
+                            'text-slate-400 bg-slate-500/10'
+                          }`}>
+                            {food.confidence}
+                          </span>
+                        )}
                       </div>
                       {food.brand && <span className="text-[10px] text-slate-500">{food.brand}</span>}
+                      {food.source === 'sage' && food.description && (
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{food.description}</p>
+                      )}
+                      {food.source === 'sage' && (
+                        <span className="text-[9px] text-emerald-500/70 italic">AI Estimated</span>
+                      )}
                       <div className="flex items-center gap-3 text-[11px] mt-1">
                         <span className="text-indigo-300 font-medium">{food.protein}g P</span>
                         <span className="text-fuchsia-300 font-medium">{food.carbs}g C</span>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from "@/lib/auth";
 import { globalMacroCache, type MacroData } from '@/lib/macroCache';
+import { estimateFoodNutrition } from '@/lib/ai/sage-food-discovery';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -11,7 +12,7 @@ interface FoodSearchResult {
   id: string;
   name: string;
   brand?: string;
-  source: 'usda' | 'openfoodfacts' | 'cache';
+  source: 'usda' | 'openfoodfacts' | 'cache' | 'sage';
   calories: number;
   protein: number;
   carbs: number;
@@ -21,6 +22,8 @@ interface FoodSearchResult {
   sodium?: number;
   servingSize?: string;
   barcode?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  description?: string;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -40,7 +43,7 @@ function parseCacheToResults(cache: MacroData[], query: string, limit = 5): Food
     .map((item, i) => ({
       id: `cache-${i}-${item.ingredient_matched.replace(/\s/g, '-')}`,
       name: item.ingredient_matched,
-      source: 'cache' as const,
+      source: (item.ingredient_matched.includes('(Sage Est.)') ? 'sage' : 'cache') as 'sage' | 'cache',
       calories: parseFloat(item.calories) || 0,
       protein: parseFloat(item.protein) || 0,
       carbs: parseFloat(item.carbs) || 0,
@@ -102,6 +105,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
     const upc = searchParams.get('upc');
+    const aiDisabled = searchParams.get('ai') === 'false';
 
     if (!query && !upc) {
       return NextResponse.json(
@@ -187,7 +191,7 @@ export async function GET(request: NextRequest) {
     const results: FoodSearchResult[] = [];
     const cacheHitNames = new Set<string>();
 
-    // 1. Check local USDA cache first
+    // 1. Check local USDA cache first (includes Sage_Estimates.md)
     try {
       const cached = globalMacroCache.get(MACROS_DIR);
       const cacheResults = parseCacheToResults(cached, query!);
@@ -237,13 +241,42 @@ export async function GET(request: NextRequest) {
       }
     } catch (err) {
       console.error('[food-search] USDA API error:', err);
-      // Non-fatal: return cache results only
+      // Non-fatal: continue to Sage fallback
+    }
+
+    // 3. Sage AI Fallback — when cache + USDA return nothing
+    if (results.length === 0 && !aiDisabled && query) {
+      console.log(`[food-search] Cache + USDA empty for "${query}". Invoking Sage Food Discovery...`);
+      try {
+        const estimates = await estimateFoodNutrition(query);
+        for (const est of estimates) {
+          results.push({
+            id: est.id,
+            name: est.name,
+            source: 'sage',
+            calories: est.calories,
+            protein: est.protein,
+            carbs: est.carbs,
+            fat: est.fat,
+            fiber: est.fiber || undefined,
+            sugar: est.sugar || undefined,
+            sodium: est.sodium || undefined,
+            servingSize: est.servingSize,
+            confidence: est.confidence,
+            description: est.description,
+          });
+        }
+      } catch (err) {
+        console.error('[food-search] Sage AI fallback error:', err);
+        // Non-fatal: return empty results rather than error
+      }
     }
 
     return NextResponse.json({
       success: true,
       results: results.slice(0, 15),
       cached: results.filter((r) => r.source === 'cache').length,
+      sage: results.filter((r) => r.source === 'sage').length,
       total: results.length,
     });
   } catch (error) {
