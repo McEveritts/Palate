@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import { Plus, Search, Camera, Zap, ScanLine, Dumbbell, Droplet } from 'lucide-react';
 import FoodSearch from './FoodSearch';
 import BarcodeScanner from './BarcodeScanner';
@@ -16,6 +16,30 @@ export interface MultiAddDockProps {
   onExerciseLogged?: () => void;
 }
 
+// ── Scroll-direction hook ──────────────────────────────────────────────────────
+
+function useScrollDirection(threshold = 10) {
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY.current;
+
+      if (Math.abs(delta) < threshold) return;
+
+      setVisible(delta < 0 || currentY < threshold);
+      lastScrollY.current = currentY;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [threshold]);
+
+  return visible;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockProps) => {
@@ -25,6 +49,17 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
   const [showExercise, setShowExercise] = useState(false);
   const [showQuickCalories, setShowQuickCalories] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
+
+  const dockVisible = useScrollDirection(10);
+  const dockControls = useAnimationControls();
+
+  useEffect(() => {
+    dockControls.start(
+      dockVisible
+        ? { y: 0, opacity: 1 }
+        : { y: 30, opacity: 0 },
+    );
+  }, [dockVisible, dockControls]);
 
   return (
     <>
@@ -73,8 +108,14 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
         }}
       />
 
-      {/* Dock */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+      {/* Dock — auto-hides on scroll down, reappears on scroll up */}
+      <motion.div
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40"
+        initial={{ y: 0, opacity: 1 }}
+        animate={dockControls}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        style={{ pointerEvents: dockVisible ? 'auto' : 'none' }}
+      >
         <motion.div
           role="toolbar"
           aria-label="Quick add food actions"
@@ -163,7 +204,7 @@ export const MultiAddDock = ({ onFoodLogged, onExerciseLogged }: MultiAddDockPro
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </>
   );
 };
