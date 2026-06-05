@@ -300,16 +300,12 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : cameraError ? (
-                  <div 
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/65 p-4 text-center cursor-pointer hover:bg-slate-950/75 transition-all duration-300 group shadow-inner"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 group-hover:scale-105 group-hover:bg-fuchsia-500/20 group-hover:border-fuchsia-500/40 transition-all duration-300 shadow-[0_0_20px_rgba(217,70,239,0.15)]">
-                      <Camera className="h-5.5 w-5.5 animate-pulse" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/65 p-6 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400">
+                      <Camera className="h-5.5 w-5.5" />
                     </div>
-                    <span className="text-xs font-semibold text-white/90 tracking-wide">PWA Camera Mode Active</span>
                     <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
-                      Tap anywhere here to snap a photo of your plate using your camera.
+                      Camera unavailable. Use the buttons below to snap a photo or upload from your gallery.
                     </span>
                   </div>
                 ) : (
