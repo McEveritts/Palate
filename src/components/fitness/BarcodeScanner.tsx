@@ -404,60 +404,6 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                 </button>
               </div>
 
-              {/* Camera Viewfinder */}
-              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-black/60 border border-white/5">
-                {cameraActive && (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-
-                {cameraError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/65 p-6 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                      <Camera className="h-5.5 w-5.5" />
-                    </div>
-                    <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
-                      Camera unavailable. Use the buttons below to snap a photo or upload from your gallery.
-                    </span>
-                  </div>
-                )}
-
-                {!cameraActive && !cameraError && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Camera className="h-8 w-8 text-slate-600 animate-pulse" />
-                  </div>
-                )}
-
-                {/* Scanning overlay */}
-                {cameraActive && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      className="w-48 h-28 border-2 border-dashed border-indigo-400/60 rounded-xl"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <motion.div
-                      className="absolute w-48 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent"
-                      animate={{ y: [-50, 50, -50] }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <p className="text-center text-xs text-slate-500">
-                {cameraActive 
-                  ? (detectorSupported 
-                      ? '🌿 Live scanner active! Align barcode or QR code inside viewfinder.' 
-                      : 'Point camera at barcode, then enter the number below')
-                  : 'Snap a picture, upload an image or enter the number manually'}
-              </p>
-
               {/* Hidden Inputs for Direct Camera vs Library picker */}
               <input
                 type="file"
@@ -475,24 +421,42 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                 className="hidden"
               />
 
-              {(!cameraActive || cameraError) && (
-                <div className="flex flex-col sm:flex-row gap-2.5 w-full">
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-[0_0_15px_rgba(59,130,246,0.25)] transition-all cursor-pointer"
-                  >
-                    <Camera className="h-4 w-4 animate-pulse" />
-                    Snap Barcode Photo
-                  </button>
-                  <button
-                    onClick={() => libraryInputRef.current?.click()}
-                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
-                  >
-                    <ImagePlus className="h-4 w-4 text-blue-400" />
-                    Upload from Gallery
-                  </button>
-                </div>
+              {/* Hidden video element for live barcode detection */}
+              {cameraActive && (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="hidden"
+                />
               )}
+
+              {/* Action Cards — Snap or Upload */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="group flex flex-col items-center gap-3 p-5 rounded-2xl border border-white/10 bg-slate-800/40 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/20 group-hover:border-blue-500/40 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] transition-all">
+                    <Camera className="h-5.5 w-5.5 text-blue-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">Snap Photo</span>
+                </button>
+                <button
+                  onClick={() => libraryInputRef.current?.click()}
+                  className="group flex flex-col items-center gap-3 p-5 rounded-2xl border border-white/10 bg-slate-800/40 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all cursor-pointer"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/20 group-hover:border-indigo-500/40 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all">
+                    <ImagePlus className="h-5.5 w-5.5 text-indigo-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">Upload Photo</span>
+                </button>
+              </div>
+
+              <p className="text-center text-[11px] text-slate-500 leading-relaxed">
+                Snap a barcode photo, upload an image, or enter the number manually.
+              </p>
 
               {/* Manual UPC Input */}
               <div className="flex gap-2">

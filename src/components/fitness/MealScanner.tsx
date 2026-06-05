@@ -283,59 +283,6 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                 </button>
               </div>
 
-              {/* Viewfinder or Captured Preview */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-black/60 border border-white/5 shadow-inner">
-                {capturedImage ? (
-                  <img
-                    src={capturedImage}
-                    alt="Captured Plate"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : cameraActive ? (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : cameraError ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950/65 p-6 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400">
-                      <Camera className="h-5.5 w-5.5" />
-                    </div>
-                    <span className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed">
-                      Camera unavailable. Use the buttons below to snap a photo or upload from your gallery.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Camera className="h-8 w-8 text-slate-600 animate-pulse" />
-                  </div>
-                )}
-
-                {/* Shutter Overlay for snapping */}
-                {cameraActive && !capturedImage && (
-                  <div className="absolute inset-x-0 bottom-4 flex justify-center z-15">
-                    <button
-                      onClick={capturePhoto}
-                      className="h-14 w-14 rounded-full border-4 border-white bg-fuchsia-500/40 hover:bg-fuchsia-500/60 active:scale-95 shadow-[0_0_20px_rgba(217,70,239,0.5)] transition-all cursor-pointer flex items-center justify-center text-white"
-                      title="Snap photo"
-                    >
-                      <Camera size={22} />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="text-center">
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {capturedImage 
-                    ? (loading ? '🌿 Sage is analyzing your plate...' : 'Analysis Complete!') 
-                    : 'Snap a picture of your plate or upload an existing photo.'}
-                </p>
-              </div>
-
               {/* Hidden Inputs for Direct Camera vs Library picker */}
               <input
                 type="file"
@@ -353,24 +300,58 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                 className="hidden"
               />
 
-              {/* Action Trigger Buttons */}
-              {!capturedImage && (
-                <div className="flex flex-col sm:flex-row gap-2.5 w-full">
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-sm font-semibold text-white shadow-[0_0_15px_rgba(217,70,239,0.25)] transition-all cursor-pointer"
-                  >
-                    <Camera className="h-4 w-4 animate-pulse" />
-                    Snap Plate Photo
-                  </button>
-                  <button
-                    onClick={() => libraryInputRef.current?.click()}
-                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-800/80 border border-white/10 hover:bg-slate-700/80 text-sm font-semibold text-white transition-all cursor-pointer"
-                  >
-                    <ImagePlus className="h-4 w-4 text-fuchsia-400" />
-                    Upload from Gallery
-                  </button>
-                </div>
+              {/* Hidden video element for live camera capture */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="hidden"
+              />
+
+              {capturedImage ? (
+                <>
+                  {/* Captured Image Preview */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 shadow-inner">
+                    <img
+                      src={capturedImage}
+                      alt="Captured Plate"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {loading ? '🌿 Sage is analyzing your plate...' : 'Analysis complete!'}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Action Cards — Snap or Upload */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="group flex flex-col items-center gap-3 p-5 rounded-2xl border border-white/10 bg-slate-800/40 hover:bg-fuchsia-500/10 hover:border-fuchsia-500/30 transition-all cursor-pointer"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500/20 to-indigo-500/20 border border-fuchsia-500/20 group-hover:border-fuchsia-500/40 group-hover:shadow-[0_0_15px_rgba(217,70,239,0.2)] transition-all">
+                        <Camera className="h-5.5 w-5.5 text-fuchsia-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">Snap Photo</span>
+                    </button>
+                    <button
+                      onClick={() => libraryInputRef.current?.click()}
+                      className="group flex flex-col items-center gap-3 p-5 rounded-2xl border border-white/10 bg-slate-800/40 hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all cursor-pointer"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 border border-indigo-500/20 group-hover:border-indigo-500/40 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all">
+                        <ImagePlus className="h-5.5 w-5.5 text-indigo-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">Upload Photo</span>
+                    </button>
+                  </div>
+                  <p className="text-center text-[11px] text-slate-500 leading-relaxed">
+                    Snap a picture of your plate or upload an existing photo.
+                  </p>
+                </>
               )}
 
               {/* Loading State Overlay */}
