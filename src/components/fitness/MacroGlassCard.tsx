@@ -50,6 +50,11 @@ const RadialProgress = ({
           aria-valuemax={data.target}
           aria-label={`${data.label}: ${data.value}g of ${data.target}g`}
         >
+          <defs>
+            <filter id={`glow-${data.label}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={data.color} floodOpacity="0.6" />
+            </filter>
+          </defs>
           {/* Background Ring */}
           <circle
             cx={size / 2}
@@ -74,7 +79,7 @@ const RadialProgress = ({
             animate={{ strokeDashoffset }}
             transition={{ duration: 1.5, ease: 'easeOut', delay: 0.2 }}
             style={{ willChange: 'transform' }}
-            className="drop-shadow-[0_0_12px_currentColor]"
+            filter={`url(#glow-${data.label})`}
           />
         </svg>
         {/* Value Label inside the ring */}
