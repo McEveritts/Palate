@@ -244,31 +244,51 @@ export async function GET(request: NextRequest) {
       // Non-fatal: continue to Sage fallback
     }
 
-    // 3. Sage AI Fallback — when cache + USDA return nothing
-    if (results.length === 0 && !aiDisabled && query) {
-      console.log(`[food-search] Cache + USDA empty for "${query}". Invoking Sage Food Discovery...`);
-      try {
-        const estimates = await estimateFoodNutrition(query);
-        for (const est of estimates) {
-          results.push({
-            id: est.id,
-            name: est.name,
-            source: 'sage',
-            calories: est.calories,
-            protein: est.protein,
-            carbs: est.carbs,
-            fat: est.fat,
-            fiber: est.fiber || undefined,
-            sugar: est.sugar || undefined,
-            sodium: est.sodium || undefined,
-            servingSize: est.servingSize,
-            confidence: est.confidence,
-            description: est.description,
-          });
+    // 3. Sage AI Supplement — for composite meals not matched by USDA raw ingredients
+    //    USDA returns raw ingredients (cranberries, pecans, chicken) for multi-word queries,
+    //    but never the composite meal itself. Detect this and invoke Sage.
+    if (!aiDisabled && query) {
+      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const isCompositeQuery = queryWords.length >= 3;
+
+      // Check if any existing result closely matches the full composite query
+      const hasCloseMatch = results.some((r) => {
+        const nameWords = r.name.toLowerCase().split(/[\s,]+/);
+        const matchCount = queryWords.filter(qw => nameWords.some(nw => nw.includes(qw) || qw.includes(nw))).length;
+        // At least 60% of query words must appear in the result name
+        return matchCount >= queryWords.length * 0.6;
+      });
+
+      const shouldInvokeSage = results.length === 0 || (isCompositeQuery && !hasCloseMatch);
+
+      if (shouldInvokeSage) {
+        console.log(`[food-search] No close match for "${query}" (${results.length} raw results). Invoking Sage Food Discovery...`);
+        try {
+          const estimates = await estimateFoodNutrition(query);
+          const sageResults: FoodSearchResult[] = [];
+          for (const est of estimates) {
+            sageResults.push({
+              id: est.id,
+              name: est.name,
+              source: 'sage',
+              calories: est.calories,
+              protein: est.protein,
+              carbs: est.carbs,
+              fat: est.fat,
+              fiber: est.fiber || undefined,
+              sugar: est.sugar || undefined,
+              sodium: est.sodium || undefined,
+              servingSize: est.servingSize,
+              confidence: est.confidence,
+              description: est.description,
+            });
+          }
+          // Prepend Sage results so the composite meal estimate appears FIRST
+          results.unshift(...sageResults);
+        } catch (err) {
+          console.error('[food-search] Sage AI fallback error:', err);
+          // Non-fatal: return existing results
         }
-      } catch (err) {
-        console.error('[food-search] Sage AI fallback error:', err);
-        // Non-fatal: return empty results rather than error
       }
     }
 
