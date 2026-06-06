@@ -42,7 +42,7 @@ const RadialProgress = ({
     <div className="flex flex-col items-center justify-center relative">
       <div className="relative" style={{ width: size, height: size }}>
         <svg
-          className="transform -rotate-90 w-full h-full drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]"
+          className="transform -rotate-90 w-full h-full"
           viewBox={`0 0 ${size} ${size}`}
           role="progressbar"
           aria-valuenow={data.value}
