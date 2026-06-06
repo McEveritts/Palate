@@ -139,7 +139,6 @@ export async function estimateFoodNutrition(
       systemInstruction: FOOD_DISCOVERY_SYSTEM_PROMPT,
       generationConfig: {
         temperature: 0.3, // Low temperature for nutritional precision
-        responseMimeType: 'application/json',
       },
     });
 
@@ -150,18 +149,48 @@ export async function estimateFoodNutrition(
       .slice(0, 200);
 
     const result = await model.generateContent(
-      `Estimate the full nutritional profile for: "${sanitized}"`
+      `Respond ONLY with a JSON array, no other text. Estimate the full nutritional profile for: "${sanitized}"`
     );
     const text = result.response.text().trim();
 
-    // Parse the JSON response
+    // Robust JSON extraction — Gemma may wrap JSON in markdown fences or prepend reasoning
     let parsed: SageRawEstimate[];
     try {
+      // Strategy 1: Try direct parse (ideal case)
       const raw = JSON.parse(text);
       parsed = Array.isArray(raw) ? raw : [raw];
     } catch {
-      console.error('[SageFoodDiscovery] Failed to parse AI response:', text.slice(0, 200));
-      return [];
+      // Strategy 2: Extract JSON array from mixed text output
+      // Look for the first [ ... ] block (greedy, handles nested objects)
+      let jsonStr: string | null = null;
+
+      // Try to find ```json ... ``` fenced block first
+      const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fencedMatch) {
+        jsonStr = fencedMatch[1].trim();
+      }
+
+      // Otherwise find the first [ ... ] that looks like a JSON array
+      if (!jsonStr) {
+        const bracketStart = text.indexOf('[');
+        const bracketEnd = text.lastIndexOf(']');
+        if (bracketStart !== -1 && bracketEnd > bracketStart) {
+          jsonStr = text.slice(bracketStart, bracketEnd + 1);
+        }
+      }
+
+      if (!jsonStr) {
+        console.error('[SageFoodDiscovery] No JSON found in AI response:', text.slice(0, 300));
+        return [];
+      }
+
+      try {
+        const raw = JSON.parse(jsonStr);
+        parsed = Array.isArray(raw) ? raw : [raw];
+      } catch {
+        console.error('[SageFoodDiscovery] Failed to parse extracted JSON:', jsonStr.slice(0, 300));
+        return [];
+      }
     }
 
     // Validate and normalize each estimate
