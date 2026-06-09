@@ -403,15 +403,15 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                         <p className="text-[9px] text-slate-500">Homemade Recipe Prescribed by SageAI</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="text-lg font-extrabold text-white">{Math.round(product.calories)}</span>
+                        <span className="text-lg font-extrabold text-white">{product.calories.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         <span className="text-[10px] text-slate-400 ml-0.5">kcal</span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-center gap-6 text-xs border-y border-white/5 py-2.5">
-                      <span className="text-indigo-300 font-semibold">{product.protein.toFixed(1)}g Protein</span>
-                      <span className="text-fuchsia-300 font-semibold">{product.carbs.toFixed(1)}g Carbs</span>
-                      <span className="text-amber-300 font-semibold">{product.fat.toFixed(1)}g Fat</span>
+                      <span className="text-indigo-300 font-semibold">{product.protein.toFixed(2)}g Protein</span>
+                      <span className="text-fuchsia-300 font-semibold">{product.carbs.toFixed(2)}g Carbs</span>
+                      <span className="text-amber-300 font-semibold">{product.fat.toFixed(2)}g Fat</span>
                     </div>
 
                     {added ? (

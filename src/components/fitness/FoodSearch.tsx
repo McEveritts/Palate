@@ -245,15 +245,15 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
                         <span className="text-[9px] text-emerald-500/70 italic">AI Estimated</span>
                       )}
                       <div className="flex items-center gap-3 text-[11px] mt-1">
-                        <span className="text-indigo-300 font-medium">{food.protein}g P</span>
-                        <span className="text-fuchsia-300 font-medium">{food.carbs}g C</span>
-                        <span className="text-amber-300 font-medium">{food.fat}g F</span>
+                        <span className="text-indigo-300 font-medium">{food.protein.toFixed(2)}g P</span>
+                        <span className="text-fuchsia-300 font-medium">{food.carbs.toFixed(2)}g C</span>
+                        <span className="text-amber-300 font-medium">{food.fat.toFixed(2)}g F</span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-white">{food.calories}</span>
+                        <span className="text-sm font-semibold text-white">{food.calories.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         <span className="text-[10px] text-slate-500 ml-0.5">kcal</span>
                       </div>
 

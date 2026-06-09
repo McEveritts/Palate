@@ -298,7 +298,7 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
                     <span className="text-base">{mealIcons[mealType]}</span>
                     {mealType}
                     <span className="text-xs text-slate-600">
-                      ({mealGroups[mealType].reduce((s, e) => s + e.calories, 0).toLocaleString()} kcal)
+                      ({mealGroups[mealType].reduce((s, e) => s + e.calories, 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kcal)
                     </span>
                   </h3>
                   <div className="flex flex-col gap-2">
@@ -315,15 +315,15 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
                             {entry.customFoodName || 'Unnamed'}
                           </span>
                           <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                            <span className="text-indigo-300 font-medium">{entry.protein}g P</span>
-                            <span className="text-fuchsia-300 font-medium">{entry.carbs}g C</span>
-                            <span className="text-amber-300 font-medium">{entry.fat}g F</span>
+                            <span className="text-indigo-300 font-medium">{entry.protein.toFixed(2)}g P</span>
+                            <span className="text-fuchsia-300 font-medium">{entry.carbs.toFixed(2)}g C</span>
+                            <span className="text-amber-300 font-medium">{entry.fat.toFixed(2)}g F</span>
                           </div>
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
-                              {entry.calories}
+                              {entry.calories.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </span>
                             <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 block">
                               kcal

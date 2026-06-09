@@ -48,7 +48,7 @@ const RadialProgress = ({
           aria-valuenow={data.value}
           aria-valuemin={0}
           aria-valuemax={data.target}
-          aria-label={`${data.label}: ${data.value}g of ${data.target}g`}
+          aria-label={`${data.label}: ${data.value.toFixed(2)}g of ${data.target}g`}
         >
           <defs>
             <filter id={`glow-${data.label}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -85,7 +85,7 @@ const RadialProgress = ({
         {/* Value Label inside the ring */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-sm font-bold text-slate-100 tracking-wider">
-            {data.value}g
+            {data.value.toFixed(2)}g
           </span>
         </div>
       </div>
@@ -167,7 +167,7 @@ export const MacroGlassCard: React.FC<MacroGlassCardProps> = ({
                 }`}
                 aria-label={`${remaining} kilocalories remaining`}
               >
-                {remaining.toLocaleString()}
+                {remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </motion.div>
               <div className="text-xs text-slate-400 uppercase tracking-widest mt-1">
                 {isOverBudget ? 'over budget' : 'kcal remaining'}
@@ -181,20 +181,20 @@ export const MacroGlassCard: React.FC<MacroGlassCardProps> = ({
             aria-label="Calorie budget breakdown"
           >
             <span className="text-slate-400">
-              Goal: {calories.target.toLocaleString()}
+              Goal: {calories.target.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-slate-700 select-none" aria-hidden>|</span>
             <span className="text-fuchsia-300">
-              Food: {calories.current.toLocaleString()}
+              Food: {calories.current.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-slate-700 select-none" aria-hidden>|</span>
             <span className="text-emerald-300 inline-flex items-center gap-0.5">
               <Flame className="w-3 h-3 inline-block" aria-hidden />
-              Exercise: {(exerciseCalories || 0).toLocaleString()}
+              Exercise: {(exerciseCalories || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-slate-700 select-none" aria-hidden>|</span>
             <span className={`font-bold ${isOverBudget ? 'text-rose-400' : 'text-indigo-300'}`}>
-              Remaining: {remaining.toLocaleString()}
+              Remaining: {remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
 
