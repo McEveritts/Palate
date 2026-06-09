@@ -34,6 +34,25 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions).catch(() => null);
     const userId = session?.user ? session.user.id : null;
 
+    let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+
+    if (!clientApiKey && userId) {
+      const config = await prisma.userConfig.findUnique({
+        where: { userId }
+      });
+      if (config?.encryptedGcpKey && config.iv && config.authTag) {
+        clientApiKey = decryptKey(config.encryptedGcpKey, config.iv, config.authTag);
+      }
+    }
+
+    // Unauthenticated guest must provide their own Gemini API key
+    if (!userId && !clientApiKey) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized. Guest users must provide their own Gemini API key in settings." }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     let vaultContext = "";
 
     // Gather context from the vault/database to ground the AI
@@ -111,17 +130,6 @@ export async function POST(req: Request) {
         }
       } catch (err) {
         console.warn('[SageAI] Fitness context fetch failed (non-fatal):', err);
-      }
-    }
-
-    let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
-
-    if (!clientApiKey && userId) {
-      const config = await prisma.userConfig.findUnique({
-        where: { userId }
-      });
-      if (config?.encryptedGcpKey && config.iv && config.authTag) {
-        clientApiKey = decryptKey(config.encryptedGcpKey, config.iv, config.authTag);
       }
     }
 

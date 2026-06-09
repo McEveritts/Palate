@@ -1,7 +1,33 @@
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
+
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { decryptKey } from "@/lib/encryption";
 
 export async function POST(req: Request) {
-  const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+  const session = await getServerSession(authOptions).catch(() => null);
+  const userId = session?.user ? session.user.id : null;
+
+  let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+
+  if (!clientApiKey && userId) {
+    const config = await prisma.userConfig.findUnique({
+      where: { userId }
+    });
+    if (config?.encryptedGcpKey && config.iv && config.authTag) {
+      clientApiKey = decryptKey(config.encryptedGcpKey, config.iv, config.authTag);
+    }
+  }
+
+  // Unauthenticated guests must provide their own API key
+  if (!userId && !clientApiKey) {
+    return new Response(JSON.stringify({ error: "Unauthorized. Guest users must provide their own Gemini API key." }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const apiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
 
   if (!apiKey) {
@@ -11,7 +37,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const ai = createGenAIClient(apiKey);
 
   let body;
   try {
@@ -53,33 +79,33 @@ You MUST output your response strictly as a single, valid JSON object matching t
 - Your output MUST start with { and end with } and be valid JSON that can be parsed directly with JSON.parse().
 - Deliver mathematically cohesive macros (4 kcal per gram of protein/carbs, 9 kcal per gram of fat).`;
 
-    const model = genAI.getGenerativeModel({
-      model: "gemma-4-31b-it",
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
-    });
-
-    const promptParts: Part[] = [];
     const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
-    if (mimeTypeMatch) {
-      promptParts.push({
-        inlineData: {
-          data: image.replace(/^data:image\/\w+;base64,/, ''),
-          mimeType: mimeTypeMatch[1]
-        }
-      });
-    } else {
+    if (!mimeTypeMatch) {
       return new Response(JSON.stringify({ error: "Bad Request: Invalid image format. Expected a base64 data URL." }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    promptParts.push({ text: systemInstruction });
+    const promptParts = [
+      {
+        inlineData: {
+          data: image.replace(/^data:image\/\w+;base64,/, ''),
+          mimeType: mimeTypeMatch[1]
+        }
+      },
+      { text: systemInstruction }
+    ];
 
-    const result = await model.generateContent(promptParts);
-    const text = result.response.text().trim();
+    const result = await ai.models.generateContent({
+      model: SAGE_MODEL,
+      contents: [{ role: 'user', parts: promptParts }],
+      config: {
+        responseMimeType: 'application/json',
+        ...SAGE_JSON_THINKING_CONFIG,
+      },
+    });
+    const text = (result.text || '').trim();
 
     try {
       const parsedData = JSON.parse(text);

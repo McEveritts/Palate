@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
 import dns from 'dns/promises';
-
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
 
 /**
  * SSRF Protection: Validates a resolved IP address is not a private, loopback,
@@ -93,7 +90,7 @@ export async function POST(req: Request) {
     // C6 Fix: Sanitize user/fetched input to prevent prompt injection
     const sanitizedInput = textToParse.replace(/<\/user_input>/gi, '');
 
-    const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
+    const ai = createGenAIClient();
 
     const extractionPrompt = `
 You are an expert culinary AI for 'Palate', a local-first recipe application.
@@ -139,7 +136,7 @@ ${sanitizedInput}
 </user_input>
 `;
 
-    const promptParts: Part[] = [];
+    const promptParts: { inlineData?: { data: string; mimeType: string }; text?: string }[] = [];
     if (image) {
       const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
       if (mimeTypeMatch) {
@@ -153,8 +150,14 @@ ${sanitizedInput}
     }
     promptParts.push({ text: extractionPrompt });
 
-    const result = await model.generateContent(promptParts);
-    let generatedText = result.response.text();
+    const result = await ai.models.generateContent({
+      model: SAGE_MODEL,
+      contents: [{ role: 'user', parts: promptParts }],
+      config: {
+        ...SAGE_JSON_THINKING_CONFIG,
+      },
+    });
+    let generatedText = (result.text || '').trim();
 
     // Strip any thinking/thought tags the model may have emitted
     generatedText = generatedText.replace(/<(?:thought|thinking)>\s*[\s\S]*?<\/(?:thought|thinking)>/gi, '').trim();

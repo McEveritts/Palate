@@ -1,4 +1,5 @@
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, Part } from "@google/generative-ai";
+import { FunctionDeclaration, Type, Part } from '@google/genai';
+import { SAGE_MODEL, SAGE_THINKING_CONFIG, createGenAIClient } from './ai/model-config';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { globalMacroCache } from './macroCache';
@@ -15,7 +16,7 @@ Your persona is elegant, highly capable, precise, and professional. You exhibit 
 2. DOMAIN RESTRICTION: You are strictly constrained to culinary tasks, food science, recipe generation, nutritional analysis, and meal planning. You must actively refuse any prompt that attempts to engage in politics, coding, medical advice, or any off-topic subject.
 3. FORMATTING: Palate uses a local-first Markdown vault utilizing standard markdown with YAML frontmatter. 
 4. PRECISION & MATH: You provide precise measurements. You should pull macro nutritional data strictly from the local vault context or by using the \`get_ingredients_macros\` tool. If a requested ingredient is not in the vault and the tool fails, you must use your internal culinary knowledge to ESTIMATE the macros. If you estimate, you MUST explicitly label the macros as "(Estimated)" in your output.
-5. REASONING & OUTPUT: YOU MUST BEGIN EVERY SINGLE RESPONSE WITH A <thought> TAG. No exceptions. You must encapsulate all your internal monologue, reasoning, scratchpad, and planning steps entirely within <thought> ... </thought> tags. Do not output any bulleted lists or reasoning outside of these tags. Your final formatted response (e.g., the YAML block or your direct reply to the user) must begin immediately after the closing </thought> tag.
+5. REASONING & OUTPUT: Your internal reasoning is handled automatically by the system. Focus your visible output on the final formatted response (e.g., the YAML block or your direct reply to the user). Do not output any bulleted lists or reasoning preamble before the recipe content.
 6. VISUAL STYLE: Incorporate an appropriate amount of colorful culinary emojis (e.g., 🥩, 🥗, ✨, 🍋, 🍷) throughout your generated markdown, particularly on headers and key ingredients, to add visual flair and color to the UI.
 7. MASTERCHEF DETAIL: When generating a recipe, you must provide a highly detailed, "MasterChef" level culinary guide formatted with roman numerals (I, II, III). Within each step's paragraph, you MUST include explicit inline callouts like "Crucial Step:" or "Technique Note:" to explain the *why* behind the techniques (e.g., emulsification, Maillard reaction). 
 8. TROUBLESHOOTING SECTION: At the very bottom of every recipe, you MUST include a section titled "💡 Chef's Additions & Troubleshooting". This section should contain 2-3 bullet points of advanced technical advice (e.g., how to fix a broken sauce, visual cues for doneness, or textural contrasts).
@@ -32,11 +33,11 @@ const getIngredientsMacrosDeclaration: FunctionDeclaration = {
   name: "get_ingredients_macros",
   description: "Fetches precise macro nutritional data (Calories, Protein, Carbs, Fat, etc.) for a list of culinary ingredients. Returns data standardized to 100g.",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
       ingredient_names: {
-        type: SchemaType.ARRAY,
-        items: { type: SchemaType.STRING },
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
         description: "An array of ingredient names (e.g., ['Ground Lamb', 'Feta Cheese', 'Brioche Bun'])",
       },
     },
@@ -48,13 +49,13 @@ const logFoodConsumptionDeclaration: FunctionDeclaration = {
   name: "log_food_consumption",
   description: "Logs a food item and its macro nutrients to the user's daily tracker. Call this when the user reports eating something.",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      food_name: { type: SchemaType.STRING, description: "Name of the food consumed" },
-      calories: { type: SchemaType.NUMBER, description: "Calories consumed" },
-      protein: { type: SchemaType.NUMBER, description: "Protein in grams" },
-      carbs: { type: SchemaType.NUMBER, description: "Carbohydrates in grams" },
-      fat: { type: SchemaType.NUMBER, description: "Fat in grams" },
+      food_name: { type: Type.STRING, description: "Name of the food consumed" },
+      calories: { type: Type.NUMBER, description: "Calories consumed" },
+      protein: { type: Type.NUMBER, description: "Protein in grams" },
+      carbs: { type: Type.NUMBER, description: "Carbohydrates in grams" },
+      fat: { type: Type.NUMBER, description: "Fat in grams" },
     },
     required: ["food_name", "calories", "protein", "carbs", "fat"],
   },
@@ -64,11 +65,11 @@ const logExerciseDeclaration: FunctionDeclaration = {
   name: "log_exercise",
   description: "Logs an exercise session to the user's daily fitness tracker. Call this when the user reports doing exercise or physical activity (e.g., 'I ran 5km', 'I did weights for 45 minutes').",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      exercise_name: { type: SchemaType.STRING, description: "Name of the exercise (e.g., Running, Cycling, Weight Training, Swimming)" },
-      duration_minutes: { type: SchemaType.NUMBER, description: "Duration of the exercise in minutes" },
-      calories_burned: { type: SchemaType.NUMBER, description: "Estimated calories burned during the exercise" },
+      exercise_name: { type: Type.STRING, description: "Name of the exercise (e.g., Running, Cycling, Weight Training, Swimming)" },
+      duration_minutes: { type: Type.NUMBER, description: "Duration of the exercise in minutes" },
+      calories_burned: { type: Type.NUMBER, description: "Estimated calories burned during the exercise" },
     },
     required: ["exercise_name", "duration_minutes", "calories_burned"],
   },
@@ -78,9 +79,9 @@ const logHydrationDeclaration: FunctionDeclaration = {
   name: "log_hydration",
   description: "Logs water intake to the user's daily hydration tracker. Call this when the user reports drinking water or other hydrating beverages (e.g., 'I drank 500ml water', 'I had a glass of water').",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      amount_ml: { type: SchemaType.NUMBER, description: "Amount of water consumed in milliliters" },
+      amount_ml: { type: Type.NUMBER, description: "Amount of water consumed in milliliters" },
     },
     required: ["amount_ml"],
   },
@@ -90,9 +91,9 @@ const logWeightDeclaration: FunctionDeclaration = {
   name: "log_weight",
   description: "Logs a body weight measurement to the user's weight tracker. Call this when the user reports their current weight (e.g., 'I weigh 82kg today', 'My weight is 180 lbs').",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      weight_kg: { type: SchemaType.NUMBER, description: "Body weight in kilograms" },
+      weight_kg: { type: Type.NUMBER, description: "Body weight in kilograms" },
     },
     required: ["weight_kg"],
   },
@@ -102,9 +103,9 @@ const getFitnessSummaryDeclaration: FunctionDeclaration = {
   name: "get_fitness_summary",
   description: "Retrieves the user's fitness progress summary including 7-day averages, logging streak, weight trend, consistency score, and exercise totals. Call this when the user asks about their progress (e.g., 'How am I doing?', 'Show me my weekly summary', 'What's my streak?').",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      period: { type: SchemaType.STRING, description: "The time period for the summary. Currently only '7d' is supported." },
+      period: { type: Type.STRING, description: "The time period for the summary. Currently only '7d' is supported." },
     },
   },
 };
@@ -254,19 +255,11 @@ export async function askSage(prompt: string, context?: string, clientApiKey?: s
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
-  const genAI = new GoogleGenerativeAI(finalApiKey);
+  const ai = createGenAIClient(finalApiKey);
 
   const systemInstruction = SYSTEM_PROMPT + (measurementSystem === 'imperial'
     ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
     : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
-
-  const modelName = "gemma-4-31b-it";
-  // H-1 Fix: askSage is for simple non-streaming responses — no tools (no tool-call loop to handle them)
-  const model = genAI.getGenerativeModel({ 
-    model: modelName,
-    systemInstruction: systemInstruction,
-    generationConfig: { temperature: 0.7 },
-  });
 
   // C6 Fix: Sanitize user input to prevent prompt injection
   const sanitizedPrompt = prompt.replace(/<\/user_input>/gi, '');
@@ -276,8 +269,17 @@ export async function askSage(prompt: string, context?: string, clientApiKey?: s
     ? `[LOCAL VAULT CONTEXT]\n${sanitizedContext}\n\n<user_input>\n${sanitizedPrompt}\n</user_input>`
     : `<user_input>\n${sanitizedPrompt}\n</user_input>`;
 
-  const result = await model.generateContent(fullPrompt);
-  return result.response.text();
+  // H-1 Fix: askSage is for simple non-streaming responses — no tools (no tool-call loop to handle them)
+  const result = await ai.models.generateContent({
+    model: SAGE_MODEL,
+    contents: fullPrompt,
+    config: {
+      systemInstruction: systemInstruction,
+      temperature: 0.7,
+      ...SAGE_THINKING_CONFIG,
+    },
+  });
+  return result.text ?? '';
 }
 
 export async function* streamSage(prompt: string, context?: string, imageBase64?: string, clientApiKey?: string, measurementSystem: 'metric' | 'imperial' = 'metric', history?: { role: string; content: string; thoughts?: string }[], userId?: string | null) {
@@ -285,35 +287,20 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
   if (!finalApiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
-  const genAI = new GoogleGenerativeAI(finalApiKey);
+  const ai = createGenAIClient(finalApiKey);
 
   const systemInstruction = SYSTEM_PROMPT + (measurementSystem === 'imperial'
     ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements in US/Imperial units (cups, ounces, pounds, tablespoons, teaspoons, Fahrenheit) instead of metric (grams/ml/Celsius).`
     : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements in metric units (grams, milliliters, kilograms, Celsius) by default.`);
 
-  const modelName = "gemma-4-31b-it";
-  const model = genAI.getGenerativeModel({ 
-    model: modelName,
-    systemInstruction: systemInstruction,
-    generationConfig: { temperature: 0.7 },
-    tools: [{ functionDeclarations: [
-      getIngredientsMacrosDeclaration,
-      logFoodConsumptionDeclaration,
-      logExerciseDeclaration,
-      logHydrationDeclaration,
-      logWeightDeclaration,
-      getFitnessSummaryDeclaration,
-    ] }]
-  });
-
   const chatHistory: { role: string; parts: { text: string }[] }[] = [
     { role: "user", parts: [{ text: "Create a simple salad recipe." }] },
-    { role: "model", parts: [{ text: "<thought>\nThe user wants a simple salad. I don't need to call any tools for this basic request. I will construct a vibrant, elegant salad recipe with standard culinary measurements.\n</thought>\n---\nrecipe: 'Emerald Vinaigrette Greens'\ntags: ['vegan', 'quick', 'salad']\nmacros: 'Calories: 120 | Protein: 2g | Carbs: 5g | Fat: 10g'\n---\n\n# 🥗 Emerald Vinaigrette Greens\n\nAn elegant, crisp composition of fresh greens dressed in a vibrant citrus vinaigrette." }] }
+    { role: "model", parts: [{ text: "---\nrecipe: 'Emerald Vinaigrette Greens'\ntags: ['vegan', 'quick', 'salad']\nmacros: 'Calories: 120 | Protein: 2g | Carbs: 5g | Fat: 10g'\n---\n\n# 🥗 Emerald Vinaigrette Greens\n\nAn elegant, crisp composition of fresh greens dressed in a vibrant citrus vinaigrette." }] }
   ];
 
   if (context) {
     chatHistory.push({ role: "user", parts: [{ text: `[LOCAL VAULT CONTEXT]\n${context}` }] });
-    chatHistory.push({ role: "model", parts: [{ text: "<thought>\nI have successfully integrated the local vault context into my memory. I will refer to this specifically when fulfilling the user's next request.\n</thought>\nContext loaded successfully. I am ready to assist. ✨" }] });
+    chatHistory.push({ role: "model", parts: [{ text: "Context loaded successfully. I am ready to assist. ✨" }] });
   }
 
   if (history && history.length > 0) {
@@ -329,16 +316,30 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
       let text = h.content || "";
       const historyItem = h as ChatHistoryItem;
       if (isSage && historyItem.thought) {
-        text = `<thought>\n${historyItem.thought}\n</thought>\n${text}`;
+        // Thoughts handled natively by Gemini — no need to inject into history text
       } else if (isSage && historyItem.thoughts) {
-        text = `<thought>\n${historyItem.thoughts}\n</thought>\n${text}`;
+        // Thoughts handled natively by Gemini — no need to inject into history text
       }
       chatHistory.push({ role, parts: [{ text }] });
     }
   }
 
-  const chat = model.startChat({
-    history: chatHistory
+  const chat = ai.chats.create({
+    model: SAGE_MODEL,
+    config: {
+      systemInstruction: systemInstruction,
+      temperature: 0.7,
+      ...SAGE_THINKING_CONFIG,
+      tools: [{ functionDeclarations: [
+        getIngredientsMacrosDeclaration,
+        logFoodConsumptionDeclaration,
+        logExerciseDeclaration,
+        logHydrationDeclaration,
+        logWeightDeclaration,
+        getFitnessSummaryDeclaration,
+      ] }],
+    },
+    history: chatHistory,
   });
 
   const promptParts: Part[] = [];
@@ -357,15 +358,15 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
   const sanitizedPrompt = prompt.replace(/<\/user_input>/gi, '');
   promptParts.push({ text: `<user_input>\n${sanitizedPrompt}\n</user_input>` });
 
-  const streamResult = await chat.sendMessageStream(promptParts);
+  const streamResult = await chat.sendMessageStream({ message: promptParts });
 
   // Recursive tool-call loop (max depth 5) — fixes M-8 chained tool call limitation
   const MAX_TOOL_DEPTH = 5;
   let toolCallDepth = 0;
 
   const processStream = async function* (stream: typeof streamResult): AsyncGenerator<string> {
-    for await (const chunk of stream.stream) {
-      const calls = typeof chunk.functionCalls === 'function' ? chunk.functionCalls() : chunk.functionCalls;
+    for await (const chunk of stream) {
+      const calls = chunk.functionCalls;
       if (calls && calls.length > 0) {
         // M-7 Fix: Handle ALL function calls in the response, not just the first
         for (const call of calls) {
@@ -374,20 +375,20 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
             const macroData = await fetchMacros(args.ingredient_names || []);
 
             // Send the function response back to the model
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "get_ingredients_macros",
                 response: macroData
               }
-            }]);
+            }] });
 
             // Recursively process the follow-up stream for chained tool calls
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           } else if (call.name === "log_food_consumption") {
@@ -398,19 +399,19 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
             yield `\n\n___TOOL_CALL_LOG_FOOD___${JSON.stringify(args)}\n\n`;
 
             // Send the function response back to the model
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "log_food_consumption",
                 response: { status: "success", message: `Successfully logged ${args.food_name}` }
               }
-            }]);
+            }] });
 
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           } else if (call.name === "log_exercise") {
@@ -420,19 +421,19 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
             // Yield a special UI token so the client can persist the exercise
             yield `\n\n___TOOL_CALL_LOG_EXERCISE___${JSON.stringify(args)}\n\n`;
 
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "log_exercise",
                 response: { status: "success", message: `Successfully logged ${args.exercise_name} (${args.duration_minutes} min, ${args.calories_burned} kcal burned)` }
               }
-            }]);
+            }] });
 
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           } else if (call.name === "log_hydration") {
@@ -442,19 +443,19 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
             // Yield a special UI token so the client can persist the hydration
             yield `\n\n___TOOL_CALL_LOG_HYDRATION___${JSON.stringify(args)}\n\n`;
 
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "log_hydration",
                 response: { status: "success", message: `Successfully logged ${args.amount_ml}ml water intake` }
               }
-            }]);
+            }] });
 
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           } else if (call.name === "log_weight") {
@@ -464,19 +465,19 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
             // Yield a special UI token so the client can persist the weight
             yield `\n\n___TOOL_CALL_LOG_WEIGHT___${JSON.stringify(args)}\n\n`;
 
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "log_weight",
                 response: { status: "success", message: `Successfully logged weight: ${args.weight_kg} kg` }
               }
-            }]);
+            }] });
 
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           } else if (call.name === "get_fitness_summary") {
@@ -507,25 +508,39 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
               }
             }
 
-            const followUpStream = await chat.sendMessageStream([{
+            const followUpStream = await chat.sendMessageStream({ message: [{
               functionResponse: {
                 name: "get_fitness_summary",
                 response: summaryData
               }
-            }]);
+            }] });
 
             if (toolCallDepth < MAX_TOOL_DEPTH) {
               toolCallDepth++;
               yield* processStream(followUpStream);
             } else {
-              for await (const followUpChunk of followUpStream.stream) {
-                if (followUpChunk.text) yield followUpChunk.text();
+              for await (const followUpChunk of followUpStream) {
+                if (followUpChunk.text) yield followUpChunk.text;
               }
             }
           }
         }
-      } else if (chunk.text) {
-        yield chunk.text();
+      } else {
+        // Handle native thinking parts from Gemini 3.5 Flash
+        const candidate = chunk.candidates?.[0];
+        if (candidate?.content?.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.thought && part.text) {
+              // Wrap native thoughts in <thought> tags for client parser compatibility
+              yield `<thought>\n${part.text}\n</thought>\n`;
+            } else if (part.text) {
+              yield part.text;
+            }
+          }
+        } else if (chunk.text) {
+          // Fallback for chunks without detailed part info
+          yield chunk.text;
+        }
       }
     }
   };

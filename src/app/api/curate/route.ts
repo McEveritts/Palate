@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getHouseholdId } from "@/lib/household";
 import matter from 'gray-matter';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
 
 export async function GET() {
   return NextResponse.json(
-    { success: false, error: 'Use POST to trigger curation' },
+    { success: false, error: 'Method Not Allowed' },
     { status: 405 }
   );
 }
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     // OR an authenticated user session. Never allow unauthenticated access.
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get('authorization');
-    const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isCronAuth = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
 
     const session = await getServerSession(authOptions).catch(() => null);
     const userId = session?.user ? session.user.id : null;
@@ -72,9 +72,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Prompt Sage to generate new curated recipes
-    const model = genAI.getGenerativeModel({
-      model: "gemma-4-31b-it",
-      systemInstruction: `You are Sage, a MasterChef-level digital sous-chef and culinary educator. 
+    const curateSystemInstruction = `You are Sage, a MasterChef-level digital sous-chef and culinary educator. 
 Generate exactly 3 unique, highly appealing recipes that share a cohesive thematic thesis for this week's curation.
 
 CRITICAL REQUIREMENTS:
@@ -122,13 +120,20 @@ II. **[Step Title]**
 ### 💡 Chef's Additions & Troubleshooting
 
 *   **[Issue or Tip Name]:** [Explanation and solution]
-*   **[Textural Contrast]:** [Suggestion for plating or garnish]`
-    });
+*   **[Textural Contrast]:** [Suggestion for plating or garnish]`;
 
     const prompt = "Generate this week's 3 featured curated recipes. The first recipe must be the Hero main dish (including the Master's-level editorial intro). The remaining two recipes MUST be elevated side dishes that pair perfectly and can be served alongside the Hero main dish.";
-    
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+
+    const ai = createGenAIClient();
+    const result = await ai.models.generateContent({
+      model: SAGE_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction: curateSystemInstruction,
+        ...SAGE_JSON_THINKING_CONFIG,
+      },
+    });
+    const text = result.text || '';
 
     // Log the raw AI output for debugging purposes
     if (process.env.NODE_ENV !== 'test') {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { globalMacroCache, MacroData } from '@/lib/macroCache';
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
 import fs, { mkdir } from 'fs/promises';
 import path from 'path';
 
@@ -159,12 +160,7 @@ export async function GET(req: Request) {
       console.warn(`[USDA API Error]: Request failed for "${trimmedIngredient}". Triggering Gemma fallback.`, error);
 
       try {
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
-        // M-16: Guard against missing API key instead of non-null assertion
-        const geminiKey = process.env.GEMINI_API_KEY;
-        if (!geminiKey) throw new Error('GEMINI_API_KEY not configured');
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
+        const ai = createGenAIClient();
 
         // M-17: Sanitize ingredient to prevent prompt injection
         const sanitized = trimmedIngredient.replace(/["\\]/g, '').slice(0, 100);
@@ -173,8 +169,14 @@ export async function GET(req: Request) {
 Return ONLY a valid JSON object matching this exact schema, with no markdown formatting or text:
 {"calories": <number>, "protein": <number>, "carbs": <number>, "fat": <number>}`;
 
-        const result = await model.generateContent(prompt);
-        let text = result.response.text().trim();
+        const result = await ai.models.generateContent({
+          model: SAGE_MODEL,
+          contents: prompt,
+          config: {
+            ...SAGE_JSON_THINKING_CONFIG,
+          },
+        });
+        let text = (result.text || '').trim();
 
         // Clean potential markdown fences
         text = text.replace(/^```(json)?/i, '').replace(/```$/, '').trim();

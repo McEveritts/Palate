@@ -1,7 +1,33 @@
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { SAGE_MODEL, SAGE_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
+
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { decryptKey } from "@/lib/encryption";
 
 export async function POST(req: Request) {
-  const clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+  const session = await getServerSession(authOptions).catch(() => null);
+  const userId = session?.user ? session.user.id : null;
+
+  let clientApiKey = req.headers.get("x-gemini-api-key") || undefined;
+
+  if (!clientApiKey && userId) {
+    const config = await prisma.userConfig.findUnique({
+      where: { userId }
+    });
+    if (config?.encryptedGcpKey && config.iv && config.authTag) {
+      clientApiKey = decryptKey(config.encryptedGcpKey, config.iv, config.authTag);
+    }
+  }
+
+  // Unauthenticated guests must provide their own API key
+  if (!userId && !clientApiKey) {
+    return new Response(JSON.stringify({ error: "Unauthorized. Guest users must provide their own Gemini API key." }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const apiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
 
   if (!apiKey) {
@@ -11,7 +37,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const ai = createGenAIClient(apiKey);
 
   let body;
   try {
@@ -40,14 +66,11 @@ export async function POST(req: Request) {
     const systemInstruction = `You are a Zero-Waste Culinary Specialist.
 The user will provide a list of random ingredients, or an image of ingredients in their fridge.
 Your goal is to synthesize a cohesive, delicious recipe that uses these specific ingredients to prevent food waste.
-Always wrap your reasoning in <thought> tags before answering. Output the final recipe in Palate's standard Markdown format with YAML frontmatter.${unitInstruction}`;
+Output the final recipe in Palate's standard Markdown format with YAML frontmatter.${unitInstruction}`;
 
-    const model = genAI.getGenerativeModel({
-      model: "gemma-4-31b-it",
-      systemInstruction
-    });
+    // promptParts are built below, then passed to generateContentStream
 
-    const promptParts: Part[] = [];
+    const promptParts: { inlineData?: { data: string; mimeType: string }; text?: string }[] = [];
     if (image) {
       const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
       if (mimeTypeMatch) {
@@ -66,13 +89,31 @@ Always wrap your reasoning in <thought> tags before answering. Output the final 
        promptParts.push({ text: "What recipe can I make to use up these ingredients before they go bad?" });
     }
 
-    const result = await model.generateContentStream(promptParts);
+    const stream = await ai.models.generateContentStream({
+      model: SAGE_MODEL,
+      contents: [{ role: 'user', parts: promptParts }],
+      config: {
+        systemInstruction,
+        ...SAGE_THINKING_CONFIG,
+      },
+    });
 
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            controller.enqueue(new TextEncoder().encode(chunk.text()));
+          for await (const chunk of stream) {
+            const candidate = chunk.candidates?.[0];
+            if (candidate?.content?.parts) {
+              for (const part of candidate.content.parts) {
+                if (part.thought && part.text) {
+                  controller.enqueue(new TextEncoder().encode(`<thought>\n${part.text}\n</thought>\n`));
+                } else if (part.text) {
+                  controller.enqueue(new TextEncoder().encode(part.text));
+                }
+              }
+            } else if (chunk.text) {
+              controller.enqueue(new TextEncoder().encode(chunk.text));
+            }
           }
           controller.close();
         } catch (streamError) {

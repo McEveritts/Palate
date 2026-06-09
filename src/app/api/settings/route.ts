@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         // Live verify key validity with Google API before saving
         try {
           const testRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${geminiApiKey.trim()}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey.trim()}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

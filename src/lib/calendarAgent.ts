@@ -1,5 +1,7 @@
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from "@google/generative-ai";
+import { Type } from "@google/genai";
+import type { FunctionDeclaration } from "@google/genai";
 import { scheduleMeal, getScheduledMeals, moveScheduledMeal, cancelScheduledMeal } from "../app/actions";
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from './ai/model-config';
 
 // Weekday indexes
 const WEEKDAYS: { [key: string]: number } = {
@@ -128,26 +130,26 @@ export const calendarToolsDeclarations: FunctionDeclaration[] = [
     name: "schedule_meal",
     description: "Schedules a meal with a specific recipe, date, meal type, and optional planned yield and parent meal ID.",
     parameters: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
         recipeId: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The unique ID or slug of the recipe to schedule."
         },
         dateStr: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The date to schedule (e.g. 'YYYY-MM-DD' or relative statements like 'tomorrow')."
         },
         mealType: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The meal type. Must be 'Breakfast', 'Lunch', 'Dinner', or 'Snack'."
         },
         plannedYield: {
-          type: SchemaType.NUMBER,
+          type: Type.NUMBER,
           description: "Portions or yield planned (optional, defaults to 1.0)."
         },
         parentMealId: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "Parent meal ID for leftovers tracking (optional)."
         }
       },
@@ -158,14 +160,14 @@ export const calendarToolsDeclarations: FunctionDeclaration[] = [
     name: "get_scheduled_meals",
     description: "Retrieves scheduled meals within a specific date range.",
     parameters: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
         startDateStr: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "Start date of the range (e.g. 'YYYY-MM-DD' or relative like 'today')."
         },
         endDateStr: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "End date of the range (e.g. 'YYYY-MM-DD' or relative like 'next Friday')."
         }
       },
@@ -176,18 +178,18 @@ export const calendarToolsDeclarations: FunctionDeclaration[] = [
     name: "move_scheduled_meal",
     description: "Moves an already scheduled meal to a new date and/or changes its meal type.",
     parameters: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
         mealId: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The unique ID of the scheduled meal to update."
         },
         newDateStr: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The new date (e.g. 'YYYY-MM-DD' or relative statements)."
         },
         newMealType: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The new meal type (e.g. 'Breakfast', 'Lunch', 'Dinner', 'Snack')."
         }
       },
@@ -198,10 +200,10 @@ export const calendarToolsDeclarations: FunctionDeclaration[] = [
     name: "cancel_scheduled_meal",
     description: "Cancels/deletes a scheduled meal using its unique ID.",
     parameters: {
-      type: SchemaType.OBJECT,
+      type: Type.OBJECT,
       properties: {
         mealId: {
-          type: SchemaType.STRING,
+          type: Type.STRING,
           description: "The unique ID of the scheduled meal to cancel."
         }
       },
@@ -246,8 +248,6 @@ You have access to tools:
 - cancel_scheduled_meal(mealId)
 
 Always execute tool calls using absolute date formats (YYYY-MM-DD). If you need to make a relative date absolute, do so inside your thought process first.
-You MUST begin every single response with a <thought> tag. Within <thought> ... </thought> tags, perform all calculations, resolve relative dates to absolute dates, select the correct tool, and format your thoughts with elegant precision.
-Only output the tool call or the final response after the </thought> tag.
 `;
 }
 
@@ -294,33 +294,32 @@ export async function runCalendarAgent(
 
   const baseDate = options.baseDate || new Date();
   const timeZoneOffset = options.timeZoneOffset || "-04:00";
-  const modelName = options.modelName || "gemma-4-31b-it";
-
   const systemInstruction = getCalendarSystemInstructions(baseDate, timeZoneOffset);
-  const genAI = new GoogleGenerativeAI(finalApiKey);
-  
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    systemInstruction,
-    generationConfig: { temperature: 0.1 },
-    tools: [{ functionDeclarations: calendarToolsDeclarations }]
+  const ai = createGenAIClient(finalApiKey);
+
+  const chat = ai.chats.create({
+    model: SAGE_MODEL,
+    config: {
+      systemInstruction,
+      temperature: 0.1,
+      ...SAGE_JSON_THINKING_CONFIG,
+      tools: [{ functionDeclarations: calendarToolsDeclarations }],
+    },
   });
 
-  const chat = model.startChat();
-  
   // Step 1: Send the user prompt to the model
-  const result = await chat.sendMessage(prompt);
-  const textContent = result.response.text();
+  const result = await chat.sendMessage({ message: prompt });
+  const textContent = result.text || '';
   
   // Extract preserved thoughts from the output
   const thoughtMatch = textContent.match(/<thought>([\s\S]*?)<\/thought>/);
   const thought = thoughtMatch ? thoughtMatch[1].trim() : "";
   
-  const functionCalls = result.response.functionCalls();
+  const functionCalls = result.functionCalls;
   
   if (functionCalls && functionCalls.length > 0) {
     const call = functionCalls[0];
-    const name = call.name;
+    const name = call.name || '';
     const args = call.args as unknown as CalendarToolArgs;
     
     let actionResult: unknown;
@@ -365,14 +364,11 @@ export async function runCalendarAgent(
       }
 
       // Step 2: Feed function execution response back to model to get final natural language explanation
-      const followUp = await chat.sendMessage([{
-        functionResponse: {
-          name,
-          response: actionResult as Record<string, unknown>
-        }
-      }]);
+      const followUp = await chat.sendMessage({
+        message: [{ functionResponse: { name, response: actionResult as Record<string, unknown> } }]
+      });
 
-      const followUpText = followUp.response.text();
+      const followUpText = followUp.text || '';
       // Clean up the text representation if needed
       const cleanResponse = followUpText.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim();
 

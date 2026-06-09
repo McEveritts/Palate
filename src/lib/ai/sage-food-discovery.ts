@@ -12,7 +12,7 @@
  *   - Food Discovery      → THIS FILE ← NEW
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from './model-config';
 import fs from 'fs/promises';
 import path from 'path';
 import { globalMacroCache } from '../macroCache';
@@ -133,14 +133,7 @@ export async function estimateFoodNutrition(
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(finalApiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemma-4-31b-it',
-      systemInstruction: FOOD_DISCOVERY_SYSTEM_PROMPT,
-      generationConfig: {
-        temperature: 0.3, // Low temperature for nutritional precision
-      },
-    });
+    const ai = createGenAIClient(finalApiKey);
 
     // Sanitize input to prevent prompt injection
     const sanitized = query
@@ -148,10 +141,16 @@ export async function estimateFoodNutrition(
       .replace(/\b(ignore|override|system|instruction|prompt)\b/gi, '')
       .slice(0, 200);
 
-    const result = await model.generateContent(
-      `Respond ONLY with a JSON array, no other text. Estimate the full nutritional profile for: "${sanitized}"`
-    );
-    const text = result.response.text().trim();
+    const result = await ai.models.generateContent({
+      model: SAGE_MODEL,
+      contents: `Respond ONLY with a JSON array, no other text. Estimate the full nutritional profile for: "${sanitized}"`,
+      config: {
+        systemInstruction: FOOD_DISCOVERY_SYSTEM_PROMPT,
+        temperature: 0.3, // Low temperature for nutritional precision
+        ...SAGE_JSON_THINKING_CONFIG,
+      },
+    });
+    const text = (result.text || '').trim();
 
     // Robust JSON extraction — Gemma may wrap JSON in markdown fences or prepend reasoning
     let parsed: SageRawEstimate[];

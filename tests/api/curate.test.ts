@@ -11,14 +11,33 @@ vi.mock('fs/promises', () => ({
   }
 }));
 
+vi.mock('@/lib/household', () => ({
+  getHouseholdId: vi.fn().mockResolvedValue(null)
+}));
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    recipe: {
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue({}),
+      upsert: vi.fn().mockResolvedValue({})
+    }
+  }
+}));
+
 const mockGenerateContent = vi.fn();
+const mockGetServerSession = vi.fn();
+
+vi.mock('next-auth/next', () => ({
+  getServerSession: () => mockGetServerSession()
+}));
 
 vi.mock('@google/generative-ai', () => {
   return {
     GoogleGenerativeAI: class {
       getGenerativeModel() {
         return {
-          generateContent: mockGenerateContent
+          generateContent: (...args: any[]) => mockGenerateContent(...args)
         };
       }
     }
@@ -29,6 +48,8 @@ describe('POST /api/curate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.GEMINI_API_KEY = "test-key";
+    process.env.CRON_SECRET = "test-cron-secret";
+    mockGetServerSession.mockResolvedValue({ user: { id: "test-user-id" } });
   });
 
   it('should successfully split recipes using standard delimiter', async () => {
@@ -137,45 +158,14 @@ Hero description
     expect(json.error).toBe('An unexpected error occurred during curation.');
   });
 
-  it('should successfully run curation with a GET request', async () => {
-    mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
----
-title: "Hero Main GET"
-tags: ["main", "Curated By Sage"]
-macros: "Calories: 500 | Protein: 30g | Carbs: 50g | Fat: 15g"
----
-# 🥩 Hero Main GET 🥩
-Hero description
-|||RECIPE_SPLIT|||
----
-title: "Side One GET"
-tags: ["side", "Curated By Sage"]
-macros: "Calories: 200 | Protein: 5g | Carbs: 20g | Fat: 5g"
----
-# 🥗 Side One GET 🥗
-Side description
-|||RECIPE_SPLIT|||
----
-title: "Side Two GET"
-tags: ["side", "Curated By Sage"]
-macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
----
-# 🍤 Side Two GET 🍤
-Side description
-`
-      }
-    });
-
+  it('should fail curation with a GET request (405 Method Not Allowed)', async () => {
     const req = new Request('http://localhost/api/curate', { method: 'GET' });
-    const res = await GET(req);
+    const res = await GET();
     const json = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(json.success).toBe(true);
-    expect(json.message).toContain('generated 3 new curated recipes');
-    expect(fs.writeFile).toHaveBeenCalledTimes(3);
+    expect(res.status).toBe(405);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Method Not Allowed');
   });
 
   it('should strip preamble and thoughts from recipes', async () => {
@@ -228,5 +218,75 @@ Side description
     const thirdCallArgs = vi.mocked(fs.writeFile).mock.calls[2];
     expect(thirdCallArgs[1]).not.toContain('Some side thoughts before the side');
     expect((thirdCallArgs[1] as string).startsWith('---')).toBe(true);
+  });
+
+  it('should reject unauthenticated request if CRON_SECRET and user session are missing', async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
+    process.env.CRON_SECRET = "";
+
+    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Unauthorized');
+  });
+
+  it('should authorize request with correct Cron Bearer token even if no user session is present', async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
+    process.env.CRON_SECRET = "secret-cron";
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => `
+---
+title: "Hero"
+tags: ["main"]
+macros: "Calories: 500"
+---
+# 🥩 Hero
+|||RECIPE_SPLIT|||
+---
+title: "Side One"
+tags: ["side"]
+macros: "Calories: 200"
+---
+# 🥗 Side One
+|||RECIPE_SPLIT|||
+---
+title: "Side Two"
+tags: ["side"]
+macros: "Calories: 150"
+---
+# 🍤 Side Two
+`
+      }
+    });
+
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer secret-cron' }
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+  });
+
+  it('should reject request with incorrect Cron Bearer token if no user session is present', async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
+    process.env.CRON_SECRET = "secret-cron";
+
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer wrong-cron' }
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Unauthorized');
   });
 });

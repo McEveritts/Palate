@@ -89,10 +89,18 @@ export default withAuth(
         const { pathname } = req.nextUrl;
         const isApiRoute = pathname.startsWith('/api/');
         if (isApiRoute) {
-          // Allow guest access to Sage AI API routes
+          // Allow guest access to Sage AI API routes ONLY if they provide their own API key
           if (pathname.startsWith('/api/sage')) {
             const isGuest = req.cookies.get("palate_guest")?.value === "true";
-            return !!token || isGuest;
+            const hasApiKey = !!req.headers.get("x-gemini-api-key");
+            return !!token || (isGuest && hasApiKey);
+          }
+          // Allow access to /api/curate if token exists or valid CRON_SECRET authorization header is present
+          if (pathname === '/api/curate') {
+            const authHeader = req.headers.get('authorization');
+            const cronSecret = process.env.CRON_SECRET;
+            const isCronAuth = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
+            return !!token || isCronAuth;
           }
           return !!token;
         }
@@ -115,6 +123,6 @@ export const config = {
     "/upload/:path*",
     "/settings",
     "/calendar",
-    "/api/((?!auth|curate).*)",
+    "/api/((?!auth).*)",
   ],
 };

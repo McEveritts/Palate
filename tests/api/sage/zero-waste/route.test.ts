@@ -1,6 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../../../../src/app/api/sage/zero-waste/route';
 
+const mockGetServerSession = vi.fn();
+vi.mock('next-auth/next', () => ({
+  getServerSession: () => mockGetServerSession()
+}));
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    userConfig: {
+      findUnique: vi.fn().mockResolvedValue(null)
+    }
+  }
+}));
+
 vi.mock('@google/generative-ai', () => {
   return {
     GoogleGenerativeAI: class {
@@ -18,6 +31,7 @@ vi.mock('@google/generative-ai', () => {
 describe('Zero Waste API', () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key";
+    mockGetServerSession.mockResolvedValue({ user: { id: "test-user" } });
   });
 
   it('returns a stream response', async () => {
@@ -57,5 +71,26 @@ describe('Zero Waste API', () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(500);
+  });
+
+  it('returns 401 when user is guest and no custom key is provided', async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
+    const req = new Request('http://localhost/api/sage/zero-waste', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: 'test' })
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 200 when user is guest but custom key is provided in headers', async () => {
+    mockGetServerSession.mockResolvedValueOnce(null);
+    const req = new Request('http://localhost/api/sage/zero-waste', {
+      method: 'POST',
+      headers: { 'x-gemini-api-key': 'user-provided-key' },
+      body: JSON.stringify({ prompt: 'test' })
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
   });
 });
