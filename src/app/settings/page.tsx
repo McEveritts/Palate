@@ -420,7 +420,7 @@ export default function SettingsPage() {
   if (!mounted) return null;
 
   return (
-    <div className="w-full flex-1 p-8 md:p-12 max-w-4xl mx-auto">
+    <div className="w-full flex-1 p-4 sm:p-8 md:p-12 max-w-4xl mx-auto">
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-white tracking-tight">Settings</h1>
         <p className="text-slate-400 mt-2 text-lg">Manage your account and AI configuration.</p>
@@ -428,15 +428,15 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-8">
         {/* User Profile Section */}
-        <section className="glass-panel p-8 rounded-3xl border border-white/5">
+        <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5">
           <div className="flex items-center gap-3 mb-6">
             <User className="text-indigo-400 w-6 h-6" />
             <h2 className="text-2xl font-bold text-white">User Profile</h2>
           </div>
 
           {session?.user ? (
-            <div className="flex items-center justify-between bg-black/20 p-6 rounded-2xl border border-white/5">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center justify-between bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 gap-6">
+              <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-4 sm:gap-6">
                 {session.user.image ? (
                   <Image 
                     src={session.user.image} 
@@ -461,14 +461,14 @@ export default function SettingsPage() {
                   document.cookie = "palate_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                   signOut({ callbackUrl: '/login' });
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </button>
             </div>
           ) : (
-            <div className="bg-black/20 p-6 rounded-2xl border border-white/5 text-center">
+            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 text-center">
               <p className="text-slate-400 mb-4">You are currently using Palate in Guest Mode.</p>
               <button
                 onClick={() => {
@@ -486,7 +486,7 @@ export default function SettingsPage() {
 
         {/* Household Section */}
         {session?.user && (
-          <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+          <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-500/20 transition-colors" />
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
             
@@ -496,13 +496,13 @@ export default function SettingsPage() {
             </div>
 
             {householdLoading ? (
-              <div className="bg-black/20 p-6 rounded-2xl border border-white/5 text-center">
+              <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 text-center">
                 <p className="text-slate-400 animate-pulse">Loading household...</p>
               </div>
             ) : household ? (
               <div className="flex flex-col gap-6">
                 {/* Household Name */}
-                <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">Kitchen Name</h3>
                     <div className="flex items-center gap-2">
@@ -517,7 +517,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   {isEditingName ? (
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <input
                         type="text"
                         value={householdNameEdit}
@@ -526,18 +526,20 @@ export default function SettingsPage() {
                         maxLength={100}
                         onKeyDown={(e) => e.key === 'Enter' && handleRenameHousehold()}
                       />
-                      <button
-                        onClick={handleRenameHousehold}
-                        className="px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => { setIsEditingName(false); setHouseholdNameEdit(household.name); }}
-                        className="px-4 py-2.5 text-slate-400 hover:text-white transition-colors"
-                      >
-                        Cancel
-                      </button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={handleRenameHousehold}
+                          className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all text-center cursor-pointer"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setIsEditingName(false); setHouseholdNameEdit(household.name); }}
+                          className="flex-1 sm:flex-initial px-4 py-2.5 text-slate-400 hover:text-white transition-colors text-center border border-white/5 rounded-xl bg-white/5 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -550,7 +552,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Members */}
-                <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
                   <h3 className="text-lg font-semibold text-white mb-4">Members</h3>
                   <div className="flex flex-wrap gap-4">
                     {household.members.map((member) => (
@@ -589,7 +591,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Invite Partner */}
-                <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -602,7 +604,7 @@ export default function SettingsPage() {
                     </div>
                     <button
                       onClick={handleCreateInvite}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white font-bold rounded-xl transition-all shadow-lg"
+                      className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white font-bold rounded-xl transition-all shadow-lg"
                     >
                       <UserPlus className="w-4 h-4" />
                       Generate Code
@@ -615,14 +617,14 @@ export default function SettingsPage() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center gap-3 bg-slate-900/80 p-4 rounded-xl border border-indigo-500/20 mt-3"
+                        className="flex flex-col sm:flex-row items-center gap-3 bg-slate-900/80 p-4 rounded-xl border border-indigo-500/20 mt-3"
                       >
-                        <code className="text-2xl font-mono font-bold tracking-[0.3em] text-indigo-300 flex-1">
+                        <code className="text-xl sm:text-2xl font-mono font-bold tracking-[0.3em] text-indigo-300 flex-1">
                           {inviteCode}
                         </code>
                         <button
                           onClick={handleCopyInvite}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg transition-colors border border-indigo-500/20 font-medium text-sm"
+                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg transition-colors border border-indigo-500/20 font-medium text-sm"
                         >
                           {inviteCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                           {inviteCopied ? "Copied!" : "Copy"}
@@ -633,12 +635,12 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Redeem Invite */}
-                <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
                   <h3 className="text-lg font-semibold text-white mb-2">Join Another Kitchen</h3>
                   <p className="text-slate-400 text-sm mb-4">
                     Enter an invite code from your partner to join their kitchen.
                   </p>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="text"
                       value={redeemCode}
@@ -651,7 +653,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleRedeemInvite}
                       disabled={redeemCode.length !== 8}
-                      className="px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg"
+                      className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg text-center flex justify-center items-center cursor-pointer"
                     >
                       Join
                     </button>
@@ -665,7 +667,7 @@ export default function SettingsPage() {
 
                 {/* Leave Household */}
                 {household.members.length > 1 && (
-                  <div className="bg-black/20 p-6 rounded-2xl border border-rose-500/10">
+                  <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-rose-500/10">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div>
                         <h3 className="text-lg font-semibold text-rose-300 flex items-center gap-2">
@@ -678,7 +680,7 @@ export default function SettingsPage() {
                       </div>
                       <button
                         onClick={handleLeaveHousehold}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium"
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 hover:text-rose-200 rounded-xl transition-colors border border-rose-500/30 font-medium cursor-pointer"
                       >
                         <DoorOpen className="w-4 h-4" />
                         Leave Kitchen
@@ -693,13 +695,13 @@ export default function SettingsPage() {
 
         {/* Fitness Profile Section */}
         {session?.user && (
-          <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+          <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
             <div className="flex items-center gap-3 mb-6">
               <Activity className="text-emerald-400 w-6 h-6 animate-pulse" />
               <h2 className="text-2xl font-bold text-white">Fitness Profile</h2>
             </div>
-            <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
               {fitnessProfile ? (
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex-1">
@@ -714,7 +716,7 @@ export default function SettingsPage() {
                   </div>
                   <a
                     href="/diary"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 text-center"
                   >
                     <Activity className="w-4 h-4" />
                     Open Sage Fitness
@@ -728,7 +730,7 @@ export default function SettingsPage() {
                   </div>
                   <a
                     href="/diary"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 text-center"
                   >
                     <Activity className="w-4 h-4" />
                     Set Up in Sage Fitness
@@ -740,14 +742,14 @@ export default function SettingsPage() {
         )}
 
         {/* Display & Units Section */}
-        <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+        <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
           <div className="flex items-center gap-3 mb-6">
             <Sparkles className="text-indigo-400 w-6 h-6 animate-pulse" />
             <h2 className="text-2xl font-bold text-white">Display & Units</h2>
           </div>
 
-          <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-white">Measurement System</h3>
               <p className="text-slate-400 mt-1 text-sm leading-relaxed">
@@ -757,10 +759,10 @@ export default function SettingsPage() {
             </div>
             
             {/* Sliding Toggle Control */}
-            <div className="flex items-center gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
+            <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
               <button
                 onClick={() => handleToggleSystem('metric')}
-                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
                   measurementSystem === 'metric' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -776,7 +778,7 @@ export default function SettingsPage() {
               
               <button
                 onClick={() => handleToggleSystem('imperial')}
-                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
                   measurementSystem === 'imperial' ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -794,7 +796,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Google Calendar Sync Section */}
-        <section className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+        <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-500/20 transition-colors" />
           
@@ -805,7 +807,7 @@ export default function SettingsPage() {
 
           {!session?.user ? (
             /* Guest Mode */
-            <div className="bg-black/20 p-6 rounded-2xl border border-white/5 text-center relative overflow-hidden flex flex-col items-center py-10">
+            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 text-center relative overflow-hidden flex flex-col items-center py-10">
               <div className="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center border border-white/10 mb-4 backdrop-blur-md">
                 <Lock className="text-slate-400 w-8 h-8" />
               </div>
@@ -826,7 +828,7 @@ export default function SettingsPage() {
             </div>
           ) : !hasCalendarScope ? (
             /* Logged in, scope not granted */
-            <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <AlertCircle className="text-amber-400 w-5 h-5 animate-bounce" />
@@ -838,7 +840,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={handleAuthorizeGoogleCalendar}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold transition-all shadow-lg border border-indigo-500/30"
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold transition-all shadow-lg border border-indigo-500/30 text-center cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
                 Authorize Google Calendar
@@ -848,17 +850,17 @@ export default function SettingsPage() {
             /* Logged in, fully authorized */
             <div className="flex flex-col gap-6">
               {/* Enable Toggle */}
-              <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">Enable Calendar Sync</h3>
                   <p className="text-slate-400 mt-1 text-sm leading-relaxed">
                     When enabled, scheduled meals are pushed dynamically to your selected Google Calendar.
                   </p>
                 </div>
-                <div className="flex items-center gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
+                <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
                   <button
                     onClick={() => handleToggleCalendarSync(true)}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
                       calendarSyncEnabled ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                     }`}
                   >
@@ -873,7 +875,7 @@ export default function SettingsPage() {
                   </button>
                   <button
                     onClick={() => handleToggleCalendarSync(false)}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative z-10 ${
+                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
                       !calendarSyncEnabled ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
                     }`}
                   >
@@ -892,14 +894,14 @@ export default function SettingsPage() {
               {calendarSyncEnabled && (
                 <>
                   {/* Select Target Calendar */}
-                  <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-white">Target Calendar</h3>
                       <p className="text-slate-400 mt-1 text-sm leading-relaxed">
                         Choose which Google Calendar to populate with your meals. Sage can create a dedicated calendar automatically.
                       </p>
                     </div>
-                    <div className="w-full md:w-auto min-w-[280px]">
+                    <div className="w-full md:w-auto min-w-0 md:min-w-[280px]">
                       <select
                         value={selectedCalendarId}
                         onChange={(e) => handleSelectCalendar(e.target.value)}
@@ -918,18 +920,18 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Backfill Calendar Button */}
-                  <div className="bg-black/20 p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-white">Sync Existing Meal Plans</h3>
                       <p className="text-slate-400 mt-1 text-sm leading-relaxed">
                         Synchronize all scheduled upcoming meals in your database with your Google Calendar now.
                       </p>
                     </div>
-                    <div className="flex flex-col gap-2 w-full md:w-auto items-end">
+                    <div className="flex flex-col gap-2 w-full md:w-auto items-stretch md:items-end">
                       <button
                         onClick={handleBackfillSync}
                         disabled={backfilling}
-                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[200px]"
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[200px] cursor-pointer"
                       >
                         <RefreshCw className={`w-4 h-4 ${backfilling ? 'animate-spin' : ''}`} />
                         {backfilling ? 'Syncing...' : 'Sync Upcoming Meals'}
@@ -948,13 +950,13 @@ export default function SettingsPage() {
         </section>
 
         {/* SageAI Configuration Section */}
-        <section className="glass-panel p-8 rounded-3xl border border-white/5">
+        <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5">
           <div className="flex items-center gap-3 mb-6">
             <Key className="text-fuchsia-400 w-6 h-6" />
             <h2 className="text-2xl font-bold text-white">SageAI Configuration</h2>
           </div>
 
-          <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+          <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
             <p className="text-slate-400 mb-6 max-w-2xl">
               Palate requires a Google Gemini API Key to synthesize recipes and perform zero-waste analysis. 
               This key is stored <strong className="text-white">securely in your encrypted cloud vault</strong> and is never exposed in plain text.
@@ -974,7 +976,7 @@ export default function SettingsPage() {
                   </span>
                 )}
               </label>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="api-key"
                   type="password"
@@ -995,7 +997,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSaveKey}
                   disabled={saving || (session?.user ? false : keyInput === geminiApiKey)}
-                  className="px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[140px]"
+                  className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[140px] text-center justify-center flex items-center cursor-pointer"
                 >
                   {saving ? 'Verifying...' : 'Save & Verify'}
                 </button>
