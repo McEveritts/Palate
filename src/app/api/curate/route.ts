@@ -10,27 +10,32 @@ import matter from 'gray-matter';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-export async function GET(req: Request) {
-  return POST(req);
+export async function GET() {
+  return NextResponse.json(
+    { success: false, error: 'Use POST to trigger curation' },
+    { status: 405 }
+  );
 }
 
 export async function POST(req: Request) {
   try {
-    // Authenticate cron requests via CRON_SECRET
+    // Authentication: require EITHER a valid CRON_SECRET bearer token
+    // OR an authenticated user session. Never allow unauthenticated access.
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const authHeader = req.headers.get('authorization');
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    const authHeader = req.headers.get('authorization');
+    const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+    const session = await getServerSession(authOptions).catch(() => null);
+    const userId = session?.user ? session.user.id : null;
+
+    if (!isCronAuth && !userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     // Determine if we're in DB mode or filesystem mode
-    const session = await getServerSession(authOptions).catch(() => null);
-    const userId = session?.user ? session.user.id : null;
     const householdId = userId ? await getHouseholdId(userId) : null;
 
     const currentDir = path.join(process.cwd(), 'vault', 'curated', 'current');
