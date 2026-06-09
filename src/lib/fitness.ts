@@ -131,3 +131,65 @@ export function allocateMacros({
     fat: Math.round(fatGrams),
   };
 }
+
+/**
+ * Try to parse the weight in grams from a serving size description string.
+ * Example inputs:
+ *  - "1 cheeseburger 60547 (200.0g)" => 200
+ *  - "1 MCDonald's Mac Jr 64742 (135.0g)" => 135
+ *  - "100g" => 100
+ *  - "1 serving (150 g)" => 150
+ *  - "1 serving" => null
+ */
+export function parseServingWeight(servingSize: string | undefined): number | null {
+  if (!servingSize) return null;
+  // Look inside parentheses first
+  const parenMatch = servingSize.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const content = parenMatch[1];
+    const gMatch = content.match(/([\d.]+)\s*g/i);
+    if (gMatch) return parseFloat(gMatch[1]);
+  }
+  // Otherwise try to match any number followed by g
+  const gMatch = servingSize.match(/([\d.]+)\s*g/i);
+  if (gMatch) return parseFloat(gMatch[1]);
+  
+  return null;
+}
+
+/**
+ * Calculates the macro multiplier based on the food details, logging quantity, and unit.
+ *
+ * @param food - Object containing source, name, and servingSize
+ * @param quantity - The numeric value inputted by the user
+ * @param unit - Either 'grams' or 'servings'
+ */
+export function getScaleFactor(
+  food: { source: string; name: string; servingSize?: string },
+  quantity: number,
+  unit: 'grams' | 'servings'
+): number {
+  const isPerServing = food.source === 'sage' || food.name.includes('(Sage Est.)');
+  const servingWeight = parseServingWeight(food.servingSize);
+
+  if (unit === 'grams') {
+    if (isPerServing) {
+      if (servingWeight) {
+        return quantity / servingWeight;
+      }
+      return quantity / 100; // fallback
+    } else {
+      return quantity / 100;
+    }
+  } else {
+    // unit is 'servings'
+    if (isPerServing) {
+      return quantity;
+    } else {
+      if (servingWeight) {
+        return quantity * (servingWeight / 100);
+      }
+      return quantity; // fallback, assume 1 serving = 100g
+    }
+  }
+}

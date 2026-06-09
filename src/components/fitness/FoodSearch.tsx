@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Plus, Utensils, Loader2, Check } from 'lucide-react';
+import { getScaleFactor, parseServingWeight } from '@/lib/fitness';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,17 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
   const [error, setError] = useState<string | null>(null);
   const [selectingMealFor, setSelectingMealFor] = useState<FoodResult | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unit, setUnit] = useState<'grams' | 'servings'>('servings');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset quantity/unit when selecting a different food
+  useEffect(() => {
+    if (selectingMealFor) {
+      setQuantity(1);
+      setUnit('servings');
+    }
+  }, [selectingMealFor]);
 
   // Clean up debounce timer on unmount
   useEffect(() => () => {
@@ -103,20 +114,24 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
   // Log food to diary
   const handleAddFood = useCallback(async (food: FoodResult, mealType: string) => {
     try {
+      const scale = getScaleFactor(food, quantity, unit);
+      const formattedUnit = unit === 'servings' ? (quantity === 1 ? 'serving' : 'servings') : 'g';
+      const displayName = `${food.name} (${quantity}${formattedUnit})`;
+
       const res = await fetch('/api/diary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mealType,
-          customFoodName: food.name,
-          amountConsumed: 100,
-          calories: food.calories,
-          protein: food.protein,
-          carbs: food.carbs,
-          fat: food.fat,
-          fiber: food.fiber ?? 0,
-          sugar: food.sugar ?? 0,
-          sodium: food.sodium ?? 0,
+          customFoodName: displayName,
+          amountConsumed: unit === 'grams' ? quantity : quantity * (parseServingWeight(food.servingSize) || 100),
+          calories: food.calories * scale,
+          protein: food.protein * scale,
+          carbs: food.carbs * scale,
+          fat: food.fat * scale,
+          fiber: (food.fiber ?? 0) * scale,
+          sugar: (food.sugar ?? 0) * scale,
+          sodium: (food.sodium ?? 0) * scale,
         }),
       });
 
@@ -124,13 +139,13 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
 
       setAddedId(food.id);
       setSelectingMealFor(null);
-      onFoodSelected?.({ name: food.name, calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat, source: food.source });
+      onFoodSelected?.({ name: displayName, calories: food.calories * scale, protein: food.protein * scale, carbs: food.carbs * scale, fat: food.fat * scale, source: food.source });
 
       setTimeout(() => setAddedId(null), 2000);
     } catch (err) {
       console.error('[FoodSearch] Log error:', err);
     }
-  }, [onFoodSelected]);
+  }, [onFoodSelected, quantity, unit]);
 
   return (
     <AnimatePresence>
@@ -283,17 +298,46 @@ export default function FoodSearch({ isOpen, onClose, onFoodSelected }: FoodSear
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="relative z-20 border-t border-white/10 bg-slate-900/80 backdrop-blur-3xl p-4"
+                  className="relative z-20 border-t border-white/10 bg-slate-900/80 backdrop-blur-3xl p-4 space-y-4"
                 >
-                  <p className="text-xs text-slate-400 mb-3 text-center">
-                    Log <span className="text-white font-medium">{selectingMealFor.name}</span> as:
-                  </p>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-slate-400 text-center">
+                      Log <span className="text-white font-medium">{selectingMealFor.name}</span>
+                      {selectingMealFor.servingSize && (
+                        <span className="block text-[10px] text-slate-500 mt-0.5">
+                          Serving size: {selectingMealFor.servingSize}
+                        </span>
+                      )}
+                    </p>
+                    
+                    {/* Quantity & Unit Selectors */}
+                    <div className="flex items-center justify-center gap-3 py-1 bg-black/20 rounded-xl max-w-xs mx-auto px-4 border border-white/5">
+                      <span className="text-xs text-slate-400 font-medium">Quantity:</span>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="any"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                        className="w-16 rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-white text-center outline-none focus:border-indigo-500/50"
+                      />
+                      <select
+                        value={unit}
+                        onChange={(e) => setUnit(e.target.value as 'grams' | 'servings')}
+                        className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-slate-300 outline-none focus:border-indigo-500/50 cursor-pointer"
+                      >
+                        <option value="servings">Servings</option>
+                        <option value="grams">Grams</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="flex justify-center gap-2">
                     {MEAL_TYPES.map((mt) => (
                       <button
                         key={mt}
                         onClick={() => handleAddFood(selectingMealFor, mt)}
-                        className={`px-4 py-2 rounded-xl text-xs font-medium border transition-all hover:brightness-125 ${MEAL_COLORS[mt]}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-medium border transition-all hover:brightness-125 cursor-pointer ${MEAL_COLORS[mt]}`}
                       >
                         {mt}
                       </button>

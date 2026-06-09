@@ -4,6 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, X, Loader2, Check, Sparkles, Package, AlertTriangle, ImagePlus } from 'lucide-react';
+import { getScaleFactor, parseServingWeight } from '@/lib/fitness';
 import { useAppStore } from '@/lib/store';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -46,6 +47,16 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
   const [selectingMeal, setSelectingMeal] = useState(false);
   const [added, setAdded] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unit, setUnit] = useState<'grams' | 'servings'>('servings');
+
+  // Reset quantity/unit when selecting a different product
+  useEffect(() => {
+    if (product) {
+      setQuantity(1);
+      setUnit('servings');
+    }
+  }, [product]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -212,20 +223,25 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
   const handleAddToDiary = async (mealType: string) => {
     if (!product) return;
     try {
+      const foodRef = { ...product, source: 'sage' };
+      const scale = getScaleFactor(foodRef, quantity, unit);
+      const formattedUnit = unit === 'servings' ? (quantity === 1 ? 'serving' : 'servings') : 'g';
+      const displayName = `${product.name} (${quantity}${formattedUnit})`;
+
       const res = await fetch('/api/diary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mealType,
-          customFoodName: product.name,
-          amountConsumed: 100,
-          calories: product.calories,
-          protein: product.protein,
-          carbs: product.carbs,
-          fat: product.fat,
-          fiber: product.fiber ?? 0,
-          sugar: product.sugar ?? 0,
-          sodium: product.sodium ?? 0,
+          customFoodName: displayName,
+          amountConsumed: unit === 'grams' ? quantity : quantity * (parseServingWeight(product.servingSize) || 100),
+          calories: product.calories * scale,
+          protein: product.protein * scale,
+          carbs: product.carbs * scale,
+          fat: product.fat * scale,
+          fiber: (product.fiber ?? 0) * scale,
+          sugar: (product.sugar ?? 0) * scale,
+          sodium: (product.sodium ?? 0) * scale,
         }),
       });
 
@@ -419,7 +435,28 @@ export default function MealScanner({ isOpen, onClose, onMealLogged }: MealScann
                         <Check className="h-4 w-4" /> Logged to telemetry diary!
                       </div>
                     ) : selectingMeal ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Quantity & Unit Selectors */}
+                        <div className="flex items-center justify-center gap-2 py-1 bg-black/20 rounded-xl px-3 border border-white/5 max-w-[260px] mx-auto">
+                          <span className="text-[11px] text-slate-400 font-semibold">Qty:</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="any"
+                            value={quantity}
+                            onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                            className="w-12 rounded-lg border border-white/10 bg-black/40 px-1 py-0.5 text-xs text-white text-center outline-none focus:border-indigo-500/50"
+                          />
+                          <select
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value as 'grams' | 'servings')}
+                            className="rounded-lg border border-white/10 bg-black/40 px-1 py-0.5 text-xs text-slate-300 outline-none focus:border-indigo-500/50 cursor-pointer"
+                          >
+                            <option value="servings">Servings</option>
+                            <option value="grams">Grams</option>
+                          </select>
+                        </div>
+
                         <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">Select Meal Time:</p>
                         <div className="flex justify-center gap-2">
                           {MEAL_TYPES.map((mt) => (

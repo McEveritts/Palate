@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScanLine, X, Camera, Loader2, Check, Search, AlertTriangle, Package, ImagePlus } from 'lucide-react';
+import { getScaleFactor, parseServingWeight } from '@/lib/fitness';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,16 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   const [cameraError, setCameraError] = useState(false);
   const [selectingMeal, setSelectingMeal] = useState(false);
   const [added, setAdded] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [unit, setUnit] = useState<'grams' | 'servings'>('servings');
+
+  // Reset quantity/unit when selecting a different product
+  useEffect(() => {
+    if (product) {
+      setQuantity(1);
+      setUnit('servings');
+    }
+  }, [product]);
 
   // ── UPC Lookup ─────────────────────────────────────────────
   const handleLookup = useCallback(async (code?: string) => {
@@ -337,20 +348,25 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
   const handleAddToDiary = useCallback(async (mealType: string) => {
     if (!product) return;
     try {
+      const foodRef = { ...product, source: 'openfoodfacts' };
+      const scale = getScaleFactor(foodRef, quantity, unit);
+      const formattedUnit = unit === 'servings' ? (quantity === 1 ? 'serving' : 'servings') : 'g';
+      const displayName = `${product.name} (${quantity}${formattedUnit})`;
+
       const res = await fetch('/api/diary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mealType,
-          customFoodName: product.name,
-          amountConsumed: 100,
-          calories: product.calories,
-          protein: product.protein,
-          carbs: product.carbs,
-          fat: product.fat,
-          fiber: product.fiber ?? 0,
-          sugar: product.sugar ?? 0,
-          sodium: product.sodium ?? 0,
+          customFoodName: displayName,
+          amountConsumed: unit === 'grams' ? quantity : quantity * (parseServingWeight(product.servingSize) || 100),
+          calories: product.calories * scale,
+          protein: product.protein * scale,
+          carbs: product.carbs * scale,
+          fat: product.fat * scale,
+          fiber: (product.fiber ?? 0) * scale,
+          sugar: (product.sugar ?? 0) * scale,
+          sodium: (product.sodium ?? 0) * scale,
         }),
       });
 
@@ -363,7 +379,7 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
     } catch (err) {
       console.error('[BarcodeScanner] Log error:', err);
     }
-  }, [product, onProductFound]);
+  }, [product, onProductFound, quantity, unit]);
 
   return (
     <AnimatePresence>
@@ -526,11 +542,32 @@ export default function BarcodeScanner({ isOpen, onClose, onProductFound }: Barc
                         <Check className="h-4 w-4" /> Added to diary!
                       </div>
                     ) : selectingMeal ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Quantity & Unit Selectors */}
+                        <div className="flex items-center justify-center gap-2 py-1 bg-black/20 rounded-xl px-3 border border-white/5 max-w-[260px] mx-auto">
+                          <span className="text-[11px] text-slate-400 font-medium">Qty:</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="any"
+                            value={quantity}
+                            onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                            className="w-12 rounded-lg border border-white/10 bg-black/40 px-1 py-0.5 text-xs text-white text-center outline-none focus:border-indigo-500/50"
+                          />
+                          <select
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value as 'grams' | 'servings')}
+                            className="rounded-lg border border-white/10 bg-black/40 px-1 py-0.5 text-xs text-slate-300 outline-none focus:border-indigo-500/50 cursor-pointer"
+                          >
+                            <option value="servings">Servings</option>
+                            <option value="grams">Grams</option>
+                          </select>
+                        </div>
+
                         <p className="text-xs text-slate-400 text-center">Add as:</p>
                         <div className="flex justify-center gap-2">
                           {MEAL_TYPES.map((mt) => (
-                            <button key={mt} onClick={() => handleAddToDiary(mt)} className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all hover:brightness-125 ${MEAL_COLORS[mt]}`}>
+                            <button key={mt} onClick={() => handleAddToDiary(mt)} className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all hover:brightness-125 cursor-pointer ${MEAL_COLORS[mt]}`}>
                               {mt}
                             </button>
                           ))}
