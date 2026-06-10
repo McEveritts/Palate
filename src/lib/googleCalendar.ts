@@ -1,4 +1,9 @@
 import { prisma } from "./db";
+import { Prisma } from "@prisma/client";
+
+type ScheduledMealWithRecipe = Prisma.ScheduledMealGetPayload<{
+  include: { recipe: true };
+}>;
 
 /**
  * Retrieves a valid Google OAuth access token for a given user.
@@ -238,7 +243,11 @@ export async function getOrCreateTargetCalendar(userId: string): Promise<string 
  * Ensures the event title is clean, and places all detailed nutritional breakdown, yields,
  * and deep links inside the event description body.
  */
-export async function syncMealToGoogle(userId: string, mealId: string): Promise<boolean> {
+export async function syncMealToGoogle(
+  userId: string,
+  mealId: string,
+  preloadedMeal?: ScheduledMealWithRecipe | null
+): Promise<boolean> {
   try {
     const accessToken = await getGoogleAccessToken(userId);
     if (!accessToken) return false;
@@ -246,7 +255,7 @@ export async function syncMealToGoogle(userId: string, mealId: string): Promise<
     const calendarId = await getOrCreateTargetCalendar(userId);
     if (!calendarId) return false;
 
-    const meal = await prisma.scheduledMeal.findUnique({
+    const meal = preloadedMeal || await prisma.scheduledMeal.findUnique({
       where: { id: mealId, userId },
       include: { recipe: true },
     });

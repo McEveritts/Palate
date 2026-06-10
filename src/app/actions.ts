@@ -701,7 +701,7 @@ export async function scheduleMeal(
           where: { userId },
         });
         if (config?.googleCalendarSyncEnabled) {
-          await syncMealToGoogle(userId, meal.id);
+          await syncMealToGoogle(userId, meal.id, meal);
         }
       } catch (err) {
         console.error("Failed to sync new scheduled meal to Google Calendar:", err);
@@ -831,7 +831,7 @@ export async function moveScheduledMeal(mealId: string, newDateStr: string, newM
           where: { userId },
         });
         if (config?.googleCalendarSyncEnabled) {
-          await syncMealToGoogle(userId, mealId);
+          await syncMealToGoogle(userId, mealId, updated);
         }
       } catch (err) {
         console.error("Failed to sync updated scheduled meal to Google Calendar:", err);
