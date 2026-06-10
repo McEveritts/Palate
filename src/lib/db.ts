@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -15,7 +14,7 @@ function getPrismaClient(): PrismaClient {
     return _prismaInstance;
   }
 
-  const prismaOptions: any = {
+  const prismaOptions: Prisma.PrismaClientOptions = {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   };
 
