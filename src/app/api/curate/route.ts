@@ -47,13 +47,14 @@ export async function POST(req: Request) {
       const currentRecipes = await prisma.recipe.findMany({
         where: { householdId, frontmatter: { path: ['category'], equals: 'curated-current' } },
       });
-      for (const recipe of currentRecipes) {
+      const updatePromises = currentRecipes.map((recipe) => {
         const fm = (recipe.frontmatter as Record<string, unknown> | null) || {};
-        await prisma.recipe.update({
+        return prisma.recipe.update({
           where: { id: recipe.id },
           data: { frontmatter: { ...fm, category: 'curated-archive' } },
         });
-      }
+      });
+      await prisma.$transaction(updatePromises);
     } else {
       // Filesystem mode: move files
       await fs.mkdir(currentDir, { recursive: true });

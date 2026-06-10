@@ -21,7 +21,8 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue({}),
       upsert: vi.fn().mockResolvedValue({})
-    }
+    },
+    $transaction: vi.fn().mockResolvedValue([])
   }
 }));
 
@@ -32,14 +33,14 @@ vi.mock('next-auth/next', () => ({
   getServerSession: () => mockGetServerSession()
 }));
 
-vi.mock('@google/generative-ai', () => {
+vi.mock('@google/genai', async () => {
   return {
-    GoogleGenerativeAI: class {
-      getGenerativeModel() {
-        return {
-          generateContent: (...args: any[]) => mockGenerateContent(...args)
-        };
-      }
+    ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    GoogleGenAI: class {
+      models = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        generateContent: (...args: any[]) => mockGenerateContent(...args)
+      };
     }
   };
 });
@@ -54,8 +55,7 @@ describe('POST /api/curate', () => {
 
   it('should successfully split recipes using standard delimiter', async () => {
     mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
+      text: `
 ---
 title: "Hero Main"
 tags: ["main", "Curated By Sage"]
@@ -80,7 +80,6 @@ macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
 # 🍤 Side Two 🍤
 Side description
 `
-      }
     });
 
     const req = new Request('http://localhost/api/curate', { method: 'POST' });
@@ -95,8 +94,7 @@ Side description
 
   it('should fallback to frontmatter regex split if delimiter is missing', async () => {
     mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
+      text: `
 ---
 title: "Hero Main No Delimiter"
 tags: ["main", "Curated By Sage"]
@@ -121,7 +119,6 @@ macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
 # 🍤 Side Two No Delimiter 🍤
 Side description
 `
-      }
     });
 
     const req = new Request('http://localhost/api/curate', { method: 'POST' });
@@ -136,8 +133,7 @@ Side description
 
   it('should throw an error if fewer than 3 recipes are found', async () => {
     mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
+      text: `
 ---
 title: "Only One Recipe"
 tags: ["main", "Curated By Sage"]
@@ -146,7 +142,6 @@ macros: "Calories: 500 | Protein: 30g | Carbs: 50g | Fat: 15g"
 # 🥩 Only One Recipe 🥩
 Hero description
 `
-      }
     });
 
     const req = new Request('http://localhost/api/curate', { method: 'POST' });
@@ -159,7 +154,6 @@ Hero description
   });
 
   it('should fail curation with a GET request (405 Method Not Allowed)', async () => {
-    const req = new Request('http://localhost/api/curate', { method: 'GET' });
     const res = await GET();
     const json = await res.json();
 
@@ -170,8 +164,7 @@ Hero description
 
   it('should strip preamble and thoughts from recipes', async () => {
     mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
+      text: `
 Some thoughts with separator --- inside it and preamble that should be stripped Yes.---
 title: "Hero Main with Preamble"
 tags: ["main", "Curated By Sage"]
@@ -197,7 +190,6 @@ macros: "Calories: 150 | Protein: 3g | Carbs: 15g | Fat: 3g"
 # 🍤 Side Two 🍤
 Side description
 `
-      }
     });
 
     const req = new Request('http://localhost/api/curate', { method: 'POST' });
@@ -237,8 +229,7 @@ Side description
     mockGetServerSession.mockResolvedValueOnce(null);
     process.env.CRON_SECRET = "secret-cron";
     mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => `
+      text: `
 ---
 title: "Hero"
 tags: ["main"]
@@ -260,7 +251,6 @@ macros: "Calories: 150"
 ---
 # 🍤 Side Two
 `
-      }
     });
 
     const req = new Request('http://localhost/api/curate', {
