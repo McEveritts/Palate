@@ -313,7 +313,7 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
     for (const h of history) {
       const isSage = h.role === 'sage' || h.role === 'model';
       const role = isSage ? 'model' : 'user';
-      let text = h.content || "";
+      const text = h.content || "";
       const historyItem = h as ChatHistoryItem;
       if (isSage && historyItem.thought) {
         // Thoughts handled natively by Gemini — no need to inject into history text
