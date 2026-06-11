@@ -25,8 +25,8 @@ export async function POST() {
           gte: todayStart,
         },
       },
-      select: {
-        id: true,
+      include: {
+        recipe: true,
       },
     });
 
@@ -35,7 +35,7 @@ export async function POST() {
     let failureCount = 0;
 
     for (const meal of meals) {
-      const synced = await syncMealToGoogle(userId, meal.id);
+      const synced = await syncMealToGoogle(userId, meal.id, meal);
       if (synced) {
         successCount++;
       } else {
