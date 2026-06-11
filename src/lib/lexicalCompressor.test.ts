@@ -19,6 +19,29 @@ describe('🌿 lexicalCompressor - stripFillerWords', () => {
     expect(stripFillerWords('')).toBe('');
     expect(stripFillerWords('  gently    melt  ')).toBe('melt');
   });
+
+  it('should preserve words that contain filler words as substrings', () => {
+    // "bacon" contains "on", "orange" contains "or", "band" contains "and"
+    expect(stripFillerWords('cook bacon orange and band')).toBe('cook bacon orange band');
+    expect(stripFillerWords('batter is better')).toBe('batter better');
+    expect(stripFillerWords('theater seating')).toBe('theater seating');
+  });
+
+  it('should handle case insensitivity correctly', () => {
+    expect(stripFillerWords('THE And BUt OR For WITH')).toBe('');
+    expect(stripFillerWords('Please JUST Be carefully Gently')).toBe('');
+  });
+
+  it('should handle input consisting entirely of filler words', () => {
+    expect(stripFillerWords('the a an and but or for with')).toBe('');
+    expect(stripFillerWords('is are was were be been being')).toBe('');
+  });
+
+  it('should handle punctuation attached to filler words correctly', () => {
+    // Note: The regex \\b matches word boundaries, so punctuation is left behind.
+    expect(stripFillerWords('Wait, then, carefully...')).toBe('Wait, , ...');
+  });
+
 });
 
 describe('🌿 lexicalCompressor - compressRecipeForPrompt', () => {
