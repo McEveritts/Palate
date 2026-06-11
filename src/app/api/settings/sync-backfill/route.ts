@@ -30,7 +30,6 @@ export async function POST() {
       },
     });
 
-    console.log(`Backfilling Google Calendar with ${meals.length} scheduled meals for user ${userId}...`);
 
     let successCount = 0;
     let failureCount = 0;
