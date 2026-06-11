@@ -14,24 +14,29 @@ vi.mock('@/lib/db', () => ({
   }
 }));
 
-vi.mock('@google/generative-ai', () => {
+const mockGenerateContentStream = vi.fn();
+
+vi.mock('@google/genai', async () => {
   return {
-    GoogleGenerativeAI: class {
-      getGenerativeModel() {
-        return {
-          generateContentStream: vi.fn().mockResolvedValue({
-            stream: [{ text: () => 'mock chunk 1' }, { text: () => 'mock chunk 2' }]
-          }),
-        };
-      }
-    },
+    ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    GoogleGenAI: class {
+      models = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        generateContentStream: (...args: any[]) => mockGenerateContentStream(...args)
+      };
+    }
   };
 });
 
 describe('Zero Waste API', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     process.env.GEMINI_API_KEY = "test-key";
     mockGetServerSession.mockResolvedValue({ user: { id: "test-user" } });
+    mockGenerateContentStream.mockResolvedValue([
+      { text: 'mock chunk 1' },
+      { text: 'mock chunk 2' }
+    ]);
   });
 
   it('returns a stream response', async () => {

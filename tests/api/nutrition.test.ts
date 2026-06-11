@@ -22,18 +22,16 @@ vi.mock('fs/promises', () => ({
   mkdir: vi.fn(),
 }));
 
-vi.mock('@google/generative-ai', () => {
+const mockGenerateContent = vi.fn();
+
+vi.mock('@google/genai', async () => {
   return {
-    GoogleGenerativeAI: class {
-      getGenerativeModel() {
-        return {
-          generateContent: vi.fn().mockResolvedValue({
-            response: {
-              text: () => '{"calories": 57, "protein": 0.74, "carbs": 14.49, "fat": 0.33}'
-            }
-          })
-        };
-      }
+    ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    GoogleGenAI: class {
+      models = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        generateContent: (...args: any[]) => mockGenerateContent(...args)
+      };
     }
   };
 });
@@ -45,6 +43,9 @@ global.fetch = mockFetch;
 describe('GET /api/nutrition', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mockGenerateContent.mockResolvedValue({
+      text: '{"calories": 57, "protein": 0.74, "carbs": 14.49, "fat": 0.33}'
+    });
   });
 
   it('should return error if ingredient query is missing', async () => {
