@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const [household, setHousehold] = useState<{
     id: string;
     name: string;
-    members: { id: string; name: string | null; email: string; image: string | null }[];
+    members: { id: string; name: string | null; email: string | null; image: string | null }[];
     pendingInvites: { code: string; expiresAt: string }[];
   } | null>(null);
   const [householdLoading, setHouseholdLoading] = useState(false);
@@ -451,8 +451,14 @@ export default function SettingsPage() {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-xl font-bold text-white">{session.user.name}</h3>
-                  <p className="text-slate-400">{session.user.email}</p>
+                  <h3 className="text-xl font-bold text-white">{session.user.name ?? "Palate User"}</h3>
+                  {session.user.email ? (
+                    <p className="text-slate-400">{session.user.email}</p>
+                  ) : (
+                    <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      Jellyfin Account
+                    </span>
+                  )}
                 </div>
               </div>
               <button
@@ -572,7 +578,7 @@ export default function SettingsPage() {
                         )}
                         <div>
                           <p className="text-white font-medium text-sm">{member.name || "Unknown"}</p>
-                          <p className="text-slate-500 text-xs">{member.email}</p>
+                          <p className="text-slate-500 text-xs">{member.email ?? "Jellyfin Member"}</p>
                         </div>
                         {member.id === session.user?.id ? (
                           <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full">You</span>
