@@ -21,9 +21,9 @@
 - **Hydration:** `suppressHydrationWarning` applied to `layout.tsx` to prevent mismatches from browser extensions (e.g., Dark Reader).
 
 ## Versioning & Releases
-- **Current Version:** 1.3.x series.
-- **Increment Rule:** Each commit/release bumps the **patch** version by `0.0.1` (e.g., `1.3.1` → `1.3.2` → `1.3.3`).
-- **Git Tags:** Create an annotated tag (`v1.3.x`) for each release and push it to origin.
+- **Current Version:** 1.5.x series.
+- **Increment Rule:** Each commit/release bumps the **patch** version by `0.0.1` (e.g., `1.5.0` → `1.5.1` → `1.5.2`).
+- **Git Tags:** Create an annotated tag (`v1.5.x`) for each release and push it to origin.
 - **package.json:** Update the `"version"` field in `package.json` to match the new patch version before committing.
 
 ## Agent Workflow
@@ -31,5 +31,11 @@
 - **Parallelism:** When multiple independent tasks exist (e.g., researching + coding, or modifying multiple components), launch them as concurrent sub-agents rather than handling sequentially.
 - **Context Hygiene:** Offload deep research, large file exploration, and broad codebase surveys to sub-agents to keep the main conversation context clean and focused.
 
+## Environment & Server Execution Rules
+- **Never Run Node.js Locally:** Never run `node`, `npm`, `npx`, or local dev servers on the local machine.
+- **Run on Whatbox Server:** All Node.js commands, tests, builds, and migrations are executed on Whatbox (`venus.whatbox.ca`).
+- **Sandbox Testing:** Use isolated sandbox directories (`~/.tmp/palate_test_sandbox`) on Whatbox when running test suites and builds during development so production environments are unaffected.
+
 ## Completed Phases
 - **Phase 6:** Vault Visualization ✅
+- **Phase 7:** PostgreSQL Concurrency-Safe Rate Limiter (v1.5.1) ✅

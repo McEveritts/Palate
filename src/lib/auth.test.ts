@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("@/lib/db", () => {
-  const mockPrisma = {
+// In-memory bucket store and transaction lock simulation with vi.hoisted
+const { inMemoryBuckets, activeLocks, mockPrisma } = vi.hoisted(() => {
+  const inMemoryBuckets = new Map<string, { key: string; attempts: Date[]; expiresAt: Date }>();
+  const activeLocks = new Set<string>();
+
+  const mockPrisma: any = {
     jellyfinIdentity: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -12,18 +16,82 @@ vi.mock("@/lib/db", () => {
       create: vi.fn(),
       update: vi.fn(),
     },
+    authRateLimit: {
+      findUnique: vi.fn(async ({ where }: { where: { key: string } }) => {
+        const bucket = inMemoryBuckets.get(where.key);
+        if (!bucket) return null;
+        return {
+          key: bucket.key,
+          attempts: [...bucket.attempts],
+          expiresAt: new Date(bucket.expiresAt.getTime()),
+        };
+      }),
+      update: vi.fn(async ({ where, data }: { where: { key: string }; data: any }) => {
+        const bucket = inMemoryBuckets.get(where.key) || {
+          key: where.key,
+          attempts: [],
+          expiresAt: new Date(),
+        };
+        if (data.attempts) bucket.attempts = [...data.attempts];
+        if (data.expiresAt) bucket.expiresAt = new Date(data.expiresAt.getTime());
+        inMemoryBuckets.set(where.key, bucket);
+        return bucket;
+      }),
+      upsert: vi.fn(async ({ where, create, update }: { where: { key: string }; create: any; update: any }) => {
+        let bucket = inMemoryBuckets.get(where.key);
+        if (bucket) {
+          if (update.attempts) bucket.attempts = [...update.attempts];
+          if (update.expiresAt) bucket.expiresAt = new Date(update.expiresAt.getTime());
+        } else {
+          bucket = {
+            key: create.key,
+            attempts: [...create.attempts],
+            expiresAt: new Date(create.expiresAt.getTime()),
+          };
+        }
+        inMemoryBuckets.set(where.key, bucket);
+        return bucket;
+      }),
+    },
+    $executeRaw: vi.fn(async () => 1),
     $transaction: vi.fn(async (arg: any) => {
       if (Array.isArray(arg)) {
         return Promise.all(arg);
       }
       if (typeof arg === "function") {
-        return arg(mockPrisma);
+        let lockKey: string | null = null;
+        const txPrisma = {
+          ...mockPrisma,
+          $executeRaw: vi.fn(async (strings: TemplateStringsArray, ...values: any[]) => {
+            const sql = typeof strings === "string" ? strings : strings.join("?");
+            if (sql.includes("pg_advisory_xact_lock")) {
+              lockKey = String(values[0]);
+              while (activeLocks.has(lockKey)) {
+                await new Promise((r) => setTimeout(r, 2));
+              }
+              activeLocks.add(lockKey);
+            }
+            return 1;
+          }),
+        };
+        try {
+          return await arg(txPrisma);
+        } finally {
+          if (lockKey) {
+            activeLocks.delete(lockKey);
+          }
+        }
       }
       return arg;
     }),
   };
-  return { prisma: mockPrisma };
+
+  return { inMemoryBuckets, activeLocks, mockPrisma };
 });
+
+vi.mock("@/lib/db", () => ({
+  prisma: mockPrisma,
+}));
 
 vi.mock("@/lib/jellyfin", () => ({
   isJellyfinEnabled: vi.fn().mockReturnValue(true),
@@ -34,28 +102,58 @@ vi.mock("@/lib/provisioning", () => ({
   ensureUserProvisioned: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { authorizeJellyfin, checkAuthRateLimit, authLimiter } from "./auth";
+import {
+  authorizeJellyfin,
+  checkAuthRateLimit,
+  computeRateLimitKey,
+} from "./auth";
 import { prisma } from "@/lib/db";
 import { authenticateWithJellyfin } from "@/lib/jellyfin";
 import { ensureUserProvisioned } from "@/lib/provisioning";
 
-describe("Jellyfin NextAuth Provider", () => {
+describe("Jellyfin NextAuth Provider with PostgreSQL Rate Limiter", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    authLimiter.instance = null;
+    inMemoryBuckets.clear();
+    activeLocks.clear();
     process.env = { ...originalEnv, NEXTAUTH_SECRET: "test-secret-12345" };
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    authLimiter.instance = null;
+    inMemoryBuckets.clear();
+    activeLocks.clear();
     process.env = originalEnv;
     vi.restoreAllMocks();
   });
 
-  describe("checkAuthRateLimit", () => {
+  describe("computeRateLimitKey & Normalization", () => {
+    it("produces identical HMAC keys for case and whitespace variants of username", () => {
+      const key1 = computeRateLimitKey("192.168.1.50", "master_chef", "my-secret");
+      const key2 = computeRateLimitKey("192.168.1.50", "  Master_Chef  ", "my-secret");
+      const key3 = computeRateLimitKey("192.168.1.50", "MASTER_CHEF", "my-secret");
+
+      expect(key1).toBe(key2);
+      expect(key2).toBe(key3);
+      expect(key1).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it("produces different keys for different client IPs", () => {
+      const keyA = computeRateLimitKey("10.0.0.1", "chef", "my-secret");
+      const keyB = computeRateLimitKey("10.0.0.2", "chef", "my-secret");
+      expect(keyA).not.toBe(keyB);
+    });
+
+    it("produces different keys for different usernames on same IP", () => {
+      const keyA = computeRateLimitKey("10.0.0.1", "alice", "my-secret");
+      const keyB = computeRateLimitKey("10.0.0.1", "bob", "my-secret");
+      expect(keyA).not.toBe(keyB);
+    });
+  });
+
+  describe("checkAuthRateLimit (PostgreSQL Sliding Window)", () => {
     it("fails secure in production if NEXTAUTH_SECRET is missing", async () => {
       vi.stubEnv("NODE_ENV", "production");
       delete process.env.NEXTAUTH_SECRET;
@@ -64,41 +162,127 @@ describe("Jellyfin NextAuth Provider", () => {
       expect(allowed).toBe(false);
     });
 
-    it("returns false when Upstash rate limiter returns { success: false }", async () => {
-      const mockLimit = vi.fn().mockResolvedValue({ success: false });
-      authLimiter.instance = {
-        limit: mockLimit,
-      } as any;
+    it("fails closed in production when database query fails", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.mocked(prisma.$transaction).mockRejectedValueOnce(new Error("Connection refused"));
 
-      const allowed = await checkAuthRateLimit("192.168.1.1", "bruteforce_user");
+      const allowed = await checkAuthRateLimit("192.168.1.1", "testuser");
       expect(allowed).toBe(false);
-      expect(mockLimit).toHaveBeenCalledWith(
-        expect.stringMatching(/^auth_rl_192\.168\.1\.1_[a-f0-9]{64}$/)
-      );
     });
 
-    it("returns true when Upstash rate limiter returns { success: true }", async () => {
-      authLimiter.instance = {
-        limit: vi.fn().mockResolvedValue({ success: true }),
-      } as any;
+    it("allows attempts 1 through 5 and rejects attempt 6 within 60 seconds", async () => {
+      const ip = "192.168.1.100";
+      const user = "ratelimit_chef";
 
-      const allowed = await checkAuthRateLimit("192.168.1.1", "normal_user");
+      // Attempts 1 to 5 must succeed
+      for (let i = 1; i <= 5; i++) {
+        const allowed = await checkAuthRateLimit(ip, user);
+        expect(allowed).toBe(true);
+      }
+
+      // Attempt 6 must be rejected
+      const sixthAttempt = await checkAuthRateLimit(ip, user);
+      expect(sixthAttempt).toBe(false);
+
+      // Attempt 7 must also be rejected
+      const seventhAttempt = await checkAuthRateLimit(ip, user);
+      expect(seventhAttempt).toBe(false);
+    });
+
+    it("restores access after 60 seconds (prunes expired timestamps)", async () => {
+      const ip = "192.168.1.101";
+      const user = "patient_chef";
+      const key = computeRateLimitKey(ip, user, process.env.NEXTAUTH_SECRET);
+
+      // Seed 5 attempts that occurred 65 seconds ago
+      const sixtyFiveSecondsAgo = new Date(Date.now() - 65_000);
+      inMemoryBuckets.set(key, {
+        key,
+        attempts: [
+          sixtyFiveSecondsAgo,
+          sixtyFiveSecondsAgo,
+          sixtyFiveSecondsAgo,
+          sixtyFiveSecondsAgo,
+          sixtyFiveSecondsAgo,
+        ],
+        expiresAt: new Date(sixtyFiveSecondsAgo.getTime() + 60_000),
+      });
+
+      // Now attempt 1 should succeed because old attempts are pruned
+      const allowed = await checkAuthRateLimit(ip, user);
       expect(allowed).toBe(true);
+
+      // Verify bucket only contains the fresh attempt
+      const bucket = inMemoryBuckets.get(key);
+      expect(bucket?.attempts.length).toBe(1);
+    });
+
+    it("isolates rate limits between different IP/username identities", async () => {
+      // Exhaust limits for User A on IP 1
+      for (let i = 0; i < 5; i++) {
+        await checkAuthRateLimit("10.0.0.1", "userA");
+      }
+      expect(await checkAuthRateLimit("10.0.0.1", "userA")).toBe(false);
+
+      // Different IP for User A is allowed
+      expect(await checkAuthRateLimit("10.0.0.2", "userA")).toBe(true);
+
+      // Different User on same IP 1 is allowed
+      expect(await checkAuthRateLimit("10.0.0.1", "userB")).toBe(true);
+    });
+
+    it("prevents concurrent requests from exceeding 5 attempts for the same identity", async () => {
+      const ip = "10.10.10.10";
+      const user = "concurrent_attacker";
+
+      // Launch 10 concurrent requests
+      const results = await Promise.all(
+        Array.from({ length: 10 }).map(() => checkAuthRateLimit(ip, user))
+      );
+
+      const successful = results.filter((res) => res === true).length;
+      const rejected = results.filter((res) => res === false).length;
+
+      expect(successful).toBe(5);
+      expect(rejected).toBe(5);
+    });
+
+    it("ensures cleanup error outside transaction does not fail or rollback the rate limit attempt", async () => {
+      const ip = "192.168.1.102";
+      const user = "cleanup_resilient_chef";
+      const key = computeRateLimitKey(ip, user, process.env.NEXTAUTH_SECRET);
+
+      // Make top-level prisma.$executeRaw throw (simulating cleanup failure outside transaction)
+      vi.mocked(prisma.$executeRaw).mockRejectedValueOnce(new Error("Cleanup connection drop"));
+
+      const allowed = await checkAuthRateLimit(ip, user);
+      expect(allowed).toBe(true);
+
+      const bucket = inMemoryBuckets.get(key);
+      expect(bucket).toBeDefined();
+      expect(bucket?.attempts.length).toBe(1);
     });
   });
 
+
   describe("authorizeJellyfin", () => {
-    it("throws RateLimited when Upstash limiter rejects the request with { success: false }", async () => {
-      authLimiter.instance = {
-        limit: vi.fn().mockResolvedValue({ success: false }),
-      } as any;
+    it("throws RateLimited and never contacts Jellyfin when rate limit is exceeded", async () => {
+      const ip = "10.0.0.1";
+      const username = "bruteforcer";
+
+      // Exhaust 5 attempts
+      for (let i = 0; i < 5; i++) {
+        await checkAuthRateLimit(ip, username);
+      }
 
       await expect(
         authorizeJellyfin(
-          { username: "spam_chef", password: "pwd" },
-          { headers: { "x-forwarded-for": "10.0.0.1" } }
+          { username, password: "pwd" },
+          { headers: { "x-forwarded-for": ip } }
         )
       ).rejects.toThrow("RateLimited");
+
+      expect(authenticateWithJellyfin).not.toHaveBeenCalled();
     });
 
     it("returns null when credentials are missing or invalid", async () => {

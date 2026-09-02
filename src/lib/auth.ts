@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -6,8 +5,9 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/db";
 import { isJellyfinEnabled, authenticateWithJellyfin } from "@/lib/jellyfin";
 import { ensureUserProvisioned } from "@/lib/provisioning";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { checkAuthRateLimit, computeRateLimitKey } from "@/lib/rateLimit";
+
+export { checkAuthRateLimit, computeRateLimitKey };
 
 if (!process.env.NEXTAUTH_SECRET) {
   if (process.env.NODE_ENV === "production") {
@@ -24,48 +24,6 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   console.warn("Warning: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not defined. OAuth login will fail.");
 }
 
-// Upstash Redis rate limiter for Jellyfin login attempts
-export const authLimiter = {
-  instance: (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-    ? new Ratelimit({
-        redis: new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN,
-        }),
-        limiter: Ratelimit.slidingWindow(5, "1 m"),
-      })
-    : null,
-};
-
-export async function checkAuthRateLimit(ip: string, username: string): Promise<boolean> {
-  const limiter = authLimiter.instance;
-  if (!limiter) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("[Auth] Upstash Redis is not configured in production. Blocking credentials login.");
-      return false;
-    }
-    return true; // Allow in local development / unit testing only
-  }
-  try {
-    const secret = process.env.NEXTAUTH_SECRET;
-    if (!secret && process.env.NODE_ENV === "production") {
-      return false;
-    }
-    const hmac = crypto
-      .createHmac("sha256", secret || "dev-fallback-salt")
-      .update(username.toLowerCase().trim())
-      .digest("hex");
-    const identifier = `auth_rl_${ip}_${hmac}`;
-    const { success } = await limiter.limit(identifier);
-    return success;
-  } catch (err) {
-    console.error("[Auth] Rate limit check encountered error:", err);
-    if (process.env.NODE_ENV === "production") {
-      return false; // Fail-secure in production
-    }
-    return true;
-  }
-}
 
 export async function authorizeJellyfin(
   credentials: Record<string, string> | undefined,

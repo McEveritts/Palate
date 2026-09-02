@@ -354,3 +354,16 @@ model FastingLog {
 
   @@index([userId, startTime])
 }
+
+// ---------------------------------------------------------
+// AUTHENTICATION RATE LIMITING (PostgreSQL Concurrency-Safe)
+// ---------------------------------------------------------
+model AuthRateLimit {
+  key       String     @id // HMAC-SHA256 derived identifier
+  attempts  DateTime[]    // Bounded list of attempt timestamps in rolling window
+  expiresAt DateTime      // Indexed expiration timestamp for bounded cleanup
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([expiresAt])
+}

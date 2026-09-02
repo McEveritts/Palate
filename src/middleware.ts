@@ -1,19 +1,61 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import type { NextRequestWithAuth } from "next-auth/middleware";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 
-// H4 Fix: Upstash Redis rate limiter (safe fallback if not configured)
-// M-13 Fix: Validate both env vars before initialising Redis
-const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
-  : null;
+// Best-effort process-local defense-in-depth rate limiting for Edge middleware.
+// Persistent PostgreSQL rate limiting is implemented at the Jellyfin credential login layer.
+export interface RateLimitBucket {
+  timestamps: number[];
+}
 
-// 20 requests per minute sliding window per user/IP
-const ratelimit = redis
-  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, "1 m") })
-  : null;
+export const apiRateLimitMap = new Map<string, RateLimitBucket>();
+export const API_RATE_LIMIT = 20;
+export const API_WINDOW_MS = 60 * 1000;
+export const MAX_MAP_ENTRIES = 2000;
+
+export function checkApiRateLimit(identifier: string): { success: boolean; limit: number; remaining: number; reset: number } {
+  const now = Date.now();
+  const windowStart = now - API_WINDOW_MS;
+
+  let bucket = apiRateLimitMap.get(identifier);
+  if (!bucket) {
+    // O(1) LRU eviction if map reaches max capacity to avoid unbounded growth or DoS
+    if (apiRateLimitMap.size >= MAX_MAP_ENTRIES) {
+      const oldestKey = apiRateLimitMap.keys().next().value;
+      if (oldestKey !== undefined) {
+        apiRateLimitMap.delete(oldestKey);
+      }
+    }
+    bucket = { timestamps: [] };
+    apiRateLimitMap.set(identifier, bucket);
+  } else {
+    // Refresh key order for LRU tracking in Map
+    apiRateLimitMap.delete(identifier);
+    apiRateLimitMap.set(identifier, bucket);
+  }
+
+  bucket.timestamps = bucket.timestamps.filter((t) => t > windowStart);
+
+  if (bucket.timestamps.length >= API_RATE_LIMIT) {
+    const oldestTimestamp = bucket.timestamps[0];
+    const resetTime = Math.ceil((oldestTimestamp + API_WINDOW_MS) / 1000);
+    return {
+      success: false,
+      limit: API_RATE_LIMIT,
+      remaining: 0,
+      reset: resetTime,
+    };
+  }
+
+  bucket.timestamps.push(now);
+  const resetTime = Math.ceil((now + API_WINDOW_MS) / 1000);
+  return {
+    success: true,
+    limit: API_RATE_LIMIT,
+    remaining: API_RATE_LIMIT - bucket.timestamps.length,
+    reset: resetTime,
+  };
+}
 
 export default withAuth(
   async function middleware(req: NextRequestWithAuth) {
@@ -52,30 +94,26 @@ export default withAuth(
         }
       }
 
-      // 2. H4 Fix: Rate Limiting (per-user or per-IP)
-      if (ratelimit) {
-        const identifier =
-          req.nextauth?.token?.sub ||
-          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-          "anonymous";
+      // 2. H4 Fix: Application-Wide Rate Limiting (20 req/min per user or per IP)
+      const identifier =
+        req.nextauth?.token?.sub ||
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "anonymous";
 
-        const { success, limit, reset, remaining } = await ratelimit.limit(
-          `rl_${identifier}`
+      const { success, limit, reset, remaining } = checkApiRateLimit(identifier);
+
+      if (!success) {
+        return NextResponse.json(
+          { error: "Too many requests. Please try again later." },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": limit.toString(),
+              "X-RateLimit-Remaining": remaining.toString(),
+              "X-RateLimit-Reset": reset.toString(),
+            },
+          }
         );
-
-        if (!success) {
-          return NextResponse.json(
-            { error: "Too many requests. Please try again later." },
-            {
-              status: 429,
-              headers: {
-                "X-RateLimit-Limit": limit.toString(),
-                "X-RateLimit-Remaining": remaining.toString(),
-                "X-RateLimit-Reset": reset.toString(),
-              },
-            }
-          );
-        }
       }
     }
 
