@@ -47,6 +47,9 @@ describe('Zero Waste API', () => {
     expect(res).toBeDefined();
     expect(res.status).toBe(200);
     expect(res.body).toBeInstanceOf(ReadableStream);
+    expect(mockGenerateContentStream).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "gemini-3.8-flash" })
+    );
   });
 
   it('returns 400 for missing prompt', async () => {

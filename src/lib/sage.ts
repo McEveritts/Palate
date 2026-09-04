@@ -526,7 +526,7 @@ export async function* streamSage(prompt: string, context?: string, imageBase64?
           }
         }
       } else {
-        // Handle native thinking parts from Gemini 3.5 Flash
+        // Handle native thinking parts from Gemini 3.8 Flash
         const candidate = chunk.candidates?.[0];
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts) {

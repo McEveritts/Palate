@@ -7,7 +7,7 @@ This directory contains the custom, production-ready configurations for the spec
 | Agent Name | Role | Core Domain & Focus | Key Files Managed |
 | :--- | :--- | :--- | :--- |
 | **`palate-ui`** | **UI/UX Engineer** | AetherFlow Glassmorphism, Framer Motion animations, Tailwind 4, React 19 visual design, responsive layouts. | `src/app/globals.css`, `layout.tsx`, `Sidebar.tsx`, `VaultCockpit.tsx`, `SynergyCanvas.tsx`, `CalendarView.tsx`, `SageHero.tsx` |
-| **`palate-sage`** | **AI/Sage Engineer** | Gemini/Gemma dual-model coordination, system prompts, stream endpoints, tool-calling pipelines, temporal resolution. | `src/lib/sage.ts`, `calendarAgent.ts`, `synergyEngine.ts`, `idfFilter.ts`, `symbolicMath.ts`, `api/sage/` |
+| **`palate-sage`** | **AI/Sage Engineer** | Gemini 3.8 Flash orchestration, native thinking, system prompts, stream endpoints, tool-calling pipelines, temporal resolution. | `src/lib/sage.ts`, `calendarAgent.ts`, `synergyEngine.ts`, `idfFilter.ts`, `symbolicMath.ts`, `api/sage/` |
 | **`palate-data`** | **Data/Backend Engineer** | Prisma 7.8, PostgreSQL schema, Dual-mode (DB/Filesystem) CRUD operations, Google Calendar OAuth/Sync, security checks. | `prisma/schema.prisma`, `src/app/actions.ts`, `googleCalendar.ts`, `vaultParser.ts`, `vault/`, `encryption.ts` |
 | **`palate-test`** | **QA/Test Engineer** | Vitest, unit/integration testing suite, OWASP security audits, build validation, typecheck enforcement, accessibility audits. | `vitest.config.ts`, `vitest.setup.ts`, `src/lib/*.test.ts`, `tests/` |
 

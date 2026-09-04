@@ -7,8 +7,7 @@
   [![React](https://img.shields.io/badge/React-19.2.4-blue?style=for-the-badge&logo=react)](https://react.dev/)
   [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
   [![Prisma](https://img.shields.io/badge/Prisma-7.8.0-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
-  [![Gemini](https://img.shields.io/badge/Gemini_AI-3.1-1A73E8?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com/)
-  [![Gemma](https://img.shields.io/badge/Gemma-4--31B--IT-8B5CF6?style=for-the-badge&logo=google-cloud)](https://github.com/google/gemma-pytorch)
+  [![Gemini](https://img.shields.io/badge/Gemini_AI-3.8_Flash-1A73E8?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com/)
 </div>
 
 ---
@@ -17,14 +16,14 @@
 
 **Palate** is a premium, privacy-respecting local-first culinary companion and metabolic coach designed for spatial, fluid interaction. Unlike corporate meal plan services that lock your cooking history into proprietary cloud databases, Palate stores your entire recipe catalogue as flat Markdown files using the open-standard **Cooklang** specification. 
 
-At the core of the platform is **Sage (🌿)**—your digital sous-chef and metabolic assistant. Sage operates under a specialized dual-model architecture, leveraging reinforcement-learning aligned **Gemma-4-31B-IT** alongside **Gemini 3.1 Pro** to parse ingredients, scale recipe chemistry, calculate USDA-grounded nutritional vectors, and analyze athletic training telemetry. Wrapped in the stunning, spatial **AetherFlow** glassmorphic interface, Palate is built to deliver a premium, fluid experience across browsers, tablets, and standalone PWA environments.
+At the core of the platform is **Sage (🌿)**—your digital sous-chef and metabolic assistant. Sage operates using **Gemini 3.8 Flash** (`gemini-3.8-flash`) with native thinking to parse ingredients, scale recipe chemistry, calculate USDA-grounded nutritional vectors, and analyze athletic training telemetry. Wrapped in the stunning, spatial **AetherFlow** glassmorphic interface, Palate is built to deliver a premium, fluid experience across browsers, tablets, and standalone PWA environments.
 
 ---
 
 ## ✨ Key Platform Pillars
 
-### 🌿 1. Sage AI Dual-Model Orchestration & RLAIF/DPO Alignment
-- **Gemma-4-31B-IT + Gemini 3.1:** Sage splits its cognitive load. General routing, visual plates scanning, and fast culinary scaling are handled by Gemini 3.1 Flash-Lite, while complex physiological metabolic reasoning is executed by a locally-tailored Gemma-4-31B-IT instance.
+### 🌿 1. Sage AI Orchestration & Native Thinking Architecture
+- **Gemini 3.8 Flash:** Sage leverages **Gemini 3.8 Flash** with native reasoning thinking levels (medium for rich culinary and physiological reasoning, minimal for structured JSON extraction).
 - **Strict Thought Separation:** Aligned with a custom **RLAIF (Reinforcement Learning from AI Feedback)** and **DPO (Direct Preference Optimization)** framework. The model conducts mathematical macro target calculations, Vault cross-referencing, and recovery logic exclusively inside isolated `<thought>` logs.
 - **Decoupled Wellness & Zero-Waste Paths:** Tailored system instructions allow the **Holistic Wellness Coach** and **Zero-Waste Pantry Specialist** to run on isolated endpoints, completely bypassing the culinary domain restrictions of the standard Ask Sage chat interface to prevent false-positive prompt injection slips.
 
@@ -49,7 +48,7 @@ At the core of the platform is **Sage (🌿)**—your digital sous-chef and meta
 - **Component Engine:** React 19.2.4 (Strict Concurrent Mode)
 - **Styling System:** Tailwind CSS v4 + Framer Motion 12 (Glassmorphism & Radial Specular highlights)
 - **Data & Schema Layer:** Prisma ORM 7.8.0 + PostgreSQL 16 (local or connection pooled)
-- **AI Integrations:** Google Generative AI SDK, USDA FoodData Central REST API
+- **AI Integrations:** Google GenAI SDK (`@google/genai`) with Gemini 3.8 Flash (`gemini-3.8-flash`), USDA FoodData Central REST API
 - **Auth Engine:** NextAuth.js (Exclusive Self-Hosted Jellyfin Authentication)
 - **Cryptographic Security:** AES-256-GCM symmetric encryption for client API key vaulting
 - **Testing:** Vitest 4.1.6 + React Testing Library (113/113 full suite coverage)
@@ -280,11 +279,11 @@ npm run test
 ```
 
 ### Mocking Generative Engines
-Test integrations mock standard Google Generative AI streaming returns, allowing offline verification of the stream parsing loops:
+Test integrations mock standard Google GenAI streaming returns, allowing offline verification of the stream parsing loops:
 ```typescript
 import { parseSageStream } from '@/lib/parser';
 
-describe('Gemma-4 Stream Parsing', () => {
+describe('Gemini 3.8 Flash Stream Parsing', () => {
   it('should split thoughts and content dynamically', () => {
     const raw = "<thought>\nCalculating leucine triggers.\n</thought>\n# Salmon";
     const result = parseSageStream(raw, true);

@@ -124,7 +124,7 @@ export function resolveMealTypeAndDate(query: string, referenceDate: Date = new 
   return { dateStr, mealType };
 }
 
-// Function Declarations for Gemini/Gemma-4 function calling structure
+// Function Declarations for Gemini function calling structure
 export const calendarToolsDeclarations: FunctionDeclaration[] = [
   {
     name: "schedule_meal",
@@ -275,7 +275,7 @@ interface CalendarToolArgs {
 }
 
 /**
- * Runs the Calendar Agent using Gemma-4 or Gemini 3.1 tool execution.
+ * Runs the Calendar Agent using Gemini 3.8 Flash tool execution.
  * Handles the single-turn function calling intercept loop.
  */
 export async function runCalendarAgent(

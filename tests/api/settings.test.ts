@@ -138,6 +138,78 @@ describe("Settings API Endpoints", () => {
         }),
       });
     });
+
+    it("verifies and encrypts valid Gemini API key using gemini-3.8-flash", async () => {
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+      global.fetch = mockFetch;
+
+      mockPrisma.userConfig.upsert.mockResolvedValueOnce({
+        metricSystem: true,
+        encryptedGcpKey: "mock-encrypted",
+      });
+
+      const req = new Request("https://palate.example.com/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          geminiApiKey: "AIzaSyTestValidKey12345",
+        }),
+      });
+
+      const res = await settingsPOST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.success).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=AIzaSyTestValidKey12345",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      expect(mockPrisma.userConfig.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: "user-123" },
+          update: expect.objectContaining({
+            encryptedGcpKey: expect.any(String),
+          }),
+        })
+      );
+    });
+
+    it("rejects invalid Gemini API key when Google API verification fails", async () => {
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          error: { message: "API key not valid. Please pass a valid API key." },
+        }),
+      });
+      global.fetch = mockFetch;
+
+      const req = new Request("https://palate.example.com/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          geminiApiKey: "bad-invalid-key",
+        }),
+      });
+
+      const res = await settingsPOST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.success).toBe(false);
+      expect(json.error).toContain("Google API Error");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=bad-invalid-key",
+        expect.any(Object)
+      );
+      expect(mockPrisma.userConfig.upsert).not.toHaveBeenCalled();
+    });
   });
 
   describe("POST /api/settings/sync-backfill", () => {

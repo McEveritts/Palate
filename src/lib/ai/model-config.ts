@@ -6,9 +6,9 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 /**
  * The primary model used across all SageAI endpoints.
- * Migrated from `gemma-4-31b-it` to Gemini 3.5 Flash (June 2025).
+ * Migrated to Gemini 3.8 Flash (`gemini-3.8-flash`).
  */
-export const SAGE_MODEL = "gemini-3.5-flash";
+export const SAGE_MODEL = "gemini-3.8-flash";
 
 /**
  * Thinking configuration for endpoints that stream reasoning to the UI.

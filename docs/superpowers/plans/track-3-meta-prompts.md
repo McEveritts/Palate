@@ -1,12 +1,12 @@
 # Track 3: Meta-AI Prompts for Calendar Integration
 **Author:** Sage 🌿 — Principal Software Architect  
-**Purpose:** Meta-Prompts for Gemini 3.1 Pro Deep Think / Deep Research sessions to design lightweight, high-reliability execution pipelines for the underlying Gemma-4-31b-it model.
+**Purpose:** Meta-Prompts for Gemini 3.8 Flash Deep Think / Deep Research sessions to design lightweight, high-reliability execution pipelines for the underlying Gemma-4-31b-it model.
 
 ---
 
 ## 🛠️ Prompt 1: Calendar Function Schema Architect (Tool-Calling)
 
-Copy and paste this prompt into your Gemini 3.1 Pro session to design the exact function calling structure.
+Copy and paste this prompt into your Gemini 3.8 Flash session to design the exact function calling structure.
 
 ```markdown
 [ROLE & CONTEXT]
@@ -42,7 +42,7 @@ Ensure all function parameters are strongly typed and well-described. Rely stric
 
 ## 📅 Prompt 2: Temporal Natural Language Resolver
 
-Copy and paste this prompt into your Gemini 3.1 Pro session to architect the timezone-aware date resolver.
+Copy and paste this prompt into your Gemini 3.8 Flash session to architect the timezone-aware date resolver.
 
 ```markdown
 [ROLE & CONTEXT]
@@ -50,7 +50,7 @@ You are an expert in Computational Linguistics and AI Orchestration. In our culi
 To schedule this, the underlying model (Gemma-4-31b-it) needs to resolve these relative time terms into precise ISO dates.
 
 We are establishing a dual-model pipeline:
-1. Gemini 3.1 Pro provides high-level reasoning and designs the temporal mapping logic.
+1. Gemini 3.8 Flash provides high-level reasoning and designs the temporal mapping logic.
 2. Gemma-4-31b-it executes the mapping with low latency.
 
 [TEMPORAL CONTEXT]
@@ -79,7 +79,7 @@ Format the output as a Markdown instruction block ready to be appended to the Ge
 
 ## ⚖️ Prompt 3: Just-In-Time Portion & Macro Scaler
 
-Copy and paste this prompt into your Gemini 3.1 Pro session to design the portion and macro scaling pipeline.
+Copy and paste this prompt into your Gemini 3.8 Flash session to design the portion and macro scaling pipeline.
 
 ```markdown
 [ROLE & CONTEXT]

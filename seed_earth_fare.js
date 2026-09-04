@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 
 // Helper to manually load .env files to avoid dependency issues
 function loadEnv() {
@@ -30,7 +30,7 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const ai = new GoogleGenAI({ apiKey });
 
 const recipesToSeed = [
   { title: "Love Note Cookies", category: "desserts", tags: ["dessert", "cookies", "sweet", "bonne-maman"] },
@@ -74,8 +74,6 @@ const recipesToSeed = [
 ];
 
 async function generateRecipe(recipe) {
-  const model = genAI.getGenerativeModel({ model: "gemma-4-31b-it" });
-
   const prompt = `
 You are Sage (🌿), an elegant, precise, professional digital sous-chef for 'Palate', a premium culinary app.
 Generate an authentic clean-eating recipe based on the Earth Fare blog title: "${recipe.title}".
@@ -101,8 +99,11 @@ Begin directly with "---".
 `;
 
   try {
-    const result = await model.generateContent(prompt);
-    let text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: prompt,
+    });
+    let text = (result.text || '').trim();
     // Strip XML thought blocks if any
     text = text.replace(/<(?:thought|thinking)>\s*[\s\S]*?<\/(?:thought|thinking)>/gi, '').trim();
     text = text.replace(/<(?:thought|thinking)>\s*[\s\S]*/gi, '').trim();

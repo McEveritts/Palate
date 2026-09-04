@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encryptKey } from "@/lib/encryption";
+import { SAGE_MODEL } from "@/lib/ai/model-config";
 import { decryptToken } from "@/lib/tokenEncryption";
 import {
   listUserCalendars,
@@ -164,7 +165,7 @@ export async function POST(req: Request) {
         // Live verify key validity with Google API before saving
         try {
           const testRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey.trim()}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${SAGE_MODEL}:generateContent?key=${geminiApiKey.trim()}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

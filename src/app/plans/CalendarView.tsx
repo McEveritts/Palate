@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -19,13 +19,14 @@ import {
 import { extractMacrosFromString } from '@/lib/parser';
 import { scaleQuantity } from '@/lib/symbolicMath';
 
-interface CalendarViewProps {
+export interface CalendarViewProps {
   vaultRecipes: VaultRecipe[];
   currentRecipes: VaultRecipe[];
   archiveRecipes: VaultRecipe[];
+  forceMode?: '1-day' | '3-day' | '7-day';
 }
 
-interface ScheduledMealData {
+export interface ScheduledMealData {
   id: string;
   userId: string;
   recipeId: string;
@@ -42,21 +43,18 @@ interface ScheduledMealData {
   };
 }
 
-const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+export const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
-const getLocalDateString = (date: Date): string => {
+export const getLocalDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-const getMealDateString = (dateInput: Date | string): string => {
+export const getMealDateString = (dateInput: Date | string): string => {
   if (dateInput instanceof Date) {
-    const year = dateInput.getUTCFullYear();
-    const month = String(dateInput.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateInput.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return getLocalDateString(dateInput);
   }
   if (typeof dateInput === 'string') {
     return dateInput.split('T')[0];
@@ -64,7 +62,7 @@ const getMealDateString = (dateInput: Date | string): string => {
   return '';
 };
 
-const formatMealDateFriendly = (dateInput: Date | string): string => {
+export const formatMealDateFriendly = (dateInput: Date | string): string => {
   const dateStr = getMealDateString(dateInput);
   if (!dateStr) return '';
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -72,7 +70,7 @@ const formatMealDateFriendly = (dateInput: Date | string): string => {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
-const formatMealDateFriendlyLong = (dateInput: Date | string): string => {
+export const formatMealDateFriendlyLong = (dateInput: Date | string): string => {
   const dateStr = getMealDateString(dateInput);
   if (!dateStr) return '';
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -80,11 +78,78 @@ const formatMealDateFriendlyLong = (dateInput: Date | string): string => {
   return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: CalendarViewProps) {
+/**
+ * Lightweight hook utilizing ResizeObserver to observe the container's inline width.
+ * Decoupled from viewport size, enabling sidebar/drawer/split-pane responsiveness.
+ */
+export function useContainerWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth;
+    }
+    return 1200;
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0) {
+      setWidth(rect.width);
+    }
+
+    if (typeof ResizeObserver === 'undefined') {
+      const handleResize = () => {
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0) setWidth(r.width);
+        }
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentBoxSize) {
+          const contentBoxSize = Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize;
+          if (contentBoxSize && typeof contentBoxSize.inlineSize === 'number' && contentBoxSize.inlineSize > 0) {
+            setWidth(contentBoxSize.inlineSize);
+            continue;
+          }
+        }
+        if (entry.contentRect && entry.contentRect.width > 0) {
+          setWidth(entry.contentRect.width);
+        }
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width] as const;
+}
+
+export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes, forceMode }: CalendarViewProps) {
   const [scheduledMeals, setScheduledMeals] = useState<ScheduledMealData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Container width observation for density rules
+  const [containerRef, containerWidth] = useContainerWidth<HTMLDivElement>();
+
+  const mode: '1-day' | '3-day' | '7-day' = useMemo(() => {
+    if (forceMode) return forceMode;
+    if (containerWidth < 500) return '1-day';
+    if (containerWidth < 1048) return '3-day';
+    return '7-day';
+  }, [forceMode, containerWidth]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -100,6 +165,18 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
     return sunday;
   });
 
+  // 1-day mode: selected day index (0 = Sun, 6 = Sat)
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => {
+    return new Date().getDay();
+  });
+
+  // 3-day mode: start date of the 3-day window
+  const [threeDayStart, setThreeDayStart] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+
   const getWeekDays = useCallback(() => {
     const days = [];
     for (let i = 0; i < 7; i++) {
@@ -110,13 +187,43 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
     return days;
   }, [currentWeekStart]);
 
+  const getThreeDays = useCallback(() => {
+    const days = [];
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(threeDayStart);
+      date.setDate(threeDayStart.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  }, [threeDayStart]);
+
+  const visibleDays = useMemo(() => {
+    if (mode === '1-day') {
+      const weekDays = getWeekDays();
+      return [weekDays[selectedDayIndex] || weekDays[0]];
+    }
+    if (mode === '3-day') {
+      return getThreeDays();
+    }
+    return getWeekDays();
+  }, [mode, selectedDayIndex, getWeekDays, getThreeDays]);
+
   const loadMeals = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const days = getWeekDays();
-      const startDate = getLocalDateString(days[0]);
-      const endDate = getLocalDateString(days[6]);
+      let startDate: string;
+      let endDate: string;
+
+      if (mode === '3-day') {
+        const threeDays = getThreeDays();
+        startDate = getLocalDateString(threeDays[0]);
+        endDate = getLocalDateString(threeDays[2]);
+      } else {
+        const days = getWeekDays();
+        startDate = getLocalDateString(days[0]);
+        endDate = getLocalDateString(days[6]);
+      }
 
       const res = await getScheduledMeals(startDate, endDate);
       if (res.success && res.meals) {
@@ -124,22 +231,29 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       } else {
         setError(res.error || 'Failed to fetch scheduled meals.');
       }
-    } catch (err) {
+    } catch {
       setError('Error connecting to calendar server.');
     } finally {
       setIsLoading(false);
     }
-  }, [getWeekDays]);
+  }, [mode, getThreeDays, getWeekDays]);
 
   useEffect(() => {
     loadMeals();
-  }, [currentWeekStart, loadMeals]);
+  }, [currentWeekStart, threeDayStart, mode, loadMeals]);
 
   // Modal / Interaction states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedMealDetail, setSelectedMealDetail] = useState<ScheduledMealData | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Meal Reschedule / Move state inside details modal
+  const [isMovingMeal, setIsMovingMeal] = useState(false);
+  const [moveDate, setMoveDate] = useState('');
+  const [moveType, setMoveType] = useState('Dinner');
+  const [isMovingSaving, setIsMovingSaving] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   // New meal form state
   const [newMealRecipeId, setNewMealRecipeId] = useState('');
@@ -149,25 +263,58 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
   const [newMealParentId, setNewMealParentId] = useState('');
 
   // Combine all recipes for selection
-  const allRecipes = [...vaultRecipes, ...currentRecipes, ...archiveRecipes].reduce((acc: VaultRecipe[], current) => {
-    const x = acc.find(item => item.slug === current.slug);
-    if (!x) {
-      return acc.concat([current]);
-    } else {
-      return acc;
-    }
-  }, []);
+  const allRecipes = useMemo(() => {
+    return [...vaultRecipes, ...currentRecipes, ...archiveRecipes].reduce((acc: VaultRecipe[], current) => {
+      const x = acc.find(item => item.slug === current.slug);
+      if (!x) {
+        return acc.concat([current]);
+      } else {
+        return acc;
+      }
+    }, []);
+  }, [vaultRecipes, currentRecipes, archiveRecipes]);
 
-  const handlePrevWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(currentWeekStart.getDate() - 7);
-    setCurrentWeekStart(newStart);
+  // Unified navigation handlers adapting to active density mode
+  const handlePrev = () => {
+    if (mode === '1-day') {
+      if (selectedDayIndex > 0) {
+        setSelectedDayIndex(prev => prev - 1);
+      } else {
+        const newStart = new Date(currentWeekStart);
+        newStart.setDate(currentWeekStart.getDate() - 7);
+        setCurrentWeekStart(newStart);
+        setSelectedDayIndex(6);
+      }
+    } else if (mode === '3-day') {
+      const newStart = new Date(threeDayStart);
+      newStart.setDate(threeDayStart.getDate() - 3);
+      setThreeDayStart(newStart);
+    } else {
+      const newStart = new Date(currentWeekStart);
+      newStart.setDate(currentWeekStart.getDate() - 7);
+      setCurrentWeekStart(newStart);
+    }
   };
 
-  const handleNextWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(currentWeekStart.getDate() + 7);
-    setCurrentWeekStart(newStart);
+  const handleNext = () => {
+    if (mode === '1-day') {
+      if (selectedDayIndex < 6) {
+        setSelectedDayIndex(prev => prev + 1);
+      } else {
+        const newStart = new Date(currentWeekStart);
+        newStart.setDate(currentWeekStart.getDate() + 7);
+        setCurrentWeekStart(newStart);
+        setSelectedDayIndex(0);
+      }
+    } else if (mode === '3-day') {
+      const newStart = new Date(threeDayStart);
+      newStart.setDate(threeDayStart.getDate() + 3);
+      setThreeDayStart(newStart);
+    } else {
+      const newStart = new Date(currentWeekStart);
+      newStart.setDate(currentWeekStart.getDate() + 7);
+      setCurrentWeekStart(newStart);
+    }
   };
 
   const handleToday = () => {
@@ -177,11 +324,15 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
     const sunday = new Date(today.setDate(diff));
     sunday.setHours(0, 0, 0, 0);
     setCurrentWeekStart(sunday);
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    setThreeDayStart(now);
+    setSelectedDayIndex(now.getDay());
   };
 
   const handleAddMealSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
-
     setFormError(null);
 
     // Explicit validation with user-facing feedback
@@ -200,7 +351,6 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
 
     setIsSaving(true);
     try {
-
       const res = await scheduleMeal(
         newMealRecipeId,
         newMealDate,
@@ -209,9 +359,7 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
         newMealParentId || undefined
       );
 
-
       if (res.success) {
-        // Reset form
         setNewMealRecipeId('');
         setNewMealDate('');
         setNewMealType('Dinner');
@@ -240,21 +388,29 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       } else {
         alert(res.error || 'Failed to cancel meal.');
       }
-    } catch (err) {
+    } catch {
       alert('Error deleting meal.');
     }
   };
 
-  const handleMoveMeal = async (mealId: string, dateStr: string, type: string) => {
+  const handleMoveMealAction = async () => {
+    if (!selectedMealDetail || !moveDate || !moveType) return;
+    setIsMovingSaving(true);
+    setMoveError(null);
     try {
-      const res = await moveScheduledMeal(mealId, dateStr, type);
+      const res = await moveScheduledMeal(selectedMealDetail.id, moveDate, moveType);
       if (res.success) {
+        setIsMovingMeal(false);
+        setMoveError(null);
+        setSelectedMealDetail(null);
         loadMeals();
       } else {
-        alert(res.error || 'Failed to move meal.');
+        setMoveError(res.error || 'Failed to move meal.');
       }
-    } catch (err) {
-      alert('Error moving meal.');
+    } catch {
+      setMoveError('Error connecting to calendar server to reschedule.');
+    } finally {
+      setIsMovingSaving(false);
     }
   };
 
@@ -305,60 +461,120 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
       date.getFullYear() === today.getFullYear();
   };
 
+  const headerDateLabel = useMemo(() => {
+    if (mode === '1-day') {
+      const activeDay = getWeekDays()[selectedDayIndex] || new Date();
+      return formatMealDateFriendlyLong(activeDay);
+    }
+    if (mode === '3-day') {
+      const threeDays = getThreeDays();
+      return `${formatMealDateFriendly(threeDays[0])} – ${formatMealDateFriendly(threeDays[2])}, ${threeDays[2].getFullYear()}`;
+    }
+    const weekDays = getWeekDays();
+    return `Week of ${formatMealDateFriendly(weekDays[0])} – ${formatMealDateFriendly(weekDays[6])}, ${weekDays[6].getFullYear()}`;
+  }, [mode, selectedDayIndex, getWeekDays, getThreeDays]);
+
   return (
-    <div className="w-full relative min-h-screen text-slate-100 pb-20">
+    <div ref={containerRef} className="w-full relative min-h-screen text-slate-100 pb-20 @container">
       {/* Specular Ambient Glow Orbs */}
       <div className="absolute top-20 left-10 w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-fuchsia-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Header controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-slate-950/40 p-6 rounded-2xl border border-white/5 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <Calendar className="w-6 h-6" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-slate-950/40 p-4 sm:p-6 rounded-2xl border border-white/5 backdrop-blur-md">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shrink-0">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
               Culinary Scheduler
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase tracking-widest font-extrabold animate-pulse">
-                Active
+              <span className="text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase tracking-widest font-extrabold">
+                {mode === '1-day' ? '1-Day' : mode === '3-day' ? '3-Day' : '7-Day'}
               </span>
             </h2>
             <p className="text-slate-400 text-xs mt-0.5 font-medium">
-              Week of {getWeekDays()[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {getWeekDays()[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {headerDateLabel}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end md:self-auto">
-          <button 
-            onClick={handlePrevWeek}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 transition-colors"
-          >
-            ← Prev
-          </button>
-          <button 
-            onClick={handleToday}
-            className="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-200 transition-all"
-          >
-            Today
-          </button>
-          <button 
-            onClick={handleNextWeek}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 transition-colors"
-          >
-            Next →
-          </button>
+        <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button 
+              onClick={handlePrev}
+              className="px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 transition-colors"
+              title="Previous"
+            >
+              ← Prev
+            </button>
+            <button 
+              onClick={handleToday}
+              className="px-3 sm:px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-200 transition-all"
+            >
+              Today
+            </button>
+            <button 
+              onClick={handleNext}
+              className="px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-white/5 hover:bg-slate-800 transition-colors"
+              title="Next"
+            >
+              Next →
+            </button>
+          </div>
           
           <button 
-            onClick={() => { setFormError(null); setIsAddModalOpen(true); }}
-            className="ml-4 flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-600 hover:to-fuchsia-600 rounded-lg text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all border border-indigo-400/20"
+            onClick={() => { 
+              setFormError(null); 
+              setNewMealDate(getLocalDateString(visibleDays[0] || new Date()));
+              setIsAddModalOpen(true); 
+            }}
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-600 hover:to-fuchsia-600 rounded-lg text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all border border-indigo-400/20"
           >
             <Plus className="w-4 h-4" />
             <span>Schedule Meal</span>
           </button>
         </div>
       </div>
+
+      {/* 1-Day Mode: 7-Pill Day Selector Strip */}
+      {mode === '1-day' && (
+        <div className="flex items-center justify-between gap-1.5 p-2 bg-slate-950/40 rounded-2xl border border-white/5 backdrop-blur-md mb-6 overflow-x-auto custom-scrollbar" data-testid="mobile-day-selector">
+          {getWeekDays().map((day, idx) => {
+            const isSelected = idx === selectedDayIndex;
+            const isTodayDay = isToday(day);
+            const dayMeals = scheduledMeals.filter(meal => getMealDateString(meal.date) === getLocalDateString(day));
+            const hasMeals = dayMeals.length > 0;
+
+            return (
+              <button
+                key={`pill-${idx}`}
+                type="button"
+                onClick={() => setSelectedDayIndex(idx)}
+                className={`flex-1 min-w-[42px] py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white font-bold shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-indigo-400/50'
+                    : isTodayDay
+                    ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
+                    : 'bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800 border border-white/5'
+                }`}
+                title={formatMealDateFriendlyLong(day)}
+                aria-pressed={isSelected}
+              >
+                <span className="text-[10px] uppercase font-bold tracking-wider">
+                  {getDayName(day)}
+                </span>
+                <span className="text-sm font-extrabold mt-0.5">
+                  {day.getDate()}
+                </span>
+                {hasMeals && (
+                  <span className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-white' : 'bg-indigo-400'}`} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-40 gap-4">
@@ -372,16 +588,27 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
           <p className="text-xs text-rose-300/80">{error}</p>
         </div>
       ) : (
-        /* Calendar Grid */
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
-          {getWeekDays().map((day, idx) => {
+        /* Responsive Calendar Grid adapting to container mode */
+        <div 
+          data-testid="calendar-grid"
+          data-mode={mode}
+          className={`grid gap-4 ${
+            mode === '1-day' 
+              ? 'grid-cols-1' 
+              : mode === '3-day' 
+              ? 'grid-cols-3' 
+              : isMounted
+              ? 'grid-cols-7'
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7'
+          }`}
+        >
+          {visibleDays.map((day, idx) => {
             const dayMeals = scheduledMeals.filter(meal => getMealDateString(meal.date) === getLocalDateString(day));
-
             const today = isToday(day);
 
             return (
               <div 
-                key={`day-${idx}`} 
+                key={`day-${getLocalDateString(day)}-${idx}`} 
                 className={`flex flex-col h-full min-h-[500px] rounded-2xl transition-all border ${
                   today 
                     ? 'bg-indigo-500/5 border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' 
@@ -415,9 +642,20 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                         </span>
 
                         {mealsForType.length === 0 ? (
-                          <div className="text-[10px] text-slate-600 italic border border-dashed border-white/5 rounded-xl p-2.5 flex items-center justify-center select-none bg-slate-950/5">
-                            Empty
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormError(null);
+                              setNewMealDate(getLocalDateString(day));
+                              setNewMealType(mealType);
+                              setIsAddModalOpen(true);
+                            }}
+                            className="text-[10px] text-slate-600 hover:text-indigo-300 border border-dashed border-white/5 hover:border-indigo-500/30 rounded-xl p-2.5 flex items-center justify-center select-none bg-slate-950/5 hover:bg-indigo-500/5 transition-all cursor-pointer group/empty"
+                            title={`Schedule ${mealType} on ${formatMealDateFriendly(day)}`}
+                          >
+                            <Plus className="w-3 h-3 mr-1 opacity-0 group-hover/empty:opacity-100 transition-opacity text-indigo-400" />
+                            <span>Empty</span>
+                          </button>
                         ) : (
                           mealsForType.map(meal => {
                             const freshness = calculateFreshness(meal);
@@ -428,7 +666,13 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                               <motion.div
                                 key={meal.id}
                                 layoutId={`meal-card-${meal.id}`}
-                                onClick={() => setSelectedMealDetail(meal)}
+                                onClick={() => {
+                                  setSelectedMealDetail(meal);
+                                  setIsMovingMeal(false);
+                                  setMoveError(null);
+                                  setMoveDate(getMealDateString(meal.date));
+                                  setMoveType(meal.mealType);
+                                }}
                                 className={`cursor-pointer group p-3.5 rounded-xl bg-slate-950/50 hover:bg-slate-950/70 border transition-all relative flex flex-col ${freshness.glow}`}
                               >
                                 {/* Leftover Line Indicator if parent meal is present */}
@@ -726,6 +970,87 @@ export function CalendarView({ vaultRecipes, currentRecipes, archiveRecipes }: C
                         Based on dynamic storage decay metrics
                       </span>
                     </div>
+                  </div>
+
+                  {/* Reschedule / Move Section */}
+                  <div className="p-4 rounded-2xl bg-slate-950/40 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Move className="w-3.5 h-3.5 text-indigo-400" /> Reschedule / Move Meal
+                      </span>
+                      {!isMovingMeal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMovingMeal(true);
+                            setMoveError(null);
+                            setMoveDate(getMealDateString(selectedMealDetail.date));
+                            setMoveType(selectedMealDetail.mealType);
+                          }}
+                          className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+                        >
+                          Change Date / Type
+                        </button>
+                      )}
+                    </div>
+
+                    {isMovingMeal && (
+                      <div className="pt-2 border-t border-white/5 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                              New Date
+                            </label>
+                            <input
+                              type="date"
+                              value={moveDate}
+                              onChange={(e) => setMoveDate(e.target.value)}
+                              className="w-full bg-slate-950 border border-white/10 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                              New Meal Type
+                            </label>
+                            <select
+                              value={moveType}
+                              onChange={(e) => setMoveType(e.target.value)}
+                              className="w-full bg-slate-950 border border-white/10 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                            >
+                              {MEAL_TYPES.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {moveError && (
+                          <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-start gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                            <span>{moveError}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={isMovingSaving}
+                            onClick={() => setIsMovingMeal(false)}
+                            className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white text-xs font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isMovingSaving || !moveDate}
+                            onClick={handleMoveMealAction}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 disabled:opacity-50"
+                          >
+                            {isMovingSaving ? 'Moving…' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Portions quantities scaling visualizer */}

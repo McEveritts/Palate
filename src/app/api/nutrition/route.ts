@@ -157,7 +157,7 @@ export async function GET(req: Request) {
       // 3. Write-back to local vault
       await writeToLocalMacros(newMacro);
     } catch (error: unknown) {
-      console.warn(`[USDA API Error]: Request failed for "${trimmedIngredient}". Triggering Gemma fallback.`, error);
+      console.warn(`[USDA API Error]: Request failed for "${trimmedIngredient}". Triggering Gemini fallback.`, error);
 
       try {
         const ai = createGenAIClient();

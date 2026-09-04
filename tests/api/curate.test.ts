@@ -92,6 +92,9 @@ Side description
     expect(json.success).toBe(true);
     expect(json.message).toContain('generated 3 new curated recipes');
     expect(fs.writeFile).toHaveBeenCalledTimes(3);
+    expect(mockGenerateContent).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "gemini-3.8-flash" })
+    );
   });
 
   it('should fallback to frontmatter regex split if delimiter is missing', async () => {

@@ -74,14 +74,14 @@ Palate uses `@google/generative-ai` (JS SDK v0.24.1) with the standard
 
 | File | Method | Model |
 |------|--------|-------|
-| `src/lib/sage.ts` → `askSage()` | `generateContent` | `gemma-4-31b-it` / `gemini-3.1-pro-preview` |
-| `src/lib/sage.ts` → `streamSage()` | `generateContentStream` | `gemma-4-31b-it` / `gemini-3.1-pro-preview` |
-| `src/lib/calendarAgent.ts` | `generateContent` | `gemma-4-31b-it` |
-| `src/app/api/curate/route.ts` | `generateContent` | `gemma-4-31b-it` |
-| `src/app/api/household/suggest-name/route.ts` | `generateContent` | `gemma-4-31b-it` |
-| `src/app/api/nutrition/route.ts` | `generateContent` | `gemma-4-31b-it` (USDA fallback) |
-| `src/app/api/parse/route.ts` | `generateContent` | `gemma-4-31b-it` |
-| `src/app/api/sage/zero-waste/route.ts` | `generateContentStream` | `gemma-4-31b-it` |
+| `src/lib/sage.ts` → `askSage()` | `generateContent` | `gemini-3.8-flash` |
+| `src/lib/sage.ts` → `streamSage()` | `generateContentStream` | `gemini-3.8-flash` |
+| `src/lib/calendarAgent.ts` | `generateContent` | `gemini-3.8-flash` |
+| `src/app/api/curate/route.ts` | `generateContent` | `gemini-3.8-flash` |
+| `src/app/api/household/suggest-name/route.ts` | `generateContent` | `gemini-3.8-flash` |
+| `src/app/api/nutrition/route.ts` | `generateContent` | `gemini-3.8-flash` (USDA fallback) |
+| `src/app/api/parse/route.ts` | `generateContent` | `gemini-3.8-flash` |
+| `src/app/api/sage/zero-waste/route.ts` | `generateContentStream` | `gemini-3.8-flash` |
 
 ---
 

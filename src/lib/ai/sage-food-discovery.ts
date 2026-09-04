@@ -152,7 +152,7 @@ export async function estimateFoodNutrition(
     });
     const text = (result.text || '').trim();
 
-    // Robust JSON extraction — Gemma may wrap JSON in markdown fences or prepend reasoning
+    // Robust JSON extraction — Gemini may wrap JSON in markdown fences or prepend reasoning
     let parsed: SageRawEstimate[];
     try {
       // Strategy 1: Try direct parse (ideal case)

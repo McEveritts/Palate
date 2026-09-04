@@ -216,7 +216,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
       <VaultCockpit recipes={recipes} />
 
       <motion.div 
-        className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 3xl:columns-5 4xl:columns-6 gap-6 space-y-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6 gap-6 items-start"
         animate={{ opacity: selectedId ? 0.3 : 1, filter: selectedId ? "blur(8px)" : "blur(0px)" }}
         transition={{ duration: 0.3 }}
       >
@@ -233,29 +233,31 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className={`cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-6 transition-all duration-300 hover:bg-slate-900/20 hover:backdrop-saturate-[2] break-inside-avoid inline-block w-full ${scheme.borderHover} ${scheme.shadowHover}`}
+                className={`cursor-pointer group relative overflow-hidden rounded-2xl bg-slate-900/30 backdrop-blur-3xl backdrop-saturate-[1.5] border border-white/10 border-t-white/20 border-l-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] p-6 transition-all duration-300 hover:bg-slate-900/20 hover:backdrop-saturate-[2] flex flex-col justify-between w-full ${scheme.borderHover} ${scheme.shadowHover}`}
               >
                 {/* Abstract Background Element */}
                 <div className={`absolute -top-20 -right-20 w-40 h-40 ${scheme.glow} rounded-full blur-3xl group-hover:scale-125 transition-transform duration-500 opacity-60`}></div>
                 
-                <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 pr-12 z-10 relative">
-                  {recipe.title}
-                </motion.h3>
+                <div>
+                  <motion.h3 layoutId={`title-${recipe.id}`} className="text-2xl font-bold text-white mb-2 pr-12 z-10 relative">
+                    {recipe.title}
+                  </motion.h3>
 
-                {/* Glowing category tags */}
-                {recipe.tags && recipe.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4 z-10 relative">
-                    {recipe.tags.map((tag) => (
-                      <span key={tag} className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${scheme.tagBg}`}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {/* Glowing category tags */}
+                  {recipe.tags && recipe.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4 z-10 relative">
+                      {recipe.tags.map((tag) => (
+                        <span key={tag} className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${scheme.tagBg}`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                   
-                {/* Hover Macro Dashboard */}
+                {/* Hover / Touch Macro Dashboard */}
                 {(calories > 0 || protein > 0 || carbs > 0 || fat > 0) && (
-                  <div className="mt-4 pt-4 border-t border-white/5 opacity-0 max-h-0 group-hover:opacity-100 group-hover:max-h-20 overflow-hidden transition-all duration-300 z-10 relative flex justify-between items-center text-xs">
+                  <div className="mt-4 pt-4 border-t border-white/5 z-10 relative flex justify-between items-center text-xs vault-macro-dashboard">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Calories</span>
                       <span className="text-white font-bold">{calories} kcal</span>
@@ -283,8 +285,8 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                   </div>
                 )}
 
-                {/* Secure Hover-Triggered Glassmorphic Trashcan Icon with confirmation */}
-                <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto">
+                {/* Touch-Accessible Glassmorphic Trashcan Icon with confirmation */}
+                <div className={`absolute top-4 right-4 z-20 transition-all duration-300 pointer-events-auto ${confirmDeleteId === recipe.id ? 'opacity-100' : 'touch-visible-hover-reveal'}`}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -297,7 +299,7 @@ export function VaultGrid({ initialRecipes, onSaveAction }: VaultGridProps) {
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                     onMouseUp={(e) => e.stopPropagation()}
-                    className={`flex items-center gap-1.5 p-2.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
+                    className={`flex items-center justify-center min-w-[38px] min-h-[38px] gap-1.5 p-2 sm:p-2.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
                       confirmDeleteId === recipe.id
                         ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
                         : 'bg-white/5 border-white/10 hover:bg-rose-500/20 hover:border-rose-500/35 text-slate-400 hover:text-rose-200'

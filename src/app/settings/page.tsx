@@ -434,7 +434,7 @@ export default function SettingsPage() {
       setSaving(true);
       try {
         const testRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${keyInput.trim()}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${keyInput.trim()}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

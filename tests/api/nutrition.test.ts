@@ -115,7 +115,7 @@ describe('GET /api/nutrition', () => {
     expect(globalMacroCache.invalidate).toHaveBeenCalled();
   });
 
-  it('should fallback to Gemma AI when USDA API fails or rate-limits', async () => {
+  it('should fallback to Gemini AI when USDA API fails or rate-limits', async () => {
     process.env.GEMINI_API_KEY = "test-key";
     vi.mocked(globalMacroCache.get).mockReturnValue([]);
     
@@ -145,5 +145,8 @@ describe('GET /api/nutrition', () => {
 
     expect(fs.writeFile).toHaveBeenCalled();
     expect(globalMacroCache.invalidate).toHaveBeenCalled();
+    expect(mockGenerateContent).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "gemini-3.8-flash" })
+    );
   });
 });

@@ -201,7 +201,7 @@ body {
     -webkit-text-fill-color: transparent;
   }
 
-  /* Custom Scrollbar for Chat */
+  /* Custom Scrollbar for Chat & UI Panels */
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.08) rgba(15, 23, 42, 0.3);
@@ -266,6 +266,28 @@ body {
   @media (hover: none), (max-width: 767px) {
     .touch-visible-hover-reveal {
       opacity: 1;
+    }
+  }
+
+  /* Macro Dashboard: visible on touch/mobile, hover-expand on desktop pointer */
+  @media (hover: hover) and (min-width: 768px) {
+    .vault-macro-dashboard {
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out;
+    }
+    .group:hover .vault-macro-dashboard,
+    .group:focus-within .vault-macro-dashboard {
+      opacity: 1;
+      max-height: 5rem;
+    }
+  }
+  @media (hover: none), (max-width: 767px) {
+    .vault-macro-dashboard {
+      opacity: 1;
+      max-height: 5rem;
+      overflow: visible;
     }
   }
 }
