@@ -1,14 +1,73 @@
 import { prisma } from "./db";
 import { Prisma } from "@prisma/client";
+import { encryptToken, decryptToken } from "./tokenEncryption";
 
 type ScheduledMealWithRecipe = Prisma.ScheduledMealGetPayload<{
   include: { recipe: true };
 }>;
 
+export interface GoogleConnectionStatus {
+  connected: boolean;
+  hasCalendarScope: boolean;
+  hasUsableCredentials: boolean;
+  reason?: string;
+}
+
+/**
+ * Centralized Google Calendar connection usability validator.
+ * Used by Settings and runtime Calendar operations to guarantee alignment.
+ */
+export function validateGoogleCalendarConnection(
+  account: {
+    scope?: string | null;
+    access_token?: string | null;
+    refresh_token?: string | null;
+  } | null
+): GoogleConnectionStatus {
+  if (!account) {
+    return { connected: false, hasCalendarScope: false, hasUsableCredentials: false, reason: "no_account" };
+  }
+
+  const scopes = (account.scope || "").split(/\s+/);
+  const hasScope = scopes.includes("https://www.googleapis.com/auth/calendar");
+  if (!hasScope) {
+    return { connected: false, hasCalendarScope: false, hasUsableCredentials: false, reason: "missing_calendar_scope" };
+  }
+
+  let hasValidRefreshToken = false;
+  if (account.refresh_token) {
+    try {
+      const dec = decryptToken(account.refresh_token);
+      if (dec && dec.trim() !== "") hasValidRefreshToken = true;
+    } catch {
+      hasValidRefreshToken = false;
+    }
+  }
+
+  let hasValidAccessToken = false;
+  if (account.access_token) {
+    try {
+      const dec = decryptToken(account.access_token);
+      if (dec && dec.trim() !== "") hasValidAccessToken = true;
+    } catch {
+      hasValidAccessToken = false;
+    }
+  }
+
+  const hasUsableCredentials = hasValidRefreshToken || hasValidAccessToken;
+  return {
+    connected: hasScope && hasUsableCredentials,
+    hasCalendarScope: hasScope,
+    hasUsableCredentials,
+    reason: hasUsableCredentials ? undefined : "no_usable_tokens",
+  };
+}
+
 /**
  * Retrieves a valid Google OAuth access token for a given user.
- * If the current access token is expired or close to expiring, and a refresh token
- * is available, it refreshes the token via Google's token endpoint and updates the database.
+ * Decrypts tokens stored at rest. If the current access token is corrupt, missing,
+ * or close to expiring, and a decryptable refresh token is available, it refreshes
+ * the token via Google's token endpoint and saves newly re-encrypted tokens in the database.
  */
 export async function getGoogleAccessToken(userId: string): Promise<string | null> {
   try {
@@ -17,19 +76,41 @@ export async function getGoogleAccessToken(userId: string): Promise<string | nul
     });
 
     if (!account) {
-      console.warn(`No Google account found for user ${userId}`);
       return null;
     }
 
+    let rawAccessToken: string | null = null;
+    let accessTokenCorrupt = false;
+    if (account.access_token) {
+      try {
+        rawAccessToken = decryptToken(account.access_token);
+      } catch {
+        accessTokenCorrupt = true;
+      }
+    }
+
+    let rawRefreshToken: string | null = null;
+    if (account.refresh_token) {
+      try {
+        rawRefreshToken = decryptToken(account.refresh_token);
+      } catch {
+        // Refresh token unreadable or corrupt
+      }
+    }
+
     const now = Math.floor(Date.now() / 1000);
-    // If the token expires in less than 5 minutes (300 seconds), refresh it
-    if (account.expires_at && account.expires_at <= now + 300) {
-      if (!account.refresh_token) {
-        console.error(`Google access token is expired for user ${userId}, but no refresh token is stored.`);
+    const isExpiredOrCorrupt =
+      !rawAccessToken ||
+      accessTokenCorrupt ||
+      (account.expires_at !== null && account.expires_at !== undefined && account.expires_at <= now + 300);
+
+    if (isExpiredOrCorrupt) {
+      if (!rawRefreshToken) {
+        console.error(`Google access token is expired or corrupt for user ${userId}, and no valid refresh token is stored.`);
         return null;
       }
 
-      console.log(`Refreshing expired Google access token for user ${userId}...`);
+      console.log(`Refreshing Google access token for user ${userId}...`);
       const response = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: {
@@ -39,7 +120,7 @@ export async function getGoogleAccessToken(userId: string): Promise<string | nul
           client_id: process.env.GOOGLE_CLIENT_ID || "",
           client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
           grant_type: "refresh_token",
-          refresh_token: account.refresh_token,
+          refresh_token: rawRefreshToken,
         }),
       });
 
@@ -52,21 +133,58 @@ export async function getGoogleAccessToken(userId: string): Promise<string | nul
       const data = await response.json();
       const updatedAccessToken = data.access_token;
       const updatedExpiresAt = Math.floor(Date.now() / 1000) + data.expires_in;
+      const newRefreshToken = data.refresh_token || rawRefreshToken;
 
-      await prisma.account.update({
-        where: { id: account.id },
+      // Atomic Compare-And-Swap update:
+      // Match the original access_token, refresh_token, and expires_at read before refresh
+      const casResult = await prisma.account.updateMany({
+        where: {
+          id: account.id,
+          access_token: account.access_token,
+          refresh_token: account.refresh_token,
+          expires_at: account.expires_at,
+        },
         data: {
-          access_token: updatedAccessToken,
+          access_token: encryptToken(updatedAccessToken),
           expires_at: updatedExpiresAt,
-          refresh_token: data.refresh_token || account.refresh_token, // Save new refresh token if Google rotated it
+          refresh_token: encryptToken(newRefreshToken),
         },
       });
+
+      if (casResult.count === 0) {
+        // A concurrent reconnect, refresh, or disconnect occurred!
+        // Reload current active connection for this user and provider
+        console.log(`CAS conflict during token refresh for user ${userId}. Validating current connection...`);
+        const currentAccount = await prisma.account.findFirst({
+          where: { userId, provider: "google" },
+        });
+
+        // Invariant: If account was deleted (disconnect) or replaced (reconnect), return null
+        if (
+          !currentAccount ||
+          currentAccount.id !== account.id ||
+          currentAccount.providerAccountId !== account.providerAccountId
+        ) {
+          console.warn(`[GoogleCalendar] Account was disconnected or replaced during refresh for user ${userId}. Refusing to return token.`);
+          return null;
+        }
+
+        // Winning record belongs to same account: return winning decrypted access token
+        if (currentAccount.access_token) {
+          try {
+            return decryptToken(currentAccount.access_token);
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      }
 
       console.log(`Successfully refreshed Google access token for user ${userId}.`);
       return updatedAccessToken;
     }
 
-    return account.access_token;
+    return rawAccessToken;
   } catch (error) {
     console.error(`Error in getGoogleAccessToken for user ${userId}:`, error);
     return null;
@@ -80,9 +198,7 @@ export async function hasCalendarScope(userId: string): Promise<boolean> {
   const account = await prisma.account.findFirst({
     where: { userId, provider: "google" },
   });
-  if (!account || !account.scope) return false;
-  const scopes = account.scope.split(/\s+/);
-  return scopes.includes("https://www.googleapis.com/auth/calendar");
+  return validateGoogleCalendarConnection(account).hasCalendarScope;
 }
 
 export interface GoogleCalendarItem {
@@ -173,68 +289,80 @@ export async function getOrCreateTargetCalendar(userId: string): Promise<string 
 
   if (!config || !config.googleCalendarSyncEnabled) return null;
 
-  // Case 1: Dynamic selected calendar ID already exists
-  if (config.googleCalendarId && config.googleCalendarId !== "create_sage_calendar") {
-    // Quickly verify it's still accessible
-    const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(config.googleCalendarId)}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+  // Case 1: Default / Primary Calendar selected (empty, null, or "primary")
+  if (!config.googleCalendarId || config.googleCalendarId === "primary") {
+    return "primary";
+  }
+
+  // Case 2: User explicitly selected "create_sage_calendar" to create or use dedicated calendar
+  if (config.googleCalendarId === "create_sage_calendar") {
+    // First check if there's an existing secondary calendar with this name to avoid duplicates
+    try {
+      const calendars = await listUserCalendars(userId);
+      const existingSageCal = calendars.find((c) => c.summary === "SageAI Culinary Calendar");
+      if (existingSageCal) {
+        await prisma.userConfig.update({
+          where: { userId },
+          data: { googleCalendarId: existingSageCal.id },
+        });
+        return existingSageCal.id;
+      }
+    } catch (err) {
+      console.error("Error looking up existing SageAI calendar:", err);
+    }
+
+    // Create a new dedicated secondary calendar
+    console.log(`Creating a new secondary calendar 'SageAI Culinary Calendar' for user ${userId}...`);
+    try {
+      const createRes = await fetch("https://www.googleapis.com/calendar/v3/calendars", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: "SageAI Culinary Calendar",
+          description: "Your personalized culinary meal plan synced from SageAI (Palate)",
+        }),
+      });
+
+      if (!createRes.ok) {
+        console.error("Failed to create Google secondary calendar:", await createRes.text());
+        return "primary"; // Fallback safely to primary
+      }
+
+      const calendar = await createRes.json();
+      await prisma.userConfig.update({
+        where: { userId },
+        data: { googleCalendarId: calendar.id },
+      });
+
+      console.log(`Successfully created SageAI Culinary Calendar: ${calendar.id}`);
+      return calendar.id;
+    } catch (error) {
+      console.error("Error creating secondary Google calendar:", error);
+      return "primary"; // Fallback safely to primary
+    }
+  }
+
+  // Case 3: Specific custom calendar ID selected
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(config.googleCalendarId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     if (response.ok) {
       return config.googleCalendarId;
     }
-    console.warn(`Stored calendar ID ${config.googleCalendarId} was not reachable. Re-evaluating...`);
-  }
-
-  // Case 2: Create a dedicated "SageAI Culinary Calendar"
-  // First, check if there's an existing secondary calendar with this name to avoid duplicates
-  try {
-    const calendars = await listUserCalendars(userId);
-    const existingSageCal = calendars.find(c => c.summary === "SageAI Culinary Calendar");
-    if (existingSageCal) {
-      await prisma.userConfig.update({
-        where: { userId },
-        data: { googleCalendarId: existingSageCal.id },
-      });
-      return existingSageCal.id;
-    }
-  } catch (err) {
-    console.error("Error looking up existing SageAI calendar:", err);
-  }
-
-  // Create a new secondary calendar
-  console.log(`Creating a new secondary calendar 'SageAI Culinary Calendar' for user ${userId}...`);
-  try {
-    const createRes = await fetch("https://www.googleapis.com/calendar/v3/calendars", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        summary: "SageAI Culinary Calendar",
-        description: "Your personalized culinary meal plan synced from SageAI (Palate)",
-      }),
-    });
-
-    if (!createRes.ok) {
-      console.error("Failed to create Google secondary calendar:", await createRes.text());
-      return null;
-    }
-
-    const calendar = await createRes.json();
-    await prisma.userConfig.update({
-      where: { userId },
-      data: { googleCalendarId: calendar.id },
-    });
-
-    console.log(`Successfully created SageAI Culinary Calendar: ${calendar.id}`);
-    return calendar.id;
-  } catch (error) {
-    console.error("Error creating secondary Google calendar:", error);
-    return null;
+    console.warn(`Stored calendar ID ${config.googleCalendarId} was not reachable. Falling back to primary...`);
+    return "primary";
+  } catch {
+    return "primary";
   }
 }
 
@@ -456,4 +584,30 @@ export async function deleteMealFromGoogle(userId: string, googleEventId: string
     console.error(`Error deleting Google event ${googleEventId}:`, error);
     return false;
   }
+}
+
+/**
+ * Backfills current and upcoming meals to the user's selected Google Calendar.
+ */
+export async function backfillCalendarEvents(userId: string): Promise<number> {
+  const config = await prisma.userConfig.findUnique({ where: { userId } });
+  if (!config || !config.googleCalendarSyncEnabled) return 0;
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const meals = await prisma.scheduledMeal.findMany({
+    where: {
+      userId,
+      date: { gte: todayStart },
+    },
+    include: { recipe: true },
+  });
+
+  let count = 0;
+  for (const meal of meals) {
+    const ok = await syncMealToGoogle(userId, meal.id, meal);
+    if (ok) count++;
+  }
+  return count;
 }

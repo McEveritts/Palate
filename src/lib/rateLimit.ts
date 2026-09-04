@@ -147,8 +147,11 @@ export async function checkRateLimit(
         reset: expiresAt,
       };
     });
-  } catch (err) {
-    console.error("[RateLimit] Database error during rate limit check");
+  } catch (err: unknown) {
+    const errorInfo = err && typeof err === "object" ? (err as { name?: string; code?: string }) : null;
+    const sanitizedName = errorInfo?.name || "DatabaseError";
+    const sanitizedCode = errorInfo?.code ? `[Code: ${errorInfo.code}]` : "";
+    console.error(`[RateLimit] Database error during rate limit check: ${sanitizedName} ${sanitizedCode}`.trim());
     if (process.env.NODE_ENV === "production") {
       return {
         success: false,
@@ -169,7 +172,11 @@ export async function checkRateLimit(
   if (result.success) {
     try {
       await cleanupExpiredBuckets(db, now, cleanupLimit);
-    } catch (cleanupErr) {
+    } catch (cleanupErr: unknown) {
+      const errInfo = cleanupErr && typeof cleanupErr === "object" ? (cleanupErr as { name?: string; code?: string }) : null;
+      const sanitizedName = errInfo?.name || "CleanupError";
+      const sanitizedCode = errInfo?.code ? `[Code: ${errInfo.code}]` : "";
+      console.warn(`[RateLimit] Background cleanup error: ${sanitizedName} ${sanitizedCode}`.trim());
       options.onCleanupError?.(cleanupErr);
     }
   }
@@ -180,19 +187,27 @@ export async function checkRateLimit(
 /**
  * Checks PostgreSQL-backed sliding window rate limiter for Jellyfin login attempts.
  * Max 5 accepted attempts per rolling 60-second window.
+ * Requires PALATE_RATE_LIMIT_SECRET in production for cryptographic key separation.
  */
 export async function checkAuthRateLimit(
   ip: string,
   username: string,
   db: PrismaClient = prisma
 ): Promise<boolean> {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret && process.env.NODE_ENV === "production") {
-    console.error("[Auth] Missing NEXTAUTH_SECRET in production. Blocking login.");
-    return false;
+  const rateLimitSecret = process.env.PALATE_RATE_LIMIT_SECRET;
+  if (!rateLimitSecret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[RateLimit] FATAL: Missing PALATE_RATE_LIMIT_SECRET in production. Blocking login.");
+      return false;
+    }
+    const fallbackSecret = process.env.NEXTAUTH_SECRET || "dev-fallback-salt";
+    console.warn("[RateLimit] Warning: PALATE_RATE_LIMIT_SECRET not set; falling back to secondary secret in non-production.");
+    const bucketKey = computeAuthRateLimitKey(ip, username, fallbackSecret);
+    const result = await checkRateLimit(bucketKey, { limit: 5, windowMs: 60_000, db });
+    return result.success;
   }
 
-  const bucketKey = computeAuthRateLimitKey(ip, username, secret || "dev-fallback-salt");
+  const bucketKey = computeAuthRateLimitKey(ip, username, rateLimitSecret);
   const result = await checkRateLimit(bucketKey, { limit: 5, windowMs: 60_000, db });
   return result.success;
 }

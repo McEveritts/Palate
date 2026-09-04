@@ -1,8 +1,8 @@
 "use client";
 
-import { useSession, signOut, signIn } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
-import { User, Key, LogOut, Sparkles, Calendar, RefreshCw, Lock, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus, Activity } from "lucide-react";
+import { User, Key, LogOut, Sparkles, ShieldCheck, AlertCircle, Home, Copy, Check, UserPlus, DoorOpen, Wand2, UserMinus, Activity, Calendar, RefreshCw, Unlink, ExternalLink, CheckCircle2 } from "lucide-react";
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
@@ -20,18 +20,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [keyVerification, setKeyVerification] = useState<{ status: "idle" | "success" | "error"; message: string }>({ status: "idle", message: "" });
 
-  // Google Calendar Integration states
-  const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
-  const [selectedCalendarId, setSelectedCalendarId] = useState("create_sage_calendar");
-  const [hasCalendarScope, setHasCalendarScope] = useState(false);
-  interface GoogleCalendar {
-    id: string;
-    summary: string;
-    primary?: boolean;
-  }
-  const [googleCalendars, setGoogleCalendars] = useState<GoogleCalendar[]>([]);
-  const [backfilling, setBackfilling] = useState(false);
-  const [backfillMessage, setBackfillMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Google Calendar integration states
+  const [hasGoogleConnection, setHasGoogleConnection] = useState(false);
+  const [googleCalendarSyncEnabled, setGoogleCalendarSyncEnabled] = useState(false);
+  const [googleCalendarId, setGoogleCalendarId] = useState<string>("");
+  const [calendars, setCalendars] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
+  const [calendarBackfilling, setCalendarBackfilling] = useState(false);
+  const [calendarDisconnecting, setCalendarDisconnecting] = useState(false);
+  const [calendarFeedback, setCalendarFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Household states
   const [household, setHousehold] = useState<{
@@ -79,15 +75,43 @@ export default function SettingsPage() {
             } else {
               setKeyInput("");
             }
-            setCalendarSyncEnabled(data.googleCalendarSyncEnabled);
-            setSelectedCalendarId(data.googleCalendarId || "create_sage_calendar");
-            setHasCalendarScope(data.hasCalendarScope);
-            setGoogleCalendars(data.googleCalendars || []);
+            setHasGoogleConnection(Boolean(data.hasGoogleConnection));
+            setGoogleCalendarSyncEnabled(Boolean(data.googleCalendarSyncEnabled));
+            setGoogleCalendarId(data.googleCalendarId || "");
+            setCalendars(data.calendars || []);
           }
         })
         .catch((err) => {
           console.error("Failed to load user settings:", err);
         });
+
+      // Check query params for integration status
+      const timeoutId = setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("connected") === "google_calendar") {
+          setCalendarFeedback({
+            type: "success",
+            message: "Google Calendar successfully connected!",
+          });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (params.get("error")) {
+          const err = params.get("error");
+          const messages: Record<string, string> = {
+            account_already_linked_to_another_user: "This Google account is already linked to a different Palate user.",
+            session_required: "An active Jellyfin login session is required to connect Google Calendar.",
+            state_mismatch: "Security verification failed (state mismatch). Please try connecting again.",
+            expired_oauth_state: "The authorization request expired. Please try connecting again.",
+            google_not_configured: "Google integration is not configured on this server.",
+          };
+          setCalendarFeedback({
+            type: "error",
+            message: messages[err || ""] || `Connection error: ${err}`,
+          });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     } else {
       requestAnimationFrame(() => {
         if (active) setKeyInput(geminiApiKey);
@@ -97,6 +121,116 @@ export default function SettingsPage() {
       active = false;
     };
   }, [session, geminiApiKey, setMeasurementSystem]);
+
+  const handleToggleCalendarSync = async () => {
+    const nextVal = !googleCalendarSyncEnabled;
+    setGoogleCalendarSyncEnabled(nextVal);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleCalendarSyncEnabled: nextVal }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setGoogleCalendarSyncEnabled(!nextVal); // revert optimistic state
+        setCalendarFeedback({
+          type: "error",
+          message: data.error || "Failed to update calendar sync preference.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to toggle calendar sync:", e);
+      setGoogleCalendarSyncEnabled(!nextVal); // revert optimistic state
+      setCalendarFeedback({
+        type: "error",
+        message: "Network error while updating calendar sync preference.",
+      });
+    }
+  };
+
+  const handleSelectCalendar = async (calId: string) => {
+    const previousCalId = googleCalendarId;
+    setGoogleCalendarId(calId);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleCalendarId: calId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setGoogleCalendarId(previousCalId); // revert optimistic state
+        setCalendarFeedback({
+          type: "error",
+          message: data.error || "Failed to update target calendar.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save calendar selection:", e);
+      setGoogleCalendarId(previousCalId); // revert optimistic state
+      setCalendarFeedback({
+        type: "error",
+        message: "Network error while updating target calendar.",
+      });
+    }
+  };
+
+  const handleBackfillCalendar = async () => {
+    setCalendarBackfilling(true);
+    setCalendarFeedback(null);
+    try {
+      const res = await fetch("/api/settings/sync-backfill", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCalendarFeedback({ type: "success", message: data.message });
+      } else {
+        setCalendarFeedback({ type: "error", message: data.error || "Failed to sync calendar." });
+      }
+    } catch {
+      setCalendarFeedback({ type: "error", message: "Network error while syncing calendar." });
+    } finally {
+      setCalendarBackfilling(false);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to disconnect Google Calendar? Existing events on Google will remain, but upcoming meals will stop syncing."
+      )
+    ) {
+      return;
+    }
+    setCalendarDisconnecting(true);
+    try {
+      const res = await fetch("/api/integrations/google-calendar/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setHasGoogleConnection(false);
+        setGoogleCalendarSyncEnabled(false);
+        setGoogleCalendarId("");
+        setCalendars([]);
+        if (data.revocationWarning) {
+          setCalendarFeedback({
+            type: "error",
+            message: data.revocationWarning,
+          });
+        } else {
+          setCalendarFeedback({ type: "success", message: "Google Calendar disconnected." });
+        }
+      } else {
+        setCalendarFeedback({
+          type: "error",
+          message: data.error || "Failed to disconnect Google Calendar.",
+        });
+      }
+    } catch {
+      setCalendarFeedback({ type: "error", message: "Failed to disconnect Google Calendar." });
+    } finally {
+      setCalendarDisconnecting(false);
+    }
+  };
 
   // Load household info
   const loadHousehold = useCallback(async () => {
@@ -344,79 +478,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleToggleCalendarSync = async (enabled: boolean) => {
-    setCalendarSyncEnabled(enabled);
-    if (session?.user) {
-      try {
-        await fetch("/api/settings", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            googleCalendarSyncEnabled: enabled,
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to save calendar sync preference:", err);
-      }
-    }
-  };
-
-  const handleSelectCalendar = async (calendarId: string) => {
-    setSelectedCalendarId(calendarId);
-    if (session?.user) {
-      try {
-        await fetch("/api/settings", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            googleCalendarId: calendarId,
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to save selected calendar preference:", err);
-      }
-    }
-  };
-
-  const handleBackfillSync = async () => {
-    if (!session?.user) return;
-    setBackfilling(true);
-    setBackfillMessage(null);
-    try {
-      const res = await fetch("/api/settings/sync-backfill", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setBackfillMessage({
-          type: "success",
-          text: `Meticulously synced ${data.synced} future meals to Google Calendar!`,
-        });
-      } else {
-        setBackfillMessage({
-          type: "error",
-          text: data.error || "Failed to sync scheduled meals.",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to backfill scheduled meals:", err);
-      setBackfillMessage({
-        type: "error",
-        text: "An error occurred during calendar backfill.",
-      });
-    } finally {
-      setBackfilling(false);
-    }
-  };
-
-  const handleAuthorizeGoogleCalendar = () => {
-    signIn("google", { callbackUrl: window.location.href });
-  };
-
   if (!mounted) return null;
 
   return (
@@ -489,6 +550,150 @@ export default function SettingsPage() {
             </div>
           )}
         </section>
+
+        {/* Google Calendar Integration Section */}
+        {session?.user && (
+          <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/20 transition-colors" />
+
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="text-blue-400 w-6 h-6" />
+                <h2 className="text-2xl font-bold text-white">Google Calendar Integration</h2>
+              </div>
+              {hasGoogleConnection && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Connected
+                </span>
+              )}
+            </div>
+
+            <AnimatePresence>
+              {calendarFeedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -5 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -5 }}
+                  className={`mb-6 p-4 rounded-xl border text-sm flex items-start gap-2.5 font-medium leading-relaxed ${
+                    calendarFeedback.type === "success"
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                      : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                  }`}
+                >
+                  {calendarFeedback.type === "success" ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">{calendarFeedback.message}</div>
+                  <button
+                    onClick={() => setCalendarFeedback(null)}
+                    className="text-xs opacity-70 hover:opacity-100"
+                  >
+                    Dismiss
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {!hasGoogleConnection ? (
+              <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="max-w-xl">
+                  <h3 className="text-lg font-semibold text-white mb-1">Synchronize Planned Meals</h3>
+                  <p className="text-sm text-slate-400">
+                    Connect your Google Calendar to automatically synchronize planned breakfast, lunch, and dinner schedules to your personal calendar.
+                  </p>
+                </div>
+                <a
+                  href="/api/integrations/google-calendar/connect"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition-all text-center cursor-pointer shrink-0"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Connect Google Calendar
+                </a>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {/* Sync Toggle */}
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Automatic Meal Synchronization</h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Automatically sync meal additions, moves, and deletions with your Google Calendar.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={googleCalendarSyncEnabled}
+                      onChange={handleToggleCalendarSync}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* Calendar Target Selector */}
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5">
+                  <h3 className="text-base font-semibold text-white mb-2">Target Calendar</h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Choose which calendar Palate should populate with meal schedules.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <select
+                      value={googleCalendarId}
+                      onChange={(e) => handleSelectCalendar(e.target.value)}
+                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+                    >
+                      <option value="">Primary Calendar (Default)</option>
+                      <option value="create_sage_calendar">Dedicated &ldquo;SageAI Culinary Calendar&rdquo;</option>
+                      {calendars.map((cal) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.summary} {cal.primary ? "(Primary)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Backfill & Disconnect Controls */}
+                <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Backfill Upcoming Meals</h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Push upcoming scheduled meals to your selected Google Calendar.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <button
+                      onClick={handleBackfillCalendar}
+                      disabled={calendarBackfilling || !googleCalendarSyncEnabled}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded-xl transition-colors border border-blue-500/30 text-sm font-medium disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${calendarBackfilling ? "animate-spin" : ""}`} />
+                      {calendarBackfilling ? "Syncing..." : "Sync Backfill"}
+                    </button>
+                    <a
+                      href="/api/integrations/google-calendar/connect"
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl transition-colors border border-white/10 text-sm font-medium"
+                    >
+                      Reconnect
+                    </a>
+                    <button
+                      onClick={handleDisconnectCalendar}
+                      disabled={calendarDisconnecting}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 rounded-xl transition-colors border border-rose-500/30 text-sm font-medium disabled:opacity-50"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      {calendarDisconnecting ? "Disconnecting..." : "Disconnect"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Household Section */}
         {session?.user && (
@@ -799,160 +1004,6 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </section>
-
-        {/* Google Calendar Sync Section */}
-        <section className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-colors" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-fuchsia-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-500/20 transition-colors" />
-          
-          <div className="flex items-center gap-3 mb-6">
-            <Calendar className="text-indigo-400 w-6 h-6 animate-pulse" />
-            <h2 className="text-2xl font-bold text-white">Google Calendar Sync</h2>
-          </div>
-
-          {!session?.user ? (
-            /* Guest Mode */
-            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 text-center relative overflow-hidden flex flex-col items-center py-10">
-              <div className="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center border border-white/10 mb-4 backdrop-blur-md">
-                <Lock className="text-slate-400 w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Google Calendar Integration Locked</h3>
-              <p className="text-slate-400 max-w-md mx-auto mb-6 text-sm leading-relaxed">
-                Synchronize your scheduled culinary plans with your personal Google Calendar. This feature requires you to be signed in via your Google Account.
-              </p>
-              <button
-                onClick={() => {
-                  useAppStore.getState().setGuest(false);
-                  document.cookie = 'palate_guest=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-                  window.location.href = '/login';
-                }}
-                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold transition-all shadow-lg"
-              >
-                Sign In with Google
-              </button>
-            </div>
-          ) : !hasCalendarScope ? (
-            /* Logged in, scope not granted */
-            <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <AlertCircle className="text-amber-400 w-5 h-5 animate-bounce" />
-                  Calendar Permissions Required
-                </h3>
-                <p className="text-slate-400 mt-2 text-sm leading-relaxed">
-                  Sage requires additional calendar management permissions to sync your meal schedules to Google Calendar.
-                </p>
-              </div>
-              <button
-                onClick={handleAuthorizeGoogleCalendar}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 text-white rounded-xl font-semibold transition-all shadow-lg border border-indigo-500/30 text-center cursor-pointer"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Authorize Google Calendar
-              </button>
-            </div>
-          ) : (
-            /* Logged in, fully authorized */
-            <div className="flex flex-col gap-6">
-              {/* Enable Toggle */}
-              <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">Enable Calendar Sync</h3>
-                  <p className="text-slate-400 mt-1 text-sm leading-relaxed">
-                    When enabled, scheduled meals are pushed dynamically to your selected Google Calendar.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 relative shadow-inner">
-                  <button
-                    onClick={() => handleToggleCalendarSync(true)}
-                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
-                      calendarSyncEnabled ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    {calendarSyncEnabled && (
-                      <motion.div
-                        layoutId="active-sync-bg"
-                        className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-fuchsia-600/30 border border-indigo-500/30 rounded-xl shadow-lg shadow-indigo-500/10 animate-fade-in"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-20">Sync On</span>
-                  </button>
-                  <button
-                    onClick={() => handleToggleCalendarSync(false)}
-                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 relative z-10 ${
-                      !calendarSyncEnabled ? 'text-indigo-100' : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    {!calendarSyncEnabled && (
-                      <motion.div
-                        layoutId="active-sync-bg"
-                        className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-fuchsia-600/30 border border-indigo-500/30 rounded-xl shadow-lg shadow-indigo-500/10 animate-fade-in"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-20">Sync Off</span>
-                  </button>
-                </div>
-              </div>
-
-              {calendarSyncEnabled && (
-                <>
-                  {/* Select Target Calendar */}
-                  <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white">Target Calendar</h3>
-                      <p className="text-slate-400 mt-1 text-sm leading-relaxed">
-                        Choose which Google Calendar to populate with your meals. Sage can create a dedicated calendar automatically.
-                      </p>
-                    </div>
-                    <div className="w-full md:w-auto min-w-0 md:min-w-[280px]">
-                      <select
-                        value={selectedCalendarId}
-                        onChange={(e) => handleSelectCalendar(e.target.value)}
-                        className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium backdrop-blur-md"
-                      >
-                        <option value="create_sage_calendar" className="bg-slate-950 text-indigo-300 font-bold">
-                          ✨ SageAI Culinary Calendar (Dedicated)
-                        </option>
-                        {googleCalendars.map((cal) => (
-                          <option key={cal.id} value={cal.id} className="bg-slate-950 text-white">
-                            {cal.summary} {cal.primary ? "(Primary)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Backfill Calendar Button */}
-                  <div className="bg-black/20 p-4 sm:p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white">Sync Existing Meal Plans</h3>
-                      <p className="text-slate-400 mt-1 text-sm leading-relaxed">
-                        Synchronize all scheduled upcoming meals in your database with your Google Calendar now.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2 w-full md:w-auto items-stretch md:items-end">
-                      <button
-                        onClick={handleBackfillSync}
-                        disabled={backfilling}
-                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg min-w-[200px] cursor-pointer"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${backfilling ? 'animate-spin' : ''}`} />
-                        {backfilling ? 'Syncing...' : 'Sync Upcoming Meals'}
-                      </button>
-                      {backfillMessage && (
-                        <p className={`text-xs mt-1 font-medium ${backfillMessage.type === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {backfillMessage.text}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </section>
 
         {/* SageAI Configuration Section */}

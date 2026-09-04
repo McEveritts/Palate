@@ -5,7 +5,9 @@
  * Never stores passwords, scrubs tokens, and enforces short bounded timeouts.
  */
 
-const JELLYFIN_CLIENT_HEADER = 'MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="1.5.0"';
+import { APP_VERSION } from "@/lib/version";
+
+export const JELLYFIN_CLIENT_HEADER = `MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="${APP_VERSION}"`;
 const AUTH_TIMEOUT_MS = 6000;
 const LOGOUT_TIMEOUT_MS = 2000;
 

@@ -28,10 +28,9 @@
 @layer base {
   html {
     /* 
-      Fluid typography engine (AetherFlow refactored):
+      Fluid typography engine (AetherFlow Responsive Phase 1):
       - Mobile/Tablet (< 1024px): fluidly transitions/scales down to 14px (responsive mobile boundaries 14px to 16px)
-      - Desktop/Laptop (1024px - 1920px): locked strictly to 16px
-      - Giant TVs (1920px+): clamp-scales from 16px up to 24px
+      - Desktop/Laptop/Ultrawide/4K (>= 1024px): locked strictly to 16px baseline
     */
     font-size: clamp(14px, 0.284vw + 13.09px, 16px);
   }
@@ -68,17 +67,20 @@
       border-color: rgba(255, 255, 255, 0.1);
     }
   }
-
-  @media (min-width: 1920px) {
-    html {
-      font-size: clamp(16px, 0.417vw + 8px, 24px);
-    }
-  }
 }
 
 
 :root {
   color-scheme: dark;
+
+  /* Semantic Responsive Layout Tokens */
+  --shell-header-height-mobile: 65px;
+  --shell-sidebar-width-desktop: 18rem;
+  --shell-bottom-nav-height: 4rem;
+  --shell-rail-width-tablet: 4.5rem;
+  --content-max-width: 80rem;
+  --content-padding-mobile: 1rem;
+  --content-padding-desktop: 2rem;
 }
 
 body {
@@ -247,4 +249,23 @@ body {
   .animate-aurora-1 { animation: aurora-1 20s ease-in-out infinite alternate; }
   .animate-aurora-2 { animation: aurora-2 25s ease-in-out infinite alternate; }
   .animate-aurora-3 { animation: aurora-3 30s ease-in-out infinite alternate; }
+
+  /* Touch vs Mouse Hover Visibility (WCAG 2.2 Phase 3) */
+  @media (hover: hover) and (min-width: 768px) {
+    .touch-visible-hover-reveal {
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .group:hover .touch-visible-hover-reveal,
+    .group:focus-within .touch-visible-hover-reveal,
+    .group\/preview:hover .touch-visible-hover-reveal,
+    .group\/preview:focus-within .touch-visible-hover-reveal {
+      opacity: 1;
+    }
+  }
+  @media (hover: none), (max-width: 767px) {
+    .touch-visible-hover-reveal {
+      opacity: 1;
+    }
+  }
 }

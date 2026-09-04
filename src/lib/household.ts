@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { ensureUserProvisioned } from "@/lib/provisioning";
+import type { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 
 /**
@@ -7,24 +9,23 @@ import crypto from "crypto";
  * This is the central pivot point for the entire sharing architecture:
  * all recipe/vault operations use householdId instead of userId.
  */
-export async function getHouseholdId(userId: string): Promise<string> {
-  const user = await prisma.user.findUniqueOrThrow({
+export async function getHouseholdId(userId: string, db: PrismaClient = prisma): Promise<string> {
+  const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
     select: { householdId: true, name: true },
   });
 
   if (user.householdId) return user.householdId;
 
-  // Auto-create a solo household for users who don't have one yet
-  // (handles migration edge case and new users before they name their kitchen)
-  const household = await prisma.household.create({
-    data: {
-      name: `${user.name ?? "My"}'s Kitchen`,
-      members: { connect: { id: userId } },
-    },
+  // Delegate to concurrency-safe ensureUserProvisioned to prevent duplicate orphan households
+  await ensureUserProvisioned(userId, user.name, db);
+
+  const refreshed = await db.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { householdId: true },
   });
 
-  return household.id;
+  return refreshed.householdId!;
 }
 
 /**

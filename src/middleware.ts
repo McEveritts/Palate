@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import type { NextRequestWithAuth } from "next-auth/middleware";
+import { isValidCronAuth } from "@/lib/cronAuth";
 
 // Best-effort process-local defense-in-depth rate limiting for Edge middleware.
 // Persistent PostgreSQL rate limiting is implemented at the Jellyfin credential login layer.
@@ -57,14 +58,20 @@ export function checkApiRateLimit(identifier: string): { success: boolean; limit
   };
 }
 
-export default withAuth(
-  async function middleware(req: NextRequestWithAuth) {
-    const { pathname } = req.nextUrl;
-    const isApiRoute = pathname.startsWith("/api/");
+export async function handleMiddleware(req: NextRequestWithAuth) {
+  const { pathname } = req.nextUrl;
+  const isApiRoute = pathname.startsWith("/api/");
 
     if (isApiRoute) {
-      // 1. M5 Fix: CSRF Protection — validate Origin on mutating requests
-      if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      if (pathname === "/api/curate") {
+        const authHeader = req.headers.get("authorization");
+        const cronSecret = process.env.CRON_SECRET;
+        if (!isValidCronAuth(authHeader, cronSecret)) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        // Valid cron authentication: proceed without CSRF Origin check
+      } else if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+        // 1. M5 Fix: CSRF Protection — validate Origin on mutating requests
         const origin = req.headers.get("origin");
         const host = req.headers.get("host");
 
@@ -118,32 +125,36 @@ export default withAuth(
     }
 
     return NextResponse.next();
-  },
+}
+
+export default withAuth(
+  handleMiddleware,
   {
     callbacks: {
       authorized: ({ req, token }) => {
+        // Enforce Jellyfin-exclusive session provenance.
+        // Legacy tokens lacking the Jellyfin marker are treated as unauthenticated.
+        const isJellyfinAuth = !!token && token.jellyfinAuthenticated === true;
+
         // C-1 Fix: API routes ALWAYS require a real auth token.
         // Guest cookie only allows access to page routes.
         const { pathname } = req.nextUrl;
         const isApiRoute = pathname.startsWith('/api/');
         if (isApiRoute) {
+          // Allow access to /api/curate to be handled directly by middleware function
+          if (pathname === '/api/curate') {
+            return true;
+          }
           // Allow guest access to Sage AI API routes ONLY if they provide their own API key
           if (pathname.startsWith('/api/sage')) {
             const isGuest = req.cookies.get("palate_guest")?.value === "true";
             const hasApiKey = !!req.headers.get("x-gemini-api-key");
-            return !!token || (isGuest && hasApiKey);
+            return isJellyfinAuth || (isGuest && hasApiKey);
           }
-          // Allow access to /api/curate if token exists or valid CRON_SECRET authorization header is present
-          if (pathname === '/api/curate') {
-            const authHeader = req.headers.get('authorization');
-            const cronSecret = process.env.CRON_SECRET;
-            const isCronAuth = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
-            return !!token || isCronAuth;
-          }
-          return !!token;
+          return isJellyfinAuth;
         }
         const isGuest = req.cookies.get("palate_guest")?.value === "true";
-        return !!token || isGuest;
+        return isJellyfinAuth || isGuest;
       },
     },
     pages: {

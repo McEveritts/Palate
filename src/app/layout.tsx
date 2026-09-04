@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { AuthProvider } from "@/components/layout/AuthProvider";
 import { PWARegistration } from "@/components/pwa/PWARegistration";
 
@@ -11,8 +12,6 @@ export const viewport: Viewport = {
   themeColor: "#4f46e5",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export const metadata: Metadata = {
@@ -37,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="fixed inset-0 bg-slate-950 text-white overflow-hidden lg:flex lg:flex-row" suppressHydrationWarning>
+      <body className="fixed inset-0 bg-slate-950 text-white overflow-hidden flex flex-col md:flex-row" suppressHydrationWarning>
         <AuthProvider>
           {/* PWA Updates and Install Banners */}
           <PWARegistration />
@@ -51,13 +50,16 @@ export default function RootLayout({
           <div className="fixed inset-0 opacity-[0.03] mix-blend-screen z-0 pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundSize: "200px 200px" }}></div>
           <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,rgba(2,6,23,0.8)_100%)] z-0 pointer-events-none"></div>
 
-          {/* Left Navigation Sidebar */}
+          {/* Left Navigation Shell (Mobile Header, Tablet Rail, Desktop Sidebar) */}
           <Sidebar />
 
-          {/* Middle Content Area (Chatbot) */}
-          <main className="absolute top-[65px] bottom-0 left-0 right-0 lg:static lg:flex-1 z-10 p-0 overflow-y-auto overflow-x-hidden flex flex-col">
+          {/* Primary Application Workspace */}
+          <main id="palate-main-content" className="flex-1 min-w-0 min-h-0 md:h-full overflow-y-auto overflow-x-hidden flex flex-col z-10 relative pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
             {children}
           </main>
+
+          {/* Mobile Bottom Navigation (< 768px) */}
+          <MobileBottomNav />
         </AuthProvider>
       </body>
     </html>

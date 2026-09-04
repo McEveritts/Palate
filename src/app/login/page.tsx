@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { signIn, getProviders, ClientSafeProvider, LiteralUnion } from "next-auth/react";
-import { BuiltInProviderType } from "next-auth/providers/index";
+import { useState, useEffect } from "react";
+import { signIn, getProviders } from "next-auth/react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -13,21 +12,36 @@ export default function LoginPage() {
   const router = useRouter();
   const setGuest = useAppStore((state) => state.setGuest);
 
-  const [providers, setProviders] = useState<Record<
-    LiteralUnion<BuiltInProviderType, string>,
-    ClientSafeProvider
-  > | null>(null);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Derive initial enablement strictly from NEXT_PUBLIC_JELLYFIN_LOGIN_ENABLED === "true" (never default to visible)
+  const isEnvEnabled = process.env.NEXT_PUBLIC_JELLYFIN_LOGIN_ENABLED === "true";
+  const [serverHasJellyfin, setServerHasJellyfin] = useState<boolean>(isEnvEnabled);
+
   useEffect(() => {
-    getProviders().then((res) => {
-      setProviders(res);
-    });
+    let isMounted = true;
+    getProviders()
+      .then((providers) => {
+        if (isMounted) {
+          setServerHasJellyfin(Boolean(providers && providers.jellyfin));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setServerHasJellyfin(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const hasJellyfin = isEnvEnabled && serverHasJellyfin;
+  const jellyfinPublicUrl = process.env.NEXT_PUBLIC_JELLYFIN_PUBLIC_URL || "https://jellyfin.redonemedia.org";
 
   const handleGuestLogin = () => {
     setGuest(true);
@@ -76,9 +90,6 @@ export default function LoginPage() {
     }
   };
 
-  const jellyfinPublicUrl = process.env.NEXT_PUBLIC_JELLYFIN_PUBLIC_URL || "https://jellyfin.redonemedia.org";
-  const hasJellyfin = Boolean(providers?.jellyfin);
-
   return (
     <main className="min-h-screen flex items-center justify-center relative overflow-y-auto bg-slate-950 p-4 sm:p-6 py-10">
       {/* Background Elements */}
@@ -102,8 +113,8 @@ export default function LoginPage() {
           <p className="text-slate-400 text-lg mb-8">Your AI Sous-Chef</p>
 
           <div className="w-full flex flex-col gap-4">
-            {/* Jellyfin Login Form (Rendered when Jellyfin provider is registered) */}
-            {hasJellyfin && (
+            {/* Jellyfin Login Form or Styled Unavailable State */}
+            {hasJellyfin ? (
               <form onSubmit={handleJellyfinLogin} className="w-full flex flex-col gap-3.5 text-left mb-2">
                 {errorMessage && (
                   <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2.5 text-rose-300 text-sm">
@@ -112,8 +123,8 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider pl-1">
                     Jellyfin Username
                   </label>
                   <div className="relative">
@@ -124,22 +135,21 @@ export default function LoginPage() {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Username"
+                      placeholder="e.g. chef_john"
                       autoComplete="username"
                       disabled={isLoading}
-                      required
                       className="w-full pl-10 pr-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex justify-between items-center pl-1">
+                    <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                       Password
                     </label>
                     <a
-                      href={`${jellyfinPublicUrl.replace(/\/+$/, "")}/web/index.html#!/forgotpassword.html`}
+                      href={jellyfinPublicUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
@@ -166,7 +176,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-indigo-500/25 disabled:opacity-60"
+                  className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-indigo-500/25 disabled:opacity-60 cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -178,54 +188,34 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+            ) : (
+              <div className="w-full p-5 mb-2 bg-slate-900/60 border border-amber-500/20 rounded-2xl flex flex-col items-center text-center gap-2">
+                <AlertCircle className="w-7 h-7 text-amber-400" />
+                <h3 className="text-sm font-semibold text-slate-200">Jellyfin Authentication Unavailable</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Jellyfin sign-in is currently disabled or unconfigured on this instance. You may continue as a guest below.
+                </p>
+              </div>
             )}
 
-            {/* Google Login */}
+            {/* Separator / Guest Access */}
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-white/10"></div>
+              <span className="flex-shrink mx-4 text-xs uppercase tracking-widest text-slate-400">or</span>
+              <div className="flex-grow border-t border-white/10"></div>
+            </div>
+
             <button
-              onClick={() => signIn("google", { callbackUrl: "/" })}
-              className="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-lg"
+              type="button"
+              onClick={handleGuestLogin}
+              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              {/* Simple Google SVG icon */}
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Sign in with Google
+              Continue as Guest
             </button>
 
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-white/10"></div>
-              <span className="flex-shrink-0 mx-4 text-slate-500 text-xs font-medium uppercase tracking-wider">OR</span>
-              <div className="flex-grow border-t border-white/10"></div>
-            </div>
-
-            {/* Guest Login */}
-            <div>
-              <button
-                onClick={handleGuestLogin}
-                className="w-full bg-slate-800/50 hover:bg-slate-800 border border-white/10 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-lg"
-              >
-                <User className="w-5 h-5 text-indigo-400" />
-                Continue as Guest
-              </button>
-              <p className="text-xs text-slate-500 mt-2">
-                Guest data is stored on this device only and does not sync.
-              </p>
-            </div>
+            <p className="text-xs text-slate-400 mt-4 leading-relaxed">
+              Jellyfin is the identity provider for Palate. Your credentials are authenticated directly against your private Jellyfin server.
+            </p>
           </div>
         </div>
       </motion.div>

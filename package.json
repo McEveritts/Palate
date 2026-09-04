@@ -1,6 +1,6 @@
 {
   "name": "palate",
-  "version": "1.5.1",
+  "version": "1.5.11",
   "private": true,
   "scripts": {
     "dev": "next dev -p 28014 --webpack",
@@ -8,7 +8,17 @@
     "start": "next start -p 28014",
     "lint": "eslint",
     "test": "vitest run",
-    "postinstall": "node patch-next-inspector.js"
+    "test:integration": "vitest run tests/integration",
+    "postinstall": "node patch-next-inspector.js",
+    "admin:userconfig:migrate": "tsx src/lib/admin/cli.ts userconfig:migrate",
+    "admin:userconfig:dry-run": "tsx src/lib/admin/cli.ts userconfig:dry-run",
+    "admin:userconfig:inspect": "tsx src/lib/admin/cli.ts userconfig:inspect",
+    "admin:tokens:inspect": "tsx src/lib/admin/cli.ts tokens:inspect",
+    "admin:tokens:dry-run": "tsx src/lib/admin/cli.ts tokens:dry-run",
+    "admin:tokens:migrate": "tsx src/lib/admin/cli.ts tokens:migrate",
+    "admin:users:count-google": "tsx src/lib/admin/cli.ts users:count-google",
+    "admin:users:collision-report": "tsx src/lib/admin/cli.ts users:collision-report",
+    "admin:users:pre-link": "tsx src/lib/admin/cli.ts users:pre-link"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
@@ -32,6 +42,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "serwist": "^9.5.11",
+    "server-only": "^0.0.1",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
@@ -57,6 +68,7 @@
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "tsx": "^4.19.2",
     "vitest": "^4.1.6"
   }
 }

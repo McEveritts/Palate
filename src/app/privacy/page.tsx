@@ -37,22 +37,26 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-bold text-white mb-4">2. Information We Collect</h2>
           <div className="flex flex-col gap-4 text-slate-300 leading-relaxed">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">2.1 Google Account Data</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">2.1 Jellyfin Account Data</h3>
               <p>
-                When you sign in with Google, we receive your <strong className="text-white">name</strong>,{" "}
-                <strong className="text-white">email address</strong>, and{" "}
-                <strong className="text-white">profile picture</strong> from your Google account. This
-                data is used solely to identify your account within Palate.
+                Palate authenticates users exclusively through your self-hosted Jellyfin media server.
+                When you sign in, we verify your credentials with your Jellyfin server and receive your{" "}
+                <strong className="text-white">username</strong> and unique{" "}
+                <strong className="text-white">Jellyfin user identifier</strong>. This data is used solely
+                to authenticate you and maintain your session in Palate. Google accounts are never used
+                for login or authentication.
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">2.2 Google Calendar Data</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">2.2 Optional Google Calendar Integration</h3>
               <p>
-                If you choose to enable Google Calendar Sync, Palate requests access to your Google
-                Calendar via the <code className="text-fuchsia-400 bg-black/30 px-1.5 py-0.5 rounded">
-                calendar</code> scope. This permission is used exclusively to create, update, and
-                delete meal plan events in a calendar you select. We do not read or access any
-                pre-existing calendar events unrelated to Palate.
+                If you choose to explicitly connect your Google Calendar in Settings, Palate requests access
+                to your Google Calendar via OAuth 2.0 with the{" "}
+                <code className="text-fuchsia-400 bg-black/30 px-1.5 py-0.5 rounded">calendar</code> scope.
+                This permission is used exclusively to create, update, and delete meal plan events in a
+                calendar you designate. Google OAuth is never used for Palate login or user account creation.
+                OAuth access and refresh tokens are encrypted at rest using AES-256-GCM authenticated encryption.
+                You may disconnect and revoke this integration at any time from Palate Settings.
               </p>
             </div>
             <div>
@@ -77,9 +81,9 @@ export default function PrivacyPage() {
         <section className="glass-panel p-8 rounded-3xl border border-white/5">
           <h2 className="text-2xl font-bold text-white mb-4">3. How We Use Your Information</h2>
           <ul className="list-disc list-inside text-slate-300 leading-relaxed flex flex-col gap-2">
-            <li>Authenticate your identity and maintain your session</li>
+            <li>Authenticate your identity with your Jellyfin server and maintain your session</li>
             <li>Store and display your recipes, meal plans, and AI chat history</li>
-            <li>Synchronize meal schedules to your Google Calendar (only when you enable this feature)</li>
+            <li>Synchronize meal schedules to your Google Calendar (only when you explicitly connect and enable this feature)</li>
             <li>Query the USDA FoodData Central API for nutritional information on your behalf</li>
             <li>Process AI requests through the Google Gemini API using your provided key</li>
             <li>Remember your display preferences (measurement system, calendar settings)</li>
@@ -95,8 +99,8 @@ export default function PrivacyPage() {
               following security measures:
             </p>
             <ul className="list-disc list-inside flex flex-col gap-2 ml-2">
-              <li>API keys are encrypted with AES-256-GCM with unique initialization vectors</li>
-              <li>Google OAuth tokens are stored securely and refreshed automatically</li>
+              <li>API keys and Google OAuth tokens are encrypted at rest with AES-256-GCM using unique initialization vectors and authenticated tags</li>
+              <li>Authentication is strictly handled by your self-hosted Jellyfin server</li>
               <li>All connections to the app are served over HTTPS</li>
               <li>Content Security Policy headers restrict resource loading</li>
               <li>Rate limiting is applied to API endpoints</li>
@@ -110,10 +114,7 @@ export default function PrivacyPage() {
             <p>Palate integrates with the following third-party services:</p>
             <ul className="list-disc list-inside flex flex-col gap-2 ml-2">
               <li>
-                <strong className="text-white">Google OAuth 2.0</strong> — for authentication
-              </li>
-              <li>
-                <strong className="text-white">Google Calendar API</strong> — for optional meal plan synchronization
+                <strong className="text-white">Google Calendar API &amp; OAuth 2.0</strong> — for optional meal plan synchronization (configured in Settings, never used for login)
               </li>
               <li>
                 <strong className="text-white">Google Gemini API</strong> — for AI-powered recipe synthesis and analysis

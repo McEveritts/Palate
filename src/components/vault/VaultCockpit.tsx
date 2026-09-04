@@ -212,15 +212,17 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
     <div className="w-full mb-10 relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-4 rounded-2xl glass-panel bg-slate-900/40 hover:bg-slate-900/60 border border-white/10 hover:border-white/20 transition-all text-white font-bold tracking-wide relative overflow-hidden group shadow-lg"
+        className="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 rounded-2xl glass-panel bg-slate-900/40 hover:bg-slate-900/60 border border-white/10 hover:border-white/20 transition-all text-white font-bold tracking-wide relative overflow-hidden group shadow-lg cursor-pointer text-left gap-2"
+        aria-expanded={isOpen}
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors pointer-events-none" />
-        <div className="flex items-center gap-3 relative z-10">
-          <Activity className="text-indigo-400 animate-pulse w-5 h-5" />
-          <span>AetherFlow Visual Analytics Cockpit</span>
+        <div className="flex items-center gap-2.5 sm:gap-3 relative z-10 min-w-0">
+          <Activity className="text-indigo-400 animate-pulse w-5 h-5 shrink-0" />
+          <span className="truncate text-xs sm:text-base">AetherFlow Cockpit</span>
+          <span className="hidden sm:inline font-normal text-slate-400 text-xs">Analytics</span>
         </div>
-        <span className="text-indigo-400 group-hover:text-indigo-300 font-mono text-sm relative z-10 transition-colors">
-          {isOpen ? "CLOSE COCKPIT ▲" : "EXPAND COCKPIT ▼"}
+        <span className="text-indigo-400 group-hover:text-indigo-300 font-mono text-xs sm:text-sm relative z-10 transition-colors shrink-0">
+          {isOpen ? "CLOSE ▲" : "EXPAND ▼"}
         </span>
       </button>
 
@@ -236,7 +238,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Panel A: Interactive Macronutrient Rings */}
-              <section className="glass-panel p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
+              <section className="glass-panel p-4 sm:p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -250,10 +252,10 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 mt-2">
+                  <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 sm:gap-6 mt-2">
                     {/* Nested SVG Rings */}
-                    <div className="relative w-[200px] h-[200px] flex-shrink-0 flex items-center justify-center">
-                      <svg width="200" height="200" className="-rotate-90">
+                    <div className="relative w-36 h-36 sm:w-44 sm:h-44 md:w-[200px] md:h-[200px] flex-shrink-0 flex items-center justify-center">
+                      <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
                         {/* Background circles */}
                         <circle cx={ringCenter} cy={ringCenter} r={ringRadius[0]} fill="transparent" stroke="rgba(52, 211, 153, 0.05)" strokeWidth={ringStroke} />
                         <circle cx={ringCenter} cy={ringCenter} r={ringRadius[1]} fill="transparent" stroke="rgba(244, 63, 94, 0.05)" strokeWidth={ringStroke} />
@@ -329,7 +331,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
                             }`}>
                               {hoveredMacro}
                             </span>
-                            <h4 className="text-2xl font-black text-white leading-none mt-0.5">
+                            <h4 className="text-xl sm:text-2xl font-black text-white leading-none mt-0.5">
                               {hoveredMacro === 'protein' ? `${parsedMacros.protein.pct}%` : hoveredMacro === 'fat' ? `${parsedMacros.fat.pct}%` : `${parsedMacros.carbs.pct}%`}
                             </h4>
                             <span className="text-[10px] text-slate-400 font-mono">
@@ -338,11 +340,11 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
                           </motion.div>
                         ) : (
                           <div>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none block">Calories</span>
-                            <h4 className="text-3xl font-black text-white leading-none mt-1 tracking-tight">
+                            <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none block">Calories</span>
+                            <h4 className="text-2xl sm:text-3xl font-black text-white leading-none mt-1 tracking-tight">
                               {parsedMacros.totalCalories}
                             </h4>
-                            <span className="text-[9px] text-indigo-300 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded-md mt-1.5 inline-block">
+                            <span className="text-[8px] sm:text-[9px] text-indigo-300 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded-md mt-1 sm:mt-1.5 inline-block">
                               METRIC AGG
                             </span>
                           </div>
@@ -351,28 +353,28 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
                     </div>
 
                     {/* Ring legend */}
-                    <div className="flex flex-col gap-3 justify-center">
+                    <div className="flex flex-row sm:flex-col gap-3 justify-center flex-wrap">
                       <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] shrink-0" />
                         <div>
-                          <p className="leading-none text-[11px] text-slate-400">Protein ({parsedMacros.protein.pct}%)</p>
-                          <p className="font-mono text-white text-[13px]">{parsedMacros.protein.grams}g</p>
+                          <p className="leading-none text-[10px] sm:text-[11px] text-slate-400">Protein ({parsedMacros.protein.pct}%)</p>
+                          <p className="font-mono text-white text-xs sm:text-[13px]">{parsedMacros.protein.grams}g</p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)] shrink-0" />
                         <div>
-                          <p className="leading-none text-[11px] text-slate-400">Fat ({parsedMacros.fat.pct}%)</p>
-                          <p className="font-mono text-white text-[13px]">{parsedMacros.fat.grams}g</p>
+                          <p className="leading-none text-[10px] sm:text-[11px] text-slate-400">Fat ({parsedMacros.fat.pct}%)</p>
+                          <p className="font-mono text-white text-xs sm:text-[13px]">{parsedMacros.fat.grams}g</p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] shrink-0" />
                         <div>
-                          <p className="leading-none text-[11px] text-slate-400">Carbs ({parsedMacros.carbs.pct}%)</p>
-                          <p className="font-mono text-white text-[13px]">{parsedMacros.carbs.grams}g</p>
+                          <p className="leading-none text-[10px] sm:text-[11px] text-slate-400">Carbs ({parsedMacros.carbs.pct}%)</p>
+                          <p className="font-mono text-white text-xs sm:text-[13px]">{parsedMacros.carbs.grams}g</p>
                         </div>
                       </div>
                     </div>
@@ -405,7 +407,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
               </section>
 
               {/* Panel B: Visual Culinary Radar (AetherFlow Stat Wheel) */}
-              <section className="glass-panel p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
+              <section className="glass-panel p-4 sm:p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -422,7 +424,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
 
                   {/* SVG Radar Map */}
                   <div className="relative w-full h-[220px] flex items-center justify-center mt-2 bg-black/10 rounded-2xl border border-white/5 overflow-hidden">
-                    <svg width="320" height="220" className="absolute">
+                    <svg viewBox="0 0 320 220" className="w-full h-full max-w-[320px] max-h-[220px]">
                       {/* Definitions for gorgeous HSL gradients and filters */}
                       <defs>
                         <linearGradient id="radar-glow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -585,7 +587,7 @@ export function VaultCockpit({ recipes }: VaultCockpitProps) {
               </section>
 
               {/* Panel C: Zero-Waste Pantry Synergy Grid */}
-              <section className="glass-panel p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
+              <section className="glass-panel p-4 sm:p-6 rounded-2xl border border-white/5 relative overflow-hidden flex flex-col justify-between min-h-[360px] bg-gradient-to-b from-slate-950/80 to-slate-900/40">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-fuchsia-500/5 rounded-full blur-2xl pointer-events-none" />
                 <div>
                   <div className="flex items-center gap-2 mb-4">

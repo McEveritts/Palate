@@ -57,12 +57,12 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
   // Get display name for active subcategory
   const getActiveFoodLabel = () => {
     const match = foodCategories.find(c => c.value === activeCategory);
-    return match ? `Food: ${match.label}` : 'Food Collections';
+    return match ? `Food: ${match.label}` : 'Food';
   };
 
   const getActiveBeverageLabel = () => {
     const match = beverageCategories.find(c => c.value === activeCategory);
-    return match ? `Beverage: ${match.label.replace(' Only', '')}` : 'Beverages & Smoothies';
+    return match ? `Drinks: ${match.label.replace(' Only', '')}` : 'Drinks';
   };
 
   return (
@@ -82,28 +82,29 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
       </div>
 
       {/* Premium Dropdown Category Selectors */}
-      <div className="flex bg-slate-950/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xl shrink-0 gap-1.5 items-center select-none shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+      <div className="flex flex-wrap sm:flex-nowrap bg-slate-950/60 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xl gap-1.5 items-center select-none shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full sm:w-auto">
         {/* Tab 1: All */}
         <button
           onClick={() => {
             setActiveCategory('all');
             setOpenDropdown(null);
           }}
-          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
+          className={`flex-1 sm:flex-initial px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
             activeCategory === 'all'
               ? 'bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] border border-transparent'
               : 'text-indigo-200/60 hover:text-white hover:bg-white/5 border border-transparent'
           }`}
         >
-          <Filter className="w-4 h-4" />
-          All Recipes
+          <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+          <span>All</span>
+          <span className="hidden sm:inline">Recipes</span>
         </button>
 
         {/* Tab 2: Foods Dropdown */}
-        <div ref={foodsRef} className="relative">
+        <div ref={foodsRef} className="relative flex-1 sm:flex-initial">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'foods' ? null : 'foods')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 cursor-pointer border ${
+            className={`w-full sm:w-auto px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer border ${
               isFoodActive
                 ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
                 : openDropdown === 'foods'
@@ -111,9 +112,9 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
                   : 'border-transparent text-indigo-200/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Utensils className="w-4 h-4" />
-            <span>{getActiveFoodLabel()}</span>
-            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openDropdown === 'foods' ? 'rotate-180 text-white' : 'text-indigo-400/50'}`} />
+            <Utensils className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate max-w-[90px] sm:max-w-none">{getActiveFoodLabel()}</span>
+            <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 transition-transform duration-300 ${openDropdown === 'foods' ? 'rotate-180 text-white' : 'text-indigo-400/50'}`} />
           </button>
 
           <AnimatePresence>
@@ -147,10 +148,10 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
         </div>
 
         {/* Tab 3: Beverages & Smoothies Dropdown */}
-        <div ref={beveragesRef} className="relative">
+        <div ref={beveragesRef} className="relative flex-1 sm:flex-initial">
           <button
             onClick={() => setOpenDropdown(openDropdown === 'beverages' ? null : 'beverages')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 cursor-pointer border ${
+            className={`w-full sm:w-auto px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer border ${
               isBeverageActive
                 ? 'bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.2)]'
                 : openDropdown === 'beverages'
@@ -158,9 +159,9 @@ export function VaultFilters({ searchQuery, setSearchQuery, activeCategory, setA
                   : 'border-transparent text-indigo-200/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            <CupSoda className="w-4 h-4" />
-            <span>{getActiveBeverageLabel()}</span>
-            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openDropdown === 'beverages' ? 'rotate-180 text-white' : 'text-fuchsia-400/50'}`} />
+            <CupSoda className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate max-w-[90px] sm:max-w-none">{getActiveBeverageLabel()}</span>
+            <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 transition-transform duration-300 ${openDropdown === 'beverages' ? 'rotate-180 text-white' : 'text-fuchsia-400/50'}`} />
           </button>
 
           <AnimatePresence>

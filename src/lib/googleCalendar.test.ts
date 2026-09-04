@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   getGoogleAccessToken,
@@ -16,6 +16,7 @@ vi.mock("@/lib/db", () => ({
     account: {
       findFirst: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     userConfig: {
       findUnique: vi.fn(),
@@ -35,6 +36,7 @@ describe("Google Calendar Integration Utilities", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     global.fetch = vi.fn();
+    process.env.PALATE_ENCRYPTION_SECRET = "test-secret-32-chars-minimum-pad";
   });
 
   afterEach(() => {
@@ -71,7 +73,7 @@ describe("Google Calendar Integration Utilities", () => {
         expires_at: now - 10, // Expired 10 seconds ago
       });
 
-      (prisma.account.update as any).mockResolvedValue({});
+      (prisma.account.updateMany as any).mockResolvedValue({ count: 1 });
 
       // Mock Google OAuth token response
       (global.fetch as any).mockResolvedValue({
@@ -85,10 +87,11 @@ describe("Google Calendar Integration Utilities", () => {
       const token = await getGoogleAccessToken(mockUserId);
       expect(token).toBe("new-token-123");
       expect(global.fetch).toHaveBeenCalledWith("https://oauth2.googleapis.com/token", expect.any(Object));
-      expect(prisma.account.update).toHaveBeenCalledWith({
-        where: { id: "account-123" },
+      expect(prisma.account.updateMany).toHaveBeenCalledWith({
+        where: expect.any(Object),
         data: expect.objectContaining({
-          access_token: "new-token-123",
+          access_token: expect.stringMatching(/^enc:v1:/),
+          refresh_token: expect.stringMatching(/^enc:v1:/),
         }),
       });
     });

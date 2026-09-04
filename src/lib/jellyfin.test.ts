@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isJellyfinEnabled, getJellyfinBaseUrl, authenticateWithJellyfin } from "./jellyfin";
+import { APP_VERSION } from "./version";
 
 describe("Jellyfin Auth Client", () => {
   const originalEnv = process.env;
@@ -110,7 +111,7 @@ describe("Jellyfin Auth Client", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": 'MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="1.5.0"',
+            "Authorization": `MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="${APP_VERSION}"`,
           },
           body: JSON.stringify({ Username: "Gordon", Pw: "michelin123" }),
         })
@@ -122,7 +123,7 @@ describe("Jellyfin Auth Client", () => {
         expect.objectContaining({
           method: "POST",
           headers: {
-            "Authorization": 'MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="1.5.0", Token="test-token-789"',
+            "Authorization": `MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="${APP_VERSION}", Token="test-token-789"`,
           },
         })
       );
@@ -157,7 +158,7 @@ describe("Jellyfin Auth Client", () => {
         expect.objectContaining({
           method: "POST",
           headers: {
-            "Authorization": 'MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="1.5.0", Token="token-for-disabled-user"',
+            "Authorization": `MediaBrowser Client="Palate", Device="Palate Web", DeviceId="palate-web", Version="${APP_VERSION}", Token="token-for-disabled-user"`,
           },
         })
       );

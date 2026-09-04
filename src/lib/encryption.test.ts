@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { encryptKey, decryptKey } from './encryption';
 
 describe('encryption utility', () => {
@@ -104,5 +104,73 @@ describe('encryption utility', () => {
 
     expect(encrypted1.encryptedString).not.toBe(encrypted2.encryptedString);
     expect(encrypted1.iv).not.toBe(encrypted2.iv);
+  });
+
+  it('strictly requires PALATE_ENCRYPTION_SECRET in production and refuses fallback', () => {
+    try {
+      vi.stubEnv("NODE_ENV", "production");
+      delete process.env.PALATE_ENCRYPTION_SECRET;
+      process.env.NEXTAUTH_SECRET = "fallback_secret_for_tests";
+
+      expect(() => encryptKey("test_key")).toThrow(
+        "FATAL: PALATE_ENCRYPTION_SECRET must be set in production environment"
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('supports bounded legacy fallback: decrypts ciphertext encrypted with NEXTAUTH_SECRET when PALATE_ENCRYPTION_SECRET is active', () => {
+    // 1. Encrypt with legacy NEXTAUTH_SECRET
+    delete process.env.PALATE_ENCRYPTION_SECRET;
+    process.env.NEXTAUTH_SECRET = "legacy-secret-32-chars-minimum!";
+    const secretPlaintext = "my-secret-gemini-api-key";
+    const legacyEncrypted = encryptKey(secretPlaintext);
+
+    // 2. Switch to new distinct PALATE_ENCRYPTION_SECRET
+    process.env.PALATE_ENCRYPTION_SECRET = "new-primary-palate-secret-key-32";
+    process.env.NEXTAUTH_SECRET = "legacy-secret-32-chars-minimum!";
+
+    // 3. decryptKey should transparently succeed via the bounded legacy fallback
+    const decrypted = decryptKey(
+      legacyEncrypted.encryptedString,
+      legacyEncrypted.iv,
+      legacyEncrypted.authTag
+    );
+
+    expect(decrypted).toBe(secretPlaintext);
+  });
+
+  it('fails closed in production: decryptKey throws if PALATE_ENCRYPTION_SECRET is absent even if NEXTAUTH_SECRET is set', () => {
+    try {
+      vi.stubEnv("NODE_ENV", "production");
+      delete process.env.PALATE_ENCRYPTION_SECRET;
+      process.env.NEXTAUTH_SECRET = "legacy-secret-32-chars-minimum!";
+
+      expect(() => decryptKey("somehex", "0".repeat(24), "0".repeat(32))).toThrow(
+        /FATAL: PALATE_ENCRYPTION_SECRET must be configured in production before decrypting/
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('decrypts ciphertext originally encrypted with intermediate raw-SHA PALATE_ENCRYPTION_SECRET', async () => {
+    const crypto = await import("crypto");
+    const secret = "intermediate-raw-sha-secret-32ch!";
+    process.env.PALATE_ENCRYPTION_SECRET = secret;
+
+    // Encrypt manually using raw-SHA key
+    const rawKey = crypto.createHash("sha256").update(secret).digest();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv("aes-256-gcm", rawKey, iv);
+    const text = "api-key-encrypted-with-raw-sha";
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    const tag = cipher.getAuthTag().toString("hex");
+
+    // Decrypt using decryptKey with primary secret active
+    const decrypted = decryptKey(encrypted, iv.toString("hex"), tag);
+    expect(decrypted).toBe(text);
   });
 });

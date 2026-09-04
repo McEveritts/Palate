@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { syncMealToGoogle } from "@/lib/googleCalendar";
+import { backfillCalendarEvents } from "@/lib/googleCalendar";
+
+export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
@@ -13,45 +15,30 @@ export async function POST() {
 
     const userId = session.user.id;
 
-    // Fetch all future scheduled meals for the user
-    // (greater than or equal to the start of today to ensure future planning is covered)
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const meals = await prisma.scheduledMeal.findMany({
-      where: {
-        userId,
-        date: {
-          gte: todayStart,
-        },
-      },
-      include: {
-        recipe: true,
-      },
+    // Check user configuration
+    const config = await prisma.userConfig.findUnique({
+      where: { userId },
     });
 
-
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const meal of meals) {
-      const synced = await syncMealToGoogle(userId, meal.id, meal);
-      if (synced) {
-        successCount++;
-      } else {
-        failureCount++;
-      }
+    if (!config || !config.googleCalendarSyncEnabled) {
+      return NextResponse.json(
+        { error: "Google Calendar synchronization is not enabled." },
+        { status: 400 }
+      );
     }
+
+    const syncedCount = await backfillCalendarEvents(userId);
 
     return NextResponse.json({
       success: true,
-      total: meals.length,
-      synced: successCount,
-      failed: failureCount,
+      syncedCount,
+      message: `Successfully synchronized ${syncedCount} meals to your Google Calendar.`,
     });
   } catch (error: unknown) {
-    console.error("POST /api/settings/sync-backfill error:", error);
-    const message = error instanceof Error ? error.message : "Failed to backfill calendar sync";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[POST /api/settings/sync-backfill error]:", error);
+    return NextResponse.json(
+      { error: "An unexpected error occurred during calendar backfill." },
+      { status: 500 }
+    );
   }
 }

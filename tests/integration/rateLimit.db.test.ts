@@ -9,28 +9,13 @@ import {
   cleanupExpiredBuckets,
   computeAuthRateLimitKey,
 } from "@/lib/rateLimit";
+import { assertTestDatabaseEnv } from "./dbGuard";
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const isIntegrationEnabled = process.env.RUN_DB_INTEGRATION === "true";
 
-// Safety guard: require exact database name 'palate_test' and treat malformed URLs as fatal
-if (isIntegrationEnabled) {
-  if (!testDbUrl) {
-    throw new Error("FATAL: RUN_DB_INTEGRATION is true but TEST_DATABASE_URL is not provided.");
-  }
-  let dbName: string;
-  try {
-    const url = new URL(testDbUrl);
-    dbName = url.pathname.replace(/^\//, "");
-  } catch (err: any) {
-    throw new Error(`FATAL: Malformed TEST_DATABASE_URL: ${err.message}`);
-  }
-  if (dbName !== "palate_test") {
-    throw new Error(
-      `FATAL: Integration tests must run strictly against database 'palate_test', but received '${dbName}'.`
-    );
-  }
-}
+// Safety guard: require exact database name 'palate_test'
+assertTestDatabaseEnv(testDbUrl);
 
 describe.skipIf(!isIntegrationEnabled)("PostgreSQL Rate Limiter Real Database Integration", () => {
   let prisma: PrismaClient;
@@ -183,7 +168,7 @@ describe.skipIf(!isIntegrationEnabled)("PostgreSQL Rate Limiter Real Database In
 
       // 3. While renewalClient holds the row lock in an uncommitted transaction, run cleanup from another connection
       // SKIP LOCKED must immediately skip the locked row without blocking or deleting it
-      const deletedCount = await cleanupExpiredBuckets(prisma, new Date(), 10);
+      await cleanupExpiredBuckets(prisma, new Date(), 10);
 
       // 4. In the renewal transaction, update expiresAt and commit
       await renewalClient.query(

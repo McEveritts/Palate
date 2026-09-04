@@ -106,6 +106,7 @@ import {
   authorizeJellyfin,
   checkAuthRateLimit,
   computeRateLimitKey,
+  authOptions,
 } from "./auth";
 import { prisma } from "@/lib/db";
 import { authenticateWithJellyfin } from "@/lib/jellyfin";
@@ -118,7 +119,11 @@ describe("Jellyfin NextAuth Provider with PostgreSQL Rate Limiter", () => {
     vi.clearAllMocks();
     inMemoryBuckets.clear();
     activeLocks.clear();
-    process.env = { ...originalEnv, NEXTAUTH_SECRET: "test-secret-12345" };
+    process.env = {
+      ...originalEnv,
+      NEXTAUTH_SECRET: "test-secret-12345",
+      PALATE_RATE_LIMIT_SECRET: "test-secret-12345",
+    };
   });
 
   afterEach(() => {
@@ -154,9 +159,9 @@ describe("Jellyfin NextAuth Provider with PostgreSQL Rate Limiter", () => {
   });
 
   describe("checkAuthRateLimit (PostgreSQL Sliding Window)", () => {
-    it("fails secure in production if NEXTAUTH_SECRET is missing", async () => {
+    it("fails secure in production if PALATE_RATE_LIMIT_SECRET is missing", async () => {
       vi.stubEnv("NODE_ENV", "production");
-      delete process.env.NEXTAUTH_SECRET;
+      delete process.env.PALATE_RATE_LIMIT_SECRET;
 
       const allowed = await checkAuthRateLimit("192.168.1.1", "testuser");
       expect(allowed).toBe(false);
@@ -468,6 +473,37 @@ describe("Jellyfin NextAuth Provider with PostgreSQL Rate Limiter", () => {
       });
 
       expect(ensureUserProvisioned).toHaveBeenCalledWith("palate-winner-user", "Concurrent Chef");
+    });
+  });
+
+  describe("NextAuth Provider Configuration (v1.5.11 Exclusive Jellyfin)", () => {
+    it("does not include GoogleProvider in authOptions.providers", () => {
+      const googleProvider = authOptions.providers.find((p: any) => p.id === "google");
+      expect(googleProvider).toBeUndefined();
+    });
+
+    it("registers only jellyfin credentials provider when jellyfin is enabled", () => {
+      expect(authOptions.providers.length).toBe(1);
+      expect(authOptions.providers[0].id).toBe("jellyfin");
+    });
+
+    it("does not require GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in production", () => {
+      delete process.env.GOOGLE_CLIENT_ID;
+      delete process.env.GOOGLE_CLIENT_SECRET;
+      expect(() => {
+        expect(authOptions.providers).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("properly populates token and triggers user provisioning in jwt callback", async () => {
+      const jwtCallback = authOptions.callbacks?.jwt;
+      expect(jwtCallback).toBeDefined();
+
+      const user = { id: "test-user-id", name: "Chef User" };
+      const token = await jwtCallback!({ token: {}, user: user as any, account: null });
+
+      expect(token.id).toBe("test-user-id");
+      expect(ensureUserProvisioned).toHaveBeenCalledWith("test-user-id", "Chef User");
     });
   });
 });

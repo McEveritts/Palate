@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getHouseholdId, generateInviteCode } from "@/lib/household";
+import { getHouseholdId } from "@/lib/household";
+import {
+  createHouseholdInvite,
+  redeemHouseholdInvite,
+  removeHouseholdMember,
+  leaveHousehold,
+  HouseholdServiceError,
+} from "@/lib/householdService";
 
 export async function GET() {
   try {
@@ -65,169 +72,24 @@ export async function POST(req: Request) {
 
     switch (action) {
       case "create-invite": {
-        const householdId = await getHouseholdId(userId);
-        const inviteCode = generateInviteCode();
-        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h
-
-        await prisma.inviteCode.create({
-          data: {
-            code: inviteCode,
-            householdId,
-            createdBy: userId,
-            expiresAt,
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          code: inviteCode,
-          expiresAt: expiresAt.toISOString(),
-        });
+        const result = await createHouseholdInvite(userId);
+        return NextResponse.json(result);
       }
 
       case "redeem-invite": {
-        if (!code || typeof code !== "string" || code.length !== 8) {
-          return NextResponse.json(
-            { error: "Invalid invite code format." },
-            { status: 400 }
-          );
-        }
-
-        const invite = await prisma.inviteCode.findUnique({
-          where: { code: code.toUpperCase() },
-        });
-
-        if (!invite) {
-          return NextResponse.json(
-            { error: "Invite code not found." },
-            { status: 404 }
-          );
-        }
-
-        if (invite.usedAt) {
-          return NextResponse.json(
-            { error: "This invite code has already been used." },
-            { status: 400 }
-          );
-        }
-
-        if (invite.expiresAt < new Date()) {
-          return NextResponse.json(
-            { error: "This invite code has expired." },
-            { status: 400 }
-          );
-        }
-
-        if (invite.createdBy === userId) {
-          return NextResponse.json(
-            { error: "You cannot redeem your own invite code." },
-            { status: 400 }
-          );
-        }
-
-        // Check if the user already belongs to this household
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { householdId: true },
-        });
-
-        if (user?.householdId === invite.householdId) {
-          return NextResponse.json(
-            { error: "You are already a member of this household." },
-            { status: 400 }
-          );
-        }
-
-        // Join the inviter's household
-        await prisma.$transaction([
-          prisma.user.update({
-            where: { id: userId },
-            data: { householdId: invite.householdId },
-          }),
-          prisma.inviteCode.update({
-            where: { id: invite.id },
-            data: { usedAt: new Date(), usedBy: userId },
-          }),
-        ]);
-
-        return NextResponse.json({
-          success: true,
-          message: "Successfully joined the household!",
-        });
+        const result = await redeemHouseholdInvite(userId, code);
+        return NextResponse.json(result);
       }
 
       case "remove-member": {
         const { memberId } = body;
-        if (!memberId || typeof memberId !== "string") {
-          return NextResponse.json(
-            { error: "Invalid member ID." },
-            { status: 400 }
-          );
-        }
-
-        if (memberId === userId) {
-          return NextResponse.json(
-            { error: "You cannot remove yourself. Please use the Leave Household option instead." },
-            { status: 400 }
-          );
-        }
-
-        const householdId = await getHouseholdId(userId);
-
-        // Find the member to remove and verify they belong to the same household
-        const memberUser = await prisma.user.findUnique({
-          where: { id: memberId },
-          select: { id: true, householdId: true, name: true },
-        });
-
-        if (!memberUser || memberUser.householdId !== householdId) {
-          return NextResponse.json(
-            { error: "Member not found in your household." },
-            { status: 404 }
-          );
-        }
-
-        // Create a new solo household for the removed user
-        await prisma.household.create({
-          data: {
-            name: `${memberUser.name ?? "My"}'s Kitchen`,
-            members: { connect: { id: memberId } },
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: "Member successfully removed from the household.",
-          removedMemberId: memberId,
-        });
+        const result = await removeHouseholdMember(userId, memberId);
+        return NextResponse.json(result);
       }
 
       case "leave": {
-        const currentUser = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { householdId: true, name: true },
-        });
-
-        if (!currentUser?.householdId) {
-          return NextResponse.json(
-            { error: "You are not in a household." },
-            { status: 400 }
-          );
-        }
-
-        // Create a new solo household for the departing user
-        const newHousehold = await prisma.household.create({
-          data: {
-            name: `${currentUser.name ?? "My"}'s Kitchen`,
-            members: { connect: { id: userId } },
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: "You have left the household. A new personal kitchen has been created.",
-          newHouseholdId: newHousehold.id,
-        });
+        const result = await leaveHousehold(userId);
+        return NextResponse.json(result);
       }
 
       default:
@@ -237,6 +99,9 @@ export async function POST(req: Request) {
         );
     }
   } catch (error: unknown) {
+    if (error instanceof HouseholdServiceError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
     console.error("[POST /api/household error]:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred." },

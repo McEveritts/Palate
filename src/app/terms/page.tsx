@@ -47,12 +47,13 @@ export default function TermsPage() {
           <h2 className="text-2xl font-bold text-white mb-4">3. User Accounts</h2>
           <div className="text-slate-300 leading-relaxed flex flex-col gap-3">
             <p>
-              Palate uses Google OAuth 2.0 for authentication. By signing in, you authorize us to
-              access your basic Google profile information (name, email, profile picture).
+              Palate authenticates users exclusively via your self-hosted Jellyfin media server.
+              By signing in, you authorize Palate to verify your credentials against your Jellyfin
+              instance. Google OAuth is never used for Palate authentication or account creation.
             </p>
             <p>
-              You are responsible for maintaining the security of your Google account. You agree not
-              to share your account access or use Palate for any unauthorized purpose.
+              You are responsible for maintaining the security of your Jellyfin credentials. You
+              agree not to share unauthorized access or use Palate for any unlawful purpose.
             </p>
           </div>
         </section>
@@ -60,10 +61,12 @@ export default function TermsPage() {
         <section className="glass-panel p-8 rounded-3xl border border-white/5">
           <h2 className="text-2xl font-bold text-white mb-4">4. Google Calendar Integration</h2>
           <p className="text-slate-300 leading-relaxed">
-            Palate offers optional Google Calendar synchronization to push your meal plans to a
-            calendar of your choice. By enabling this feature, you grant Palate permission to
-            create, update, and delete calendar events on your behalf. You may revoke this
-            permission at any time through your{" "}
+            Palate offers an optional Google Calendar synchronization feature to push your meal
+            plans to a calendar of your choice. By explicitly connecting Google Calendar in Settings,
+            you grant Palate permission to create, update, and delete calendar events on your behalf.
+            Google OAuth tokens are encrypted at rest using AES-256-GCM authenticated encryption.
+            You may disconnect this integration at any time in Palate Settings, which revokes stored
+            tokens and removes them from our database, or manage permissions directly through your{" "}
             <a
               href="https://myaccount.google.com/permissions"
               target="_blank"
@@ -71,8 +74,7 @@ export default function TermsPage() {
               className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
             >
               Google Account permissions
-            </a>{" "}
-            or by disabling the feature in Palate Settings.
+            </a>.
           </p>
         </section>
 

@@ -50,7 +50,7 @@ At the core of the platform is **Sage (🌿)**—your digital sous-chef and meta
 - **Styling System:** Tailwind CSS v4 + Framer Motion 12 (Glassmorphism & Radial Specular highlights)
 - **Data & Schema Layer:** Prisma ORM 7.8.0 + PostgreSQL 16 (local or connection pooled)
 - **AI Integrations:** Google Generative AI SDK, USDA FoodData Central REST API
-- **Auth Engine:** NextAuth.js (Secure Google OAuth)
+- **Auth Engine:** NextAuth.js (Exclusive Self-Hosted Jellyfin Authentication)
 - **Cryptographic Security:** AES-256-GCM symmetric encryption for client API key vaulting
 - **Testing:** Vitest 4.1.6 + React Testing Library (113/113 full suite coverage)
 
@@ -82,7 +82,7 @@ At the core of the platform is **Sage (🌿)**—your digital sous-chef and meta
 │   │   ├── layout/             # Glassmorphism panels and dynamic docks
 │   │   └── zero-waste/         # Drag-and-drop leftover selector UI
 │   ├── lib/
-│   │   ├── auth.ts             # NextAuth Google OAuth configuration
+│   │   ├── auth.ts             # NextAuth Jellyfin Credentials provider configuration
 │   │   ├── db.ts               # Local Prisma Client singleton
 │   │   ├── encryption.ts       # Cryptographic AES-256-GCM adapters
 │   │   ├── idfFilter.ts        # Inverse Document Frequency retrieval engine
@@ -143,11 +143,23 @@ Create a `.env.local` file in the root directory:
 # Database Settings (Local Docker PostgreSQL)
 DATABASE_URL="postgresql://postgres:postgres@localhost:28015/palate?schema=public"
 
-# Auth Credentials (Google Developer Console)
+# Palate Authentication (Exclusive Self-Hosted Jellyfin)
+JELLYFIN_LOGIN_ENABLED="true"
+JELLYFIN_INTERNAL_URL="http://localhost:8096"
+NEXT_PUBLIC_JELLYFIN_LOGIN_ENABLED="true"
+NEXT_PUBLIC_JELLYFIN_PUBLIC_URL="https://jellyfin.example.com"
+
+# Session & Cryptographic Key Separation (Production Requires Distinct Secrets)
+NEXTAUTH_SECRET="generate-with-openssl-rand-hex-32"
+NEXTAUTH_URL="http://localhost:28014"
+PALATE_ENCRYPTION_SECRET="generate-with-openssl-rand-hex-32"
+PALATE_RATE_LIMIT_SECRET="generate-with-openssl-rand-hex-32"
+CRON_SECRET="generate-with-openssl-rand-hex-32"
+
+# Optional Connected Integration: Google Calendar Sync
+# (Used exclusively for optional meal sync in Settings; never for Palate login)
 GOOGLE_CLIENT_ID="xxx.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="GOCSPX-xxx"
-NEXTAUTH_SECRET="your-symmetric-jwt-encryption-key"
-NEXTAUTH_URL="http://localhost:28014"
 
 # Global System Key (Fallback for guests or missing settings)
 GEMINI_API_KEY="AIzaSyxxx"
@@ -184,13 +196,21 @@ Palate will launch on its custom developer port: [http://localhost:28014](http:/
 | Variable | Scope | Description |
 | :--- | :--- | :--- |
 | `DATABASE_URL` | **Required** | PostgreSQL connection string including schema mapping. |
-| `GOOGLE_CLIENT_ID` | **Required** | OAuth Client ID for NextAuth Google login. |
-| `GOOGLE_CLIENT_SECRET` | **Required** | OAuth Client Secret for NextAuth Google login. |
-| `NEXTAUTH_SECRET` | **Required** | Symmetrical hash key used to encrypt user JWT cookies. |
-| `NEXTAUTH_URL` | **Required** | Absolute base URL of the active deployment. |
-| `GEMINI_API_KEY` | *Optional* | Fallback system key for processing guest requests. |
-| `CRON_SECRET` | *Optional* | Shared secret for authenticating scheduled curation requests. When set, the `/api/curate` endpoint requires `Authorization: Bearer <secret>`. |
-| `DEPLOYMENT_URL` | *GitHub Actions* | Base URL of the deployed Palate instance (e.g., `https://palate.example.com`). Required as a GitHub repository secret for the automated curation workflow. |
+| `JELLYFIN_LOGIN_ENABLED` | **Required** | Set to `"true"` to enable exclusive Jellyfin authentication. |
+| `JELLYFIN_INTERNAL_URL` | **Required** | Internal server URL of your Jellyfin server (e.g. `http://localhost:8096`). Fallback: `JELLYFIN_URL`. |
+| `NEXT_PUBLIC_JELLYFIN_LOGIN_ENABLED` | *Optional* | Client-side flag to enable the Jellyfin login form (requires explicit `"true"`). |
+| `NEXT_PUBLIC_JELLYFIN_PUBLIC_URL` | *Optional* | Public-facing URL of Jellyfin server for forgot-password links (e.g. `https://jellyfin.example.com`). |
+| `NEXTAUTH_SECRET` | **Required** | Secret used to sign and encrypt NextAuth JWT user sessions (min 32 chars). |
+| `NEXTAUTH_URL` | **Required** | Absolute base URL of the active deployment (e.g. `https://palate.example.com`). |
+| `PALATE_ENCRYPTION_SECRET` | **Required (Prod)** | AES-256-GCM master key used to derive domain-separated keys (`palate:gemini-api-key:v1` and `palate:google-oauth-token:v1`) at rest (min 32 chars). |
+| `PALATE_RATE_LIMIT_SECRET` | **Required (Prod)** | HMAC secret used to hash IP and username bucket identifiers for login rate limiting (min 32 chars). |
+| `CRON_SECRET` | **Required (Prod)** | Bearer token for authenticating automated `/api/curate` curation runs (min 32 chars). |
+| `GOOGLE_CLIENT_ID` | *Optional* | Google OAuth Client ID for optional Google Calendar integration in Settings (not used for login). |
+| `GOOGLE_CLIENT_SECRET` | *Optional* | Google OAuth Client Secret for optional Google Calendar integration. |
+| `GEMINI_API_KEY` | *Optional* | Fallback system key for processing guest AI requests. |
+| `DEPLOYMENT_URL` | *GitHub Actions* | Base URL of the deployed Palate instance for automated curation workflow. |
+
+> **Note on Authentication vs Integration:** Jellyfin is the exclusive login provider for Palate. Google Calendar is an optional connected integration configured in user Settings. Connecting Google Calendar defaults to automatic sync **OFF** until explicitly toggled by the user. Scheduled meals remain user-scoped (`userId`). Household/Kitchen recipe sharing is verified against real PostgreSQL.
 
 ---
 
@@ -202,7 +222,22 @@ Palate will launch on its custom developer port: [http://localhost:28014](http:/
 | `npm run build` | Compiles an optimized Next.js production build using Webpack. |
 | `npm run start` | Launches the compiled Next.js production web server on port `28014`. |
 | `npm run test` | Executes the complete Vitest automated test suite. |
+| `npm run test:integration` | Executes real PostgreSQL integration test suites against `palate_test`. |
 | `npx prisma studio` | Launches an interactive database dashboard on port `5555`. |
+| `npm run admin:userconfig:inspect` | Inspects UserConfig Gemini API key encryption status. |
+| `npm run admin:userconfig:dry-run` | Dry-runs migration of UserConfig keys to `PALATE_ENCRYPTION_SECRET`. |
+| `npm run admin:userconfig:migrate -- --confirmed` | Executes live migration of UserConfig keys (requires `--confirmed`). |
+| `npm run admin:tokens:inspect` | Inspects Google OAuth token encryption status and classification. |
+| `npm run admin:tokens:dry-run` | Dry-runs AES-256-GCM encryption of legacy plaintext Google tokens. |
+| `npm run admin:tokens:migrate -- --confirmed` | Executes live encryption of Google OAuth tokens (requires `--confirmed`). |
+| `npm run admin:users:count-google` | Outputs aggregate count of Google-era accounts and unlinked users. |
+| `npm run admin:users:collision-report` | Outputs aggregate collision report for Google-era vs Jellyfin accounts. |
+| `npm run admin:users:pre-link -- --confirmed --palate-user-id=<id> --jellyfin-server-id=<id> --jellyfin-user-id=<id> --jellyfin-username=<name>` | Pre-links a historical Google user to Jellyfin. |
+
+> **Determining Jellyfin Server ID:** To retrieve the exact Server ID for identity pre-linking, query your Jellyfin instance's public info endpoint:
+> ```bash
+> curl -s "$JELLYFIN_INTERNAL_URL/System/Info/Public" | jq -r .Id
+> ```
 
 ---
 
@@ -221,13 +256,10 @@ A GitHub Actions workflow (`.github/workflows/curate.yml`) handles scheduling au
 4. The workflow runs at **6:59 AM UTC** on Mon/Wed/Fri and can also be triggered manually from the **Actions** tab
 
 ### Self-Hosted Crontab (Alternative)
-If you're running Palate on your own server, you can use a system crontab instead:
+If you're running Palate on your own server, store the secret in a protected environment file (e.g., mode 0600) rather than command-line arguments:
 ```bash
-# Generate curation secret
-export CRON_SECRET=$(openssl rand -hex 32)
-
-# Add to crontab (adjust port to match your deployment)
-(crontab -l 2>/dev/null; echo '59 6 * * 1,3,5 curl -s -X POST -H "Authorization: Bearer '"$CRON_SECRET"'" http://localhost:28014/api/curate > /dev/null') | crontab -
+# Add to crontab reading secret from ~/.palate_cron.env
+(crontab -l 2>/dev/null; echo '59 6 * * 1,3,5 . $HOME/.palate_cron.env && curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:28014/api/curate > /dev/null') | crontab -
 ```
 
 ### Manual Trigger
@@ -266,7 +298,7 @@ describe('Gemma-4 Stream Parsing', () => {
 
 ## 🚀 Production Deployment & Server Maintenance
 
-Palate is running in production on a dedicated Linux instance (`pomelo.whatbox.ca`).
+Palate is running in production on a dedicated Linux instance (`venus.whatbox.ca`).
 
 ### Automatic Deployment Pipeline
 We utilize an automated SSH deployment pipeline configured in `quick_deploy.py`:
@@ -301,8 +333,8 @@ This script automates the complete server-side build cycle:
   ```
 
 ### Mismatched Symmetric Master Key
-- **Issue:** Encrypted API keys in the database fail integrity check on load (`InvalidMessage` error).
-- **Solution:** Verify that your `NEXTAUTH_SECRET` environment variable in your production configuration matches the exact symmetrical master key utilized during initial database encryption.
+- **Issue:** Encrypted API keys or Google OAuth tokens fail integrity check on load (`Failed to decrypt` or `InvalidMessage`).
+- **Solution:** Verify that your `PALATE_ENCRYPTION_SECRET` environment variable matches the master key used to encrypt the records. If migrating legacy records encrypted with `NEXTAUTH_SECRET`, ensure `NEXTAUTH_SECRET` is configured and run `npm run admin:userconfig:migrate` and `npm run admin:tokens:migrate`.
 
 ---
 

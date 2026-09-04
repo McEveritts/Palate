@@ -38,7 +38,6 @@ vi.mock('@google/genai', async () => {
     ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
     GoogleGenAI: class {
       models = {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         generateContent: (...args: any[]) => mockGenerateContent(...args)
       };
     }
@@ -82,7 +81,10 @@ Side description
 `
     });
 
-    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-cron-secret' }
+    });
     const res = await POST(req);
     const json = await res.json();
 
@@ -121,7 +123,10 @@ Side description
 `
     });
 
-    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-cron-secret' }
+    });
     const res = await POST(req);
     const json = await res.json();
 
@@ -144,7 +149,10 @@ Hero description
 `
     });
 
-    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-cron-secret' }
+    });
     const res = await POST(req);
     const json = await res.json();
 
@@ -192,7 +200,10 @@ Side description
 `
     });
 
-    const req = new Request('http://localhost/api/curate', { method: 'POST' });
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-cron-secret' }
+    });
     const res = await POST(req);
     const json = await res.json();
 
@@ -212,9 +223,23 @@ Side description
     expect((thirdCallArgs[1] as string).startsWith('---')).toBe(true);
   });
 
-  it('should reject unauthenticated request if CRON_SECRET and user session are missing', async () => {
-    mockGetServerSession.mockResolvedValueOnce(null);
+  it('should reject unauthenticated request if CRON_SECRET is missing or empty', async () => {
     process.env.CRON_SECRET = "";
+
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-cron-secret' }
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Unauthorized');
+  });
+
+  it('should reject unauthenticated request without Authorization header', async () => {
+    process.env.CRON_SECRET = "secret-cron";
 
     const req = new Request('http://localhost/api/curate', { method: 'POST' });
     const res = await POST(req);
@@ -225,8 +250,7 @@ Side description
     expect(json.error).toBe('Unauthorized');
   });
 
-  it('should authorize request with correct Cron Bearer token even if no user session is present', async () => {
-    mockGetServerSession.mockResolvedValueOnce(null);
+  it('should authorize request with correct Cron Bearer token without Origin header', async () => {
     process.env.CRON_SECRET = "secret-cron";
     mockGenerateContent.mockResolvedValueOnce({
       text: `
@@ -264,13 +288,27 @@ macros: "Calories: 150"
     expect(json.success).toBe(true);
   });
 
-  it('should reject request with incorrect Cron Bearer token if no user session is present', async () => {
-    mockGetServerSession.mockResolvedValueOnce(null);
+  it('should reject request with incorrect Cron Bearer token', async () => {
     process.env.CRON_SECRET = "secret-cron";
 
     const req = new Request('http://localhost/api/curate', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer wrong-cron' }
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(json.success).toBe(false);
+    expect(json.error).toBe('Unauthorized');
+  });
+
+  it('should reject request with malformed Authorization header (missing Bearer prefix)', async () => {
+    process.env.CRON_SECRET = "secret-cron";
+
+    const req = new Request('http://localhost/api/curate', {
+      method: 'POST',
+      headers: { 'Authorization': 'secret-cron' }
     });
     const res = await POST(req);
     const json = await res.json();

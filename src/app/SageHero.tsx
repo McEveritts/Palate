@@ -26,15 +26,6 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
   const sessionId = propSessionId || (params?.sessionId as string | undefined);
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isMicroScreen, setIsMicroScreen] = useState(false);
-
-  // Hydration-safe listener for dynamic viewport adjustments
-  useEffect(() => {
-    const handleResize = () => setIsMicroScreen(window.innerWidth < 380);
-    handleResize(); // Initial check
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -545,7 +536,8 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                       <button 
                         type="button"
                         onClick={removeImage}
-                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 touch-visible-hover-reveal border border-white/20 hover:bg-red-500/80 min-w-[28px] min-h-[28px] flex items-center justify-center cursor-pointer shadow-md"
+                        aria-label="Remove image"
                       >
                         <X size={14} />
                       </button>
@@ -555,8 +547,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
               </AnimatePresence>
               <button
                 type="button"
-                className="absolute left-[1px] top-[1px] bottom-[1px] w-[38px] xs:w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[44px] xs:w-[50px] min-h-[44px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors z-10 cursor-pointer"
                 title="Upload an image"
+                aria-label="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
                 <ImagePlus size={20} />
@@ -565,12 +558,12 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="glass-input pl-11 xs:pl-16 pr-12 xs:pr-36 py-3.5 xs:py-4 w-full text-white placeholder-slate-400"
-                placeholder={isMicroScreen ? "Ask Sage..." : "e.g. 'I need a high-protein dinner from the vault...'"}
+                className="glass-input pl-12 xs:pl-16 pr-12 xs:pr-36 py-3.5 xs:py-4 w-full text-white placeholder-slate-400"
+                placeholder="Ask Sage for a recipe, meal plan, or advice..."
               />
               <button
                 type="submit"
-                className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-3 xs:px-5 flex items-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
+                className="absolute right-2 top-2 bottom-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-500/30 text-white rounded-3xl px-3 xs:px-5 min-w-[40px] min-h-[40px] flex items-center justify-center gap-2 cursor-pointer transition-all backdrop-blur-md font-medium text-sm"
               >
                 <Sparkles size={16} />
                 <span className="hidden xs:inline">Ask Sage</span>
@@ -754,12 +747,13 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
 
                           {/* Action Buttons */}
                           {!msg.isStreaming && msg.content && (
-                            <div className="opacity-0 group-hover:opacity-100 flex flex-col gap-2 mb-2 flex-shrink-0 transition-all relative">
+                            <div className="touch-visible-hover-reveal group-focus-within:opacity-100 flex flex-col gap-2 mb-2 flex-shrink-0 relative">
                               {msg.role === 'sage' && (
                                 <button 
                                   onClick={() => setMeasurementSystem(measurementSystem === 'metric' ? 'imperial' : 'metric')}
-                                  className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center"
+                                  className="p-2 min-w-[36px] min-h-[36px] text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center cursor-pointer"
                                   title={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
+                                  aria-label={`Switch to ${measurementSystem === 'metric' ? 'Imperial' : 'Metric'} units`}
                                 >
                                   <Scale size={16} className={measurementSystem === 'metric' ? 'text-indigo-400' : 'text-fuchsia-400'} />
                                 </button>
@@ -768,8 +762,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                               {msg.role === 'sage' && (
                                 <button 
                                   onClick={() => setRawMode(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                                  className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg"
+                                  className="p-2 min-w-[36px] min-h-[36px] text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center cursor-pointer"
                                   title={rawMode[msg.id] ? "Show Rendered" : "Show Raw Markdown"}
+                                  aria-label={rawMode[msg.id] ? "Show Rendered" : "Show Raw Markdown"}
                                 >
                                   {rawMode[msg.id] ? <Eye size={16} /> : <FileCode size={16} />}
                                 </button>
@@ -787,8 +782,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                                       setShowCopyOptions(showCopyOptions === msg.id ? null : msg.id);
                                     }
                                   }}
-                                  className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg"
+                                  className="p-2 min-w-[36px] min-h-[36px] text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center cursor-pointer"
                                   title="Copy text"
+                                  aria-label="Copy text"
                                 >
                                   {copiedId === msg.id ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
                                 </button>
@@ -809,7 +805,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                                           setShowCopyOptions(null);
                                           setTimeout(() => setCopiedId(null), 2000);
                                         }}
-                                        className="text-[13px] px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2"
+                                        className="text-[13px] px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2 cursor-pointer"
                                       >
                                         <FileCode size={14} /> As Markdown
                                       </button>
@@ -820,7 +816,7 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                                           setShowCopyOptions(null);
                                           setTimeout(() => setCopiedId(null), 2000);
                                         }}
-                                        className="text-[13px] px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2"
+                                        className="text-[13px] px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors text-left flex items-center gap-2 cursor-pointer"
                                       >
                                         <FileText size={14} /> As Text
                                       </button>
@@ -841,8 +837,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                                       setTimeout(() => setSavedId(null), 2000);
                                     }
                                   }}
-                                  className="p-2 text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg"
+                                  className="p-2 min-w-[36px] min-h-[36px] text-slate-400 hover:text-white transition-all bg-black/20 hover:bg-black/40 rounded-lg flex items-center justify-center cursor-pointer"
                                   title="Save to vault"
+                                  aria-label="Save to vault"
                                 >
                                   {isSaving[msg.id] ? (
                                     <div className="w-4 h-4 rounded-full border-2 border-slate-400 border-t-transparent animate-spin"></div>
@@ -880,7 +877,8 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                       <button 
                         type="button"
                         onClick={removeImage}
-                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 opacity-0 group-hover/preview:opacity-100 transition-opacity border border-white/20 hover:bg-red-500/80"
+                        className="absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1 touch-visible-hover-reveal border border-white/20 hover:bg-red-500/80 min-w-[28px] min-h-[28px] flex items-center justify-center cursor-pointer shadow-md"
+                        aria-label="Remove image"
                       >
                         <X size={14} />
                       </button>
@@ -891,8 +889,9 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
               <button 
                 type="button"
                 disabled={isGenerating}
-                className="absolute left-[1px] top-[1px] bottom-[1px] w-[38px] xs:w-[50px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10"
+                className="absolute left-[1px] top-[1px] bottom-[1px] w-[44px] xs:w-[50px] min-h-[44px] flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50 z-10 cursor-pointer"
                 title="Upload an image"
+                aria-label="Upload an image"
                 onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
               >
                 <ImagePlus size={20} />
@@ -902,13 +901,13 @@ export default function SageHero({ sessionId: propSessionId }: { sessionId?: str
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
-                className="glass-input pl-11 xs:pl-16 pr-12 xs:pr-32 py-3.5 xs:py-4 w-full text-white disabled:opacity-50" 
-                placeholder={isMicroScreen ? "Follow up..." : "Ask a follow up..."}
+                className="glass-input pl-12 xs:pl-16 pr-12 xs:pr-32 py-3.5 xs:py-4 w-full text-white disabled:opacity-50" 
+                placeholder="Ask a follow up..."
               />
               <button 
                 type="submit"
                 disabled={isGenerating}
-                className="absolute right-2 top-2 bottom-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-3xl px-3 xs:px-4 flex items-center justify-center transition-all disabled:opacity-50 font-medium text-sm"
+                className="absolute right-2 top-2 bottom-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-3xl px-3 xs:px-4 min-w-[40px] min-h-[40px] flex items-center justify-center transition-all disabled:opacity-50 font-medium text-sm cursor-pointer"
               >
                 {isGenerating ? (
                   <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>

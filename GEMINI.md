@@ -39,3 +39,4 @@
 ## Completed Phases
 - **Phase 6:** Vault Visualization ✅
 - **Phase 7:** PostgreSQL Concurrency-Safe Rate Limiter (v1.5.1) ✅
+- **Phase 8:** Release v1.5.11 (Exclusive Jellyfin Auth, Cron/CSRF Remediation, Kitchen Hardening, Key Separation) [IN PROGRESS - READY FOR OPERATOR REVIEW]

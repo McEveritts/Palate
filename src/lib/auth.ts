@@ -1,5 +1,4 @@
 import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/db";
@@ -10,30 +9,23 @@ import { checkAuthRateLimit, computeRateLimitKey } from "@/lib/rateLimit";
 export { checkAuthRateLimit, computeRateLimitKey };
 
 if (!process.env.NEXTAUTH_SECRET) {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
     throw new Error("FATAL: NEXTAUTH_SECRET must be set in the environment.");
   }
   console.warn("Warning: NEXTAUTH_SECRET is not defined. Authentication might fail in production.");
 }
 
-// L2 Fix: Fail-secure on missing OAuth credentials
-if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("FATAL: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set in the environment.");
-  }
-  console.warn("Warning: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not defined. OAuth login will fail.");
-}
-
 
 export async function authorizeJellyfin(
   credentials: Record<string, string> | undefined,
-  req: any
+  req?: unknown
 ): Promise<{ id: string; name: string | null; email: string | null } | null> {
   if (!credentials?.username || typeof credentials.password !== "string") {
     return null;
   }
 
-  const reqHeaders = req?.headers as Record<string, string | string[] | undefined> | undefined;
+  const reqObj = req as { headers?: Record<string, string | string[] | undefined> } | undefined;
+  const reqHeaders = reqObj?.headers;
   const xForwardedFor = reqHeaders?.["x-forwarded-for"];
   const ip = (Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor)?.split(",")[0].trim() ||
     (reqHeaders?.["x-real-ip"] as string) ||
@@ -188,29 +180,17 @@ export const jellyfinProvider = CredentialsProvider({
   },
   authorize: authorizeJellyfin,
 });
-
-const providers: NextAuthOptions["providers"] = [
-  GoogleProvider({
-    clientId: process.env.GOOGLE_CLIENT_ID || "",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    authorization: {
-      params: {
-        prompt: "consent",
-        access_type: "offline",
-        response_type: "code",
-        scope: "openid email profile https://www.googleapis.com/auth/calendar",
-      },
-    },
-  }),
-];
-
-if (isJellyfinEnabled()) {
-  providers.push(jellyfinProvider);
-}
+jellyfinProvider.id = "jellyfin";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  providers,
+  get providers() {
+    const list: NextAuthOptions["providers"] = [];
+    if (isJellyfinEnabled()) {
+      list.push(jellyfinProvider);
+    }
+    return list;
+  },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
@@ -219,44 +199,32 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.authProvider = "jellyfin";
+        token.jellyfinAuthenticated = true;
         await ensureUserProvisioned(user.id, user.name);
       }
-
-      if (account && user) {
-        token.accessToken = account.access_token;
-        token.id = user.id;
-
-        // Persist updated Google OAuth credentials to the DB on sign in
-        if (account.provider === "google") {
-          try {
-            await prisma.account.updateMany({
-              where: {
-                userId: user.id as string,
-                provider: "google",
-              },
-              data: {
-                access_token: account.access_token,
-                // Only overwrite refresh_token if a new one is provided by Google
-                ...(account.refresh_token && { refresh_token: account.refresh_token }),
-                expires_at: account.expires_at,
-                scope: account.scope,
-              },
-            });
-          } catch (error) {
-            console.error("Failed to update Google OAuth tokens in Account table:", error);
-          }
-        }
-      }
-
       return token;
     },
     async session({ session, token }) {
+      // Invariant: Jellyfin is the exclusive login provider.
+      // Reject legacy tokens lacking the Jellyfin authentication marker!
+      if (!token.jellyfinAuthenticated || token.authProvider !== "jellyfin") {
+        return {
+          ...session,
+          user: undefined,
+          authProvider: null,
+          jellyfinAuthenticated: false,
+        } as unknown as typeof session;
+      }
+
       if (session.user) {
         session.user.id = token.id as string;
       }
+      session.authProvider = "jellyfin";
+      session.jellyfinAuthenticated = true;
       return session;
     },
   },

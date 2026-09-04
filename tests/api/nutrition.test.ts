@@ -29,7 +29,6 @@ vi.mock('@google/genai', async () => {
     ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
     GoogleGenAI: class {
       models = {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         generateContent: (...args: any[]) => mockGenerateContent(...args)
       };
     }

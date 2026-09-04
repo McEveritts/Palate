@@ -2,13 +2,9 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { SAGE_MODEL, SAGE_JSON_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getHouseholdId } from "@/lib/household";
 import matter from 'gray-matter';
-
-
+import { isValidCronAuth } from "@/lib/cronAuth";
 
 export async function GET() {
   return NextResponse.json(
@@ -19,24 +15,18 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    // Authentication: require EITHER a valid CRON_SECRET bearer token
-    // OR an authenticated user session. Never allow unauthenticated access.
+    // Automated curation is strictly restricted to valid CRON_SECRET bearer token.
     const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get('authorization');
-    const isCronAuth = !!(cronSecret && authHeader === `Bearer ${cronSecret}`);
 
-    const session = await getServerSession(authOptions).catch(() => null);
-    const userId = session?.user ? session.user.id : null;
-
-    if (!isCronAuth && !userId) {
+    if (!isValidCronAuth(authHeader, cronSecret)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Determine if we're in DB mode or filesystem mode
-    const householdId = userId ? await getHouseholdId(userId) : null;
+    const householdId = null;
 
     const currentDir = path.join(process.cwd(), 'vault', 'curated', 'current');
     const archiveDir = path.join(process.cwd(), 'vault', 'curated', 'archive');
