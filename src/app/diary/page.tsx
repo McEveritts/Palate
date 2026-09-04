@@ -163,8 +163,8 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
   };
 
   return (
-    <div className="relative min-h-screen w-full p-6 pb-32">
-      <div className="max-w-5xl mx-auto space-y-8 relative z-10">
+    <div className="relative min-h-screen w-full px-4 sm:px-6 md:px-8 lg:px-10 py-6 pb-32">
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         
         {/* Header + Date Navigation */}
         <div className="flex flex-col gap-2 pt-4 pb-2">
@@ -209,8 +209,8 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
         </div>
 
         {/* Top Widgets Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <div className="flex flex-col gap-6 lg:gap-8">
             <MacroGlassCard {...macroData} />
             <MicroNutrientCard
               fiber={dailyLog?.totalFiber ?? 0}
@@ -220,7 +220,7 @@ export default async function DiaryPage({ searchParams }: { searchParams?: Promi
             />
           </div>
           
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 lg:gap-8">
             <ContributionGrid days={pastDays} title="Weekly Consistency" />
             
             {/* Active Energy + Hydration Widget */}
