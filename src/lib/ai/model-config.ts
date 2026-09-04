@@ -12,13 +12,13 @@ export const SAGE_MODEL = "gemini-3.8-flash";
 
 /**
  * Thinking configuration for endpoints that stream reasoning to the UI.
- * Uses "medium" thinkingLevel for a balance of intelligence and cost.
+ * Uses "high" thinkingLevel for maximum culinary intelligence and deep reasoning.
  * `includeThoughts: true` ensures the reasoning trace is returned in
  * response parts so the server can relay it to the client.
  */
 export const SAGE_THINKING_CONFIG = {
   thinkingConfig: {
-    thinkingLevel: ThinkingLevel.MEDIUM,
+    thinkingLevel: ThinkingLevel.HIGH,
     includeThoughts: true,
   },
 };

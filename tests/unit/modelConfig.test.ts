@@ -26,8 +26,8 @@ describe("SageAI Model Configuration", () => {
     expect(SAGE_MODEL).toBe("gemini-3.8-flash");
   });
 
-  it("configures SAGE_THINKING_CONFIG with MEDIUM thinkingLevel and includeThoughts true", () => {
-    expect(SAGE_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.MEDIUM);
+  it("configures SAGE_THINKING_CONFIG with HIGH thinkingLevel and includeThoughts true", () => {
+    expect(SAGE_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.HIGH);
     expect(SAGE_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(true);
   });
 

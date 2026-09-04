@@ -18,7 +18,7 @@ const mockGenerateContentStream = vi.fn();
 
 vi.mock('@google/genai', async () => {
   return {
-    ThinkingLevel: { MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    ThinkingLevel: { HIGH: 'HIGH', MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
     GoogleGenAI: class {
       models = {
         generateContentStream: (...args: any[]) => mockGenerateContentStream(...args)

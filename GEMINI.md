@@ -11,7 +11,7 @@
 
 ## Technical Stack
 - **Framework:** Next.js 16.2.6 (Turbopack), React 19.2.4, Tailwind 4 (+Typography), Framer Motion 12, Lucide React.
-- **AI Orchestration:** Single-model: Gemini 3.8 Flash (`gemini-3.8-flash`) with native thinking (thinkingLevel: medium) for balanced intelligence and cost.
+- **AI Orchestration:** Single-model: Gemini 3.8 Flash (`gemini-3.8-flash`) with native thinking (thinkingLevel: high) for deep culinary reasoning.
 - **Data Layer:** Local-first Markdown vault (`vault/mains/`, `vault/sides/`) using Cooklang and YAML frontmatter.
 - **External Integration:** USDA FoodData Central via MCP for deterministic nutritional accuracy.
 
