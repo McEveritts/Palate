@@ -5,8 +5,8 @@ import { JELLYFIN_CLIENT_HEADER } from "@/lib/jellyfin";
 import fs from "fs";
 import path from "path";
 
-describe("Release Version Agreement (v1.5.21)", () => {
-  const TARGET_VERSION = "1.5.21";
+describe("Release Version Agreement (v1.5.22)", () => {
+  const TARGET_VERSION = "1.5.22";
 
   it("package.json version matches target version exactly", () => {
     expect(packageJson.version).toBe(TARGET_VERSION);
@@ -21,7 +21,7 @@ describe("Release Version Agreement (v1.5.21)", () => {
   });
 
   it("Release notes document exists and references target version", () => {
-    const releaseDocPath = path.resolve(__dirname, "../docs/releases/v1.5.21.md");
+    const releaseDocPath = path.resolve(__dirname, "../docs/releases/v1.5.22.md");
     expect(fs.existsSync(releaseDocPath)).toBe(true);
 
     const content = fs.readFileSync(releaseDocPath, "utf8");
@@ -29,3 +29,4 @@ describe("Release Version Agreement (v1.5.21)", () => {
     expect(content).toContain(`\`${TARGET_VERSION}\``);
   });
 });
+

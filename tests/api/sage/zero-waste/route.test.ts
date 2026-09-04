@@ -16,14 +16,15 @@ vi.mock('@/lib/db', () => ({
 
 const mockGenerateContentStream = vi.fn();
 
-vi.mock('@google/genai', async () => {
+vi.mock('@google/genai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@google/genai')>();
   return {
-    ThinkingLevel: { HIGH: 'HIGH', MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    ...actual,
     GoogleGenAI: class {
       models = {
-        generateContentStream: (...args: any[]) => mockGenerateContentStream(...args)
+        generateContentStream: (...args: any[]) => mockGenerateContentStream(...args),
       };
-    }
+    },
   };
 });
 

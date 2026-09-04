@@ -301,7 +301,6 @@ export async function runCalendarAgent(
     model: SAGE_MODEL,
     config: {
       systemInstruction,
-      temperature: 0.1,
       ...SAGE_JSON_THINKING_CONFIG,
       tools: [{ functionDeclarations: calendarToolsDeclarations }],
     },

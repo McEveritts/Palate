@@ -35,7 +35,7 @@ vi.mock('next-auth/next', () => ({
 
 vi.mock('@google/genai', async () => {
   return {
-    ThinkingLevel: { HIGH: 'HIGH', MEDIUM: 'MEDIUM', MINIMAL: 'MINIMAL' },
+    ThinkingLevel: { HIGH: 'HIGH', MEDIUM: 'MEDIUM', LOW: 'LOW', MINIMAL: 'MINIMAL' },
     GoogleGenAI: class {
       models = {
         generateContent: (...args: any[]) => mockGenerateContent(...args)

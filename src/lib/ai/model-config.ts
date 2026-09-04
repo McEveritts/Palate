@@ -24,13 +24,25 @@ export const SAGE_THINKING_CONFIG = {
 };
 
 /**
+ * Thinking configuration for fast transactional logging operations (food, hydration, weight, exercise).
+ * Uses "minimal" thinkingLevel for near-instant response time while preserving
+ * a brief 1-line reasoning trace.
+ */
+export const SAGE_LOGGING_THINKING_CONFIG = {
+  thinkingConfig: {
+    thinkingLevel: ThinkingLevel.MINIMAL,
+    includeThoughts: true,
+  },
+};
+
+/**
  * Thinking configuration for endpoints that return structured JSON only.
  * Thinking is minimized to save cost and avoid thought text polluting
  * JSON output. The reasoning output is NOT returned.
  */
 export const SAGE_JSON_THINKING_CONFIG = {
   thinkingConfig: {
-    thinkingLevel: ThinkingLevel.MINIMAL,
+    thinkingLevel: ThinkingLevel.LOW,
     includeThoughts: false,
   },
 };

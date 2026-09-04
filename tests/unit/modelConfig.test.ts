@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   SAGE_MODEL,
   SAGE_THINKING_CONFIG,
+  SAGE_LOGGING_THINKING_CONFIG,
   SAGE_JSON_THINKING_CONFIG,
   createGenAIClient,
 } from "@/lib/ai/model-config";
@@ -31,8 +32,13 @@ describe("SageAI Model Configuration", () => {
     expect(SAGE_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(true);
   });
 
-  it("configures SAGE_JSON_THINKING_CONFIG with MINIMAL thinkingLevel and includeThoughts false", () => {
-    expect(SAGE_JSON_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.MINIMAL);
+  it("configures SAGE_LOGGING_THINKING_CONFIG with MINIMAL thinkingLevel and includeThoughts true", () => {
+    expect(SAGE_LOGGING_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.MINIMAL);
+    expect(SAGE_LOGGING_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(true);
+  });
+
+  it("configures SAGE_JSON_THINKING_CONFIG with LOW thinkingLevel and includeThoughts false", () => {
+    expect(SAGE_JSON_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.LOW);
     expect(SAGE_JSON_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(false);
   });
 

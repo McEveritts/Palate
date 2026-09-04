@@ -1,4 +1,5 @@
 import { SAGE_MODEL, SAGE_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
+import { ThoughtDemarcator } from '@/lib/sage';
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -68,8 +69,6 @@ The user will provide a list of random ingredients, or an image of ingredients i
 Your goal is to synthesize a cohesive, delicious recipe that uses these specific ingredients to prevent food waste.
 Output the final recipe in Palate's standard Markdown format with YAML frontmatter.${unitInstruction}`;
 
-    // promptParts are built below, then passed to generateContentStream
-
     const promptParts: { inlineData?: { data: string; mimeType: string }; text?: string }[] = [];
     if (image) {
       const mimeTypeMatch = image.match(/^data:(image\/\w+);base64,/);
@@ -100,23 +99,28 @@ Output the final recipe in Palate's standard Markdown format with YAML frontmatt
 
     const readableStream = new ReadableStream({
       async start(controller) {
+        const encoder = new TextEncoder();
+        const demarcator = new ThoughtDemarcator((chunk) => controller.enqueue(encoder.encode(chunk)));
+
         try {
           for await (const chunk of stream) {
             const candidate = chunk.candidates?.[0];
             if (candidate?.content?.parts) {
               for (const part of candidate.content.parts) {
                 if (part.thought && part.text) {
-                  controller.enqueue(new TextEncoder().encode(`<thought>\n${part.text}\n</thought>\n`));
+                  demarcator.pushThought(part.text);
                 } else if (part.text) {
-                  controller.enqueue(new TextEncoder().encode(part.text));
+                  demarcator.pushContent(part.text);
                 }
               }
             } else if (chunk.text) {
-              controller.enqueue(new TextEncoder().encode(chunk.text));
+              demarcator.pushContent(chunk.text);
             }
           }
+          demarcator.flush();
           controller.close();
         } catch (streamError) {
+          demarcator.flush();
           controller.error(streamError);
         }
       }

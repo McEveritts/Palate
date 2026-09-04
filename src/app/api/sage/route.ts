@@ -16,6 +16,7 @@ const sageRequestSchema = z.object({
   history: z.array(z.any()).optional(),
   dailyTargets: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
   currentTotals: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
+  intent: z.enum(['logging', 'culinary', 'general']).optional(),
 });
 
 export async function POST(req: Request) {
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    const { prompt, image, measurementSystem, history, dailyTargets, currentTotals } = parseResult.data;
+    const { prompt, image, measurementSystem, history, dailyTargets, currentTotals, intent } = parseResult.data;
 
     // Retrieve NextAuth session
     const session = await getServerSession(authOptions).catch(() => null);
@@ -133,7 +134,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history, userId);
+    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history, userId, intent);
 
     // Discard key immediately after calling the stream function
     clientApiKey = undefined;

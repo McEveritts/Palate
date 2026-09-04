@@ -70,7 +70,6 @@ RULES:
 - Use culinary metaphors, wordplay, or warmth — NOT generic labels like "Kitchen" or "Home".
 - Examples of the caliber expected: "The Everitt Hearth", "Sage & Stone Kitchen", "The Velvet Spatula", "Casa de Umami"
 - Output ONLY the name. No quotes, no explanation, no punctuation, no preamble.`,
-        temperature: 0.8,
         maxOutputTokens: 60,
         ...SAGE_JSON_THINKING_CONFIG,
       },

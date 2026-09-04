@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { decryptKey } from "@/lib/encryption";
 import { z } from 'zod';
 import { SAGE_MODEL, SAGE_THINKING_CONFIG, createGenAIClient } from '@/lib/ai/model-config';
+import { ThoughtDemarcator } from '@/lib/sage';
 
 const wellnessRequestSchema = z.object({
   telemetry: z.object({
@@ -24,7 +25,15 @@ const wellnessRequestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     const parseResult = wellnessRequestSchema.safeParse(body);
     if (!parseResult.success) {
       return new Response(
@@ -126,26 +135,6 @@ Provide 2-3 culinary/wellness notes (e.g. active hydration techniques, nutrient 
       ? `\n\n[CRITICAL OVERRIDE]: The user has selected IMPERIAL measurements. You MUST formulate and output all culinary measurements and calculations in US/Imperial units (cups, ounces, pounds, Fahrenheit) instead of metric.`
       : `\n\n[CRITICAL]: The user has selected METRIC measurements. You MUST formulate and output all culinary measurements and calculations in metric units (grams, milliliters, kilograms, Celsius) by default.`);
 
-    const chatHistory: { role: string; parts: { text: string }[] }[] = [
-      { role: "user", parts: [{ text: "Create a simple salad recipe." }] },
-      { role: "model", parts: [{ text: "<thought>\nThe user wants a simple salad. I don't need to call any tools for this basic request. I will construct a vibrant, elegant salad recipe with standard culinary measurements.\n</thought>\n---\nrecipe: 'Emerald Vinaigrette Greens'\ntags: ['vegan', 'quick', 'salad']\nmacros: 'Calories: 120 | Protein: 2g | Carbs: 5g | Fat: 10g'\n---\n\n# 🥗 Emerald Vinaigrette Greens\n\nAn elegant, crisp composition of fresh greens dressed in a vibrant citrus vinaigrette." }] }
-    ];
-
-    if (vaultContext) {
-      chatHistory.push({ role: "user", parts: [{ text: `[LOCAL VAULT CONTEXT]\n${vaultContext}` }] });
-      chatHistory.push({ role: "model", parts: [{ text: "<thought>\nI have successfully integrated the local vault context into my memory. I will refer to this specifically when fulfilling the user's next request.\n</thought>\nContext loaded successfully. I am ready to assist. ✨" }] });
-    }
-
-    const chat = ai.chats.create({
-      model: SAGE_MODEL,
-      config: {
-        systemInstruction: wellnessSystemInstruction,
-        temperature: 0.7,
-        ...SAGE_THINKING_CONFIG,
-      },
-      history: chatHistory
-    });
-
     const customPrompt = `Today's workout focus: ${todayWorkout}.
 My 14-day exercise behavior telemetry:
 - Session Frequency: ${telemetry.sessionFrequencyStr}
@@ -157,29 +146,44 @@ My 14-day exercise behavior telemetry:
 Recommend a recovery meal from my vault. Represent all metrics and measurements in ${measurementSystem.toUpperCase()} units. Speak concisely, with elite culinary and physiological elegance.`;
 
     const sanitizedPrompt = customPrompt.replace(/<\/user_input>/gi, '');
-    const stream = await chat.sendMessageStream({
-      message: `<user_input>\n${sanitizedPrompt}\n</user_input>`
+    const sanitizedContext = vaultContext ? vaultContext.replace(/<\/user_input>/gi, '') : undefined;
+    const fullUserPrompt = sanitizedContext
+      ? `[LOCAL VAULT CONTEXT]\n${sanitizedContext}\n\n<user_input>\n${sanitizedPrompt}\n</user_input>`
+      : `<user_input>\n${sanitizedPrompt}\n</user_input>`;
+
+    const stream = await ai.models.generateContentStream({
+      model: SAGE_MODEL,
+      contents: fullUserPrompt,
+      config: {
+        systemInstruction: wellnessSystemInstruction,
+        ...SAGE_THINKING_CONFIG,
+      },
     });
 
     const readableStream = new ReadableStream({
       async start(controller) {
+        const encoder = new TextEncoder();
+        const demarcator = new ThoughtDemarcator((chunk) => controller.enqueue(encoder.encode(chunk)));
+
         try {
           for await (const chunk of stream) {
             const candidate = chunk.candidates?.[0];
             if (candidate?.content?.parts) {
               for (const part of candidate.content.parts) {
                 if (part.thought && part.text) {
-                  controller.enqueue(new TextEncoder().encode(`<thought>\n${part.text}\n</thought>\n`));
+                  demarcator.pushThought(part.text);
                 } else if (part.text) {
-                  controller.enqueue(new TextEncoder().encode(part.text));
+                  demarcator.pushContent(part.text);
                 }
               }
             } else if (chunk.text) {
-              controller.enqueue(new TextEncoder().encode(chunk.text));
+              demarcator.pushContent(chunk.text);
             }
           }
+          demarcator.flush();
           controller.close();
         } catch (error) {
+          demarcator.flush();
           controller.error(error);
         }
       }

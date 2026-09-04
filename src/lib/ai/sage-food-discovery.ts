@@ -146,7 +146,6 @@ export async function estimateFoodNutrition(
       contents: `Respond ONLY with a JSON array, no other text. Estimate the full nutritional profile for: "${sanitized}"`,
       config: {
         systemInstruction: FOOD_DISCOVERY_SYSTEM_PROMPT,
-        temperature: 0.3, // Low temperature for nutritional precision
         ...SAGE_JSON_THINKING_CONFIG,
       },
     });
