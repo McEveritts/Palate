@@ -32,8 +32,8 @@ describe("SageAI Model Configuration", () => {
     expect(SAGE_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(true);
   });
 
-  it("configures SAGE_LOGGING_THINKING_CONFIG with MINIMAL thinkingLevel and includeThoughts true", () => {
-    expect(SAGE_LOGGING_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.MINIMAL);
+  it("configures SAGE_LOGGING_THINKING_CONFIG with LOW thinkingLevel and includeThoughts true", () => {
+    expect(SAGE_LOGGING_THINKING_CONFIG.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.LOW);
     expect(SAGE_LOGGING_THINKING_CONFIG.thinkingConfig.includeThoughts).toBe(true);
   });
 

@@ -244,7 +244,7 @@ async function runScenarioB(): Promise<BenchmarkTelemetry> {
 // Scenario C: Multi-Tool Concurrent Dispatch & UI Bridging
 async function runScenarioC(): Promise<BenchmarkTelemetry> {
   const prompt = "I just finished lunch: I had 200g of grilled salmon, 150g of quinoa, and drank 500ml of water. Please log all of this.";
-  const stream = streamSage(prompt);
+  const stream = streamSage(prompt, undefined, undefined, undefined, 'metric', undefined, null, 'logging');
   const result = await consumeStream("C", "Multi-Tool Concurrent Dispatch & UI Bridging (Parallel Tools)", prompt, stream);
 
   // Specific Scenario C validations

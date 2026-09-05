@@ -198,7 +198,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       const parts = await executeSageToolCalls(calls);
       expect(parts[0].functionResponse?.name).toBe('log_hydration');
       expect(parts[0].functionResponse?.id).toBe('h_good');
-      expect((parts[0].functionResponse?.response as any).status).toBe('success');
+      expect((parts[0].functionResponse?.response as any).status).toBe('pending_client_persistence');
 
       expect(parts[1].functionResponse?.name).toBe('invalid_call');
       expect(parts[1].functionResponse?.id).toBe('inv_call');
@@ -219,7 +219,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
 
       expect(results[1].functionResponse?.name).toBe('log_hydration');
       expect(results[1].functionResponse?.id).toBe('call_valid');
-      expect((results[1].functionResponse?.response as any).status).toBe('success');
+      expect((results[1].functionResponse?.response as any).status).toBe('pending_client_persistence');
 
       expect(results[2].functionResponse?.name).toBe('unknown');
       expect((results[2].functionResponse?.response as any).error).toBeDefined();
@@ -228,6 +228,80 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
     it('handles non-array functionCalls defensively by returning empty array', async () => {
       const results = await executeSageToolCalls(null as any);
       expect(results).toEqual([]);
+    });
+
+    it('executes log_food_consumption and log_exercise with omitted optional calories/calories_burned cleanly', async () => {
+      const calls = [
+        {
+          name: 'log_food_consumption',
+          args: { food_name: 'Green Apple' },
+          id: 'food_1',
+        },
+        {
+          name: 'log_exercise',
+          args: { exercise_name: 'Pilates', duration_minutes: 45 },
+          id: 'ex_1',
+        },
+      ];
+      const tokens: string[] = [];
+      const responses = await executeSageToolCalls(calls, {
+        emitToolToken: (tok) => tokens.push(tok),
+      });
+
+      expect(responses).toHaveLength(2);
+      expect((responses[0] as any).functionResponse.response.status).toBe('pending_client_persistence');
+      expect((responses[1] as any).functionResponse.response.status).toBe('pending_client_persistence');
+      expect(tokens[0]).toContain('___TOOL_CALL_LOG_FOOD___');
+      expect(tokens[0]).toContain('"calories":0');
+      expect(tokens[1]).toContain('___TOOL_CALL_LOG_EXERCISE___');
+      expect(tokens[1]).toContain('"calories_burned":0');
+    });
+
+    it('reports success only after server persistence completes', async () => {
+      const events: string[] = [];
+      const tokens: string[] = [];
+      const responses = await executeSageToolCalls(
+        [{ name: 'log_hydration', args: { amount_ml: 400 }, id: 'hydration_1' }],
+        {
+          persistenceMode: 'server',
+          persistToolLog: async (toolName, args) => {
+            events.push(`persist:${toolName}:${args.amount_ml}`);
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            events.push('persisted');
+            return { entryId: 'water-entry-1' };
+          },
+          emitToolToken: (token) => {
+            events.push('marker');
+            tokens.push(token);
+          },
+        },
+      );
+
+      expect(events).toEqual(['persist:log_hydration:400', 'persisted', 'marker']);
+      expect((responses[0].functionResponse?.response as any).status).toBe('success');
+      expect(tokens[0]).toContain('"persisted":true');
+    });
+
+    it('does not emit a success marker when persistence fails or is disabled', async () => {
+      const tokens: string[] = [];
+      const failed = await executeSageToolCalls(
+        [{ name: 'log_weight', args: { weight_kg: 82 }, id: 'weight_1' }],
+        {
+          persistenceMode: 'server',
+          persistToolLog: async () => {
+            throw new Error('database unavailable');
+          },
+          emitToolToken: (token) => tokens.push(token),
+        },
+      );
+      const disabled = await executeSageToolCalls(
+        [{ name: 'log_hydration', args: { amount_ml: 250 }, id: 'hydration_2' }],
+        { persistenceMode: 'disabled', emitToolToken: (token) => tokens.push(token) },
+      );
+
+      expect((failed[0].functionResponse?.response as any).status).toBe('error');
+      expect((disabled[0].functionResponse?.response as any).status).toBe('error');
+      expect(tokens).toEqual([]);
     });
 
     it('normalizes single string ingredient_names into array in get_ingredients_macros', async () => {
@@ -265,6 +339,15 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
         expect(logFoodConsumptionSchema.safeParse({ food_name: 'Diet Soda', calories: 0 }).success).toBe(true);
       });
 
+      it('accepts food logging arguments when optional calories/macros are omitted', () => {
+        const res = logFoodConsumptionSchema.safeParse({ food_name: 'Fresh Apple' });
+        expect(res.success).toBe(true);
+        if (res.success) {
+          expect(res.data.food_name).toBe('Fresh Apple');
+          expect(res.data.calories).toBeUndefined();
+        }
+      });
+
       it('rejects missing food_name or empty food_name', () => {
         expect(logFoodConsumptionSchema.safeParse({ calories: 100 }).success).toBe(false);
         expect(logFoodConsumptionSchema.safeParse({ food_name: '   ', calories: 100 }).success).toBe(false);
@@ -282,6 +365,16 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       it('accepts valid positive duration and non-negative calories burned', () => {
         expect(logExerciseSchema.safeParse({ exercise_name: 'Running', duration_minutes: 30, calories_burned: 300 }).success).toBe(true);
         expect(logExerciseSchema.safeParse({ exercise_name: 'Stretching', duration_minutes: '15', calories_burned: 0 }).success).toBe(true);
+      });
+
+      it('accepts exercise logging arguments when optional calories_burned is omitted', () => {
+        const res = logExerciseSchema.safeParse({ exercise_name: 'Morning Walk', duration_minutes: 30 });
+        expect(res.success).toBe(true);
+        if (res.success) {
+          expect(res.data.exercise_name).toBe('Morning Walk');
+          expect(res.data.duration_minutes).toBe(30);
+          expect(res.data.calories_burned).toBeUndefined();
+        }
       });
 
       it('rejects duration_minutes <= 0, NaN, Infinity, or non-numeric strings', () => {
@@ -309,6 +402,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
         expect(logHydrationSchema.safeParse({ amount_ml: NaN }).success).toBe(false);
         expect(logHydrationSchema.safeParse({ amount_ml: Infinity }).success).toBe(false);
         expect(logHydrationSchema.safeParse({ amount_ml: 'invalid' }).success).toBe(false);
+        expect(logHydrationSchema.safeParse({ amount_ml: 5001 }).success).toBe(false);
       });
     });
 
@@ -324,6 +418,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
         expect(logWeightSchema.safeParse({ weight_kg: NaN }).success).toBe(false);
         expect(logWeightSchema.safeParse({ weight_kg: Infinity }).success).toBe(false);
         expect(logWeightSchema.safeParse({ weight_kg: 'heavy' }).success).toBe(false);
+        expect(logWeightSchema.safeParse({ weight_kg: 501 }).success).toBe(false);
       });
     });
 
@@ -572,7 +667,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       expect(fullOutput).toContain('80');
     });
 
-    it('calibrates thinking config dynamically to MINIMAL when logging intent is detected', async () => {
+    it('calibrates thinking config dynamically to LOW when logging intent is detected', async () => {
       async function* turn() {
         yield { candidates: [{ content: { parts: [{ text: 'Logged food' }] } }] };
       }
@@ -585,7 +680,7 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
 
       expect(mockCreateChat).toHaveBeenCalled();
       const lastCall = mockCreateChat.mock.calls[mockCreateChat.mock.calls.length - 1][0];
-      expect(lastCall.config.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.MINIMAL);
+      expect(lastCall.config.thinkingConfig.thinkingLevel).toBe(ThinkingLevel.LOW);
       expect(lastCall.config.thinkingConfig.includeThoughts).toBe(true);
     });
 
@@ -617,6 +712,9 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       expect(LOGGING_INTENT_REGEX.test('weighed 78.5kg this morning')).toBe(true);
       expect(LOGGING_INTENT_REGEX.test('water intake 1500ml')).toBe(true);
       expect(LOGGING_INTENT_REGEX.test('drank 250ml orange juice')).toBe(true);
+      expect(LOGGING_INTENT_REGEX.test('I just drank 500ml water')).toBe(true);
+      expect(LOGGING_INTENT_REGEX.test('I just finished lunch: salmon and quinoa')).toBe(true);
+      expect(LOGGING_INTENT_REGEX.test('My weight is 80kg')).toBe(true);
       expect(LOGGING_INTENT_REGEX.test('Can you suggest a high-protein dinner?')).toBe(false);
     });
 
@@ -629,6 +727,9 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       expect(resolveSageIntent('weighed 78.5kg this morning')).toBe('logging');
       expect(resolveSageIntent('water intake 1500ml')).toBe('logging');
       expect(resolveSageIntent('drank 250ml orange juice')).toBe('logging');
+      expect(resolveSageIntent('I just drank 500ml water')).toBe('logging');
+      expect(resolveSageIntent('I just finished lunch: salmon and quinoa')).toBe('logging');
+      expect(resolveSageIntent('My weight is 80kg')).toBe('logging');
     });
 
     it('defaults to general intent for recipe, technique, and wellness prompts', () => {
@@ -642,6 +743,13 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
       expect(resolveSageIntent('How to cook steak', 'logging')).toBe('logging');
       expect(resolveSageIntent('i ate an apple', 'general')).toBe('general');
     });
+
+    it('handles empty, null, or undefined prompts gracefully without throwing', () => {
+      expect(resolveSageIntent('')).toBe('general');
+      expect(resolveSageIntent('   ')).toBe('general');
+      expect(resolveSageIntent(undefined as any)).toBe('general');
+      expect(resolveSageIntent(null as any)).toBe('general');
+    });
   });
 
   describe('Atwater Macro Fallback Calculation', () => {
@@ -654,6 +762,17 @@ describe('Sage Native AFC & Owned Tool Orchestration', () => {
 
       // Zero macros -> 0 kcal
       expect(calculateAtwaterCalories(0, 0, 0)).toBe(0);
+    });
+
+    it('clamps negative nutrient numbers to zero and avoids negative energy contribution', () => {
+      // USDA difference arithmetic can yield negative carbs, e.g. -0.1g
+      expect(calculateAtwaterCalories(20, -0.1, 5)).toBe(125);
+      expect(calculateAtwaterCalories(-5, -10, -2)).toBe(0);
+    });
+
+    it('safely handles non-finite (NaN, Infinity) nutrient values', () => {
+      expect(calculateAtwaterCalories(NaN, 10, 5)).toBe(85);
+      expect(calculateAtwaterCalories(20, Infinity, 5)).toBe(125);
     });
 
     it('applies Atwater fallback in fetchMacros when cached calories are missing or 0.00', async () => {

@@ -56,7 +56,7 @@ export const logFoodConsumptionDeclaration: FunctionDeclaration = {
       carbs: { type: Type.NUMBER, description: "Carbohydrates in grams" },
       fat: { type: Type.NUMBER, description: "Fat in grams" },
     },
-    required: ["food_name", "calories", "protein", "carbs", "fat"],
+    required: ["food_name"],
   },
 };
 
@@ -70,7 +70,7 @@ export const logExerciseDeclaration: FunctionDeclaration = {
       duration_minutes: { type: Type.NUMBER, description: "Duration of the exercise in minutes" },
       calories_burned: { type: Type.NUMBER, description: "Estimated calories burned during the exercise" },
     },
-    required: ["exercise_name", "duration_minutes", "calories_burned"],
+    required: ["exercise_name", "duration_minutes"],
   },
 };
 
@@ -113,7 +113,10 @@ export const getFitnessSummaryDeclaration: FunctionDeclaration = {
  * Computes energy content via standard Atwater factors (4 kcal/g protein, 4 kcal/g carb, 9 kcal/g fat).
  */
 export function calculateAtwaterCalories(protein: number, carbs: number, fat: number): number {
-  return Math.round(protein * 4 + carbs * 4 + fat * 9);
+  const p = Math.max(0, Number.isFinite(protein) ? protein : 0);
+  const c = Math.max(0, Number.isFinite(carbs) ? carbs : 0);
+  const f = Math.max(0, Number.isFinite(fat) ? fat : 0);
+  return Math.round(p * 4 + c * 4 + f * 9);
 }
 
 export async function fetchMacros(ingredient_names: string[]) {
@@ -493,7 +496,7 @@ export const getIngredientsMacrosSchema = z.object({
 
 export const logFoodConsumptionSchema = z.object({
   food_name: z.string().trim().min(1, "Missing required argument: food_name"),
-  calories: createNonNegativeNumberSchema('calories'),
+  calories: createNonNegativeNumberSchema('calories').optional(),
   protein: createNonNegativeNumberSchema('protein').optional(),
   carbs: createNonNegativeNumberSchema('carbs').optional(),
   fat: createNonNegativeNumberSchema('fat').optional(),
@@ -502,15 +505,19 @@ export const logFoodConsumptionSchema = z.object({
 export const logExerciseSchema = z.object({
   exercise_name: z.string().trim().min(1, "Missing required argument: exercise_name"),
   duration_minutes: createPositiveNumberSchema('duration_minutes'),
-  calories_burned: createNonNegativeNumberSchema('calories_burned'),
+  calories_burned: createNonNegativeNumberSchema('calories_burned').optional(),
 });
 
 export const logHydrationSchema = z.object({
-  amount_ml: createPositiveNumberSchema('amount_ml'),
+  amount_ml: createPositiveNumberSchema('amount_ml').refine((n) => n <= 5000, {
+    message: 'amount_ml must be less than or equal to 5000',
+  }),
 });
 
 export const logWeightSchema = z.object({
-  weight_kg: createPositiveNumberSchema('weight_kg'),
+  weight_kg: createPositiveNumberSchema('weight_kg').refine((n) => n <= 500, {
+    message: 'weight_kg must be less than or equal to 500',
+  }),
 });
 
 export const getFitnessSummarySchema = z.object({
@@ -521,6 +528,16 @@ export interface SageCallableToolOptions {
   userId?: string | null;
   emitToolToken?: (token: string) => void;
   toolExecutors?: Record<string, (args: Record<string, unknown>, call: FunctionCall) => Promise<Record<string, unknown>>>;
+  persistenceMode?: 'legacy-client' | 'server' | 'disabled';
+  persistToolLog?: (
+    toolName: 'log_food_consumption' | 'log_exercise' | 'log_hydration' | 'log_weight',
+    args: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>;
+}
+
+export interface SageStreamRuntimeOptions {
+  persistenceMode?: SageCallableToolOptions['persistenceMode'];
+  persistToolLog?: SageCallableToolOptions['persistToolLog'];
 }
 
 /**
@@ -537,6 +554,72 @@ export async function executeSageToolCalls(
   const userId = options?.userId ?? null;
   const emitToolToken = options?.emitToolToken;
   const customExecutors = options?.toolExecutors;
+  const persistenceMode = options?.persistenceMode ?? 'legacy-client';
+
+  const completeLogCall = async (
+    callName: 'log_food_consumption' | 'log_exercise' | 'log_hydration' | 'log_weight',
+    callId: string | undefined,
+    marker: string,
+    payload: Record<string, unknown>,
+    successMessage: string,
+  ): Promise<Part> => {
+    if (persistenceMode === 'disabled') {
+      return {
+        functionResponse: {
+          name: callName,
+          ...(callId ? { id: callId } : {}),
+          response: {
+            status: 'error',
+            error: 'Sign in to Palate before logging nutrition or fitness data.',
+          },
+        },
+      };
+    }
+
+    if (persistenceMode === 'server') {
+      if (!options?.persistToolLog) {
+        return {
+          functionResponse: {
+            name: callName,
+            ...(callId ? { id: callId } : {}),
+            response: { status: 'error', error: 'Server persistence is unavailable.' },
+          },
+        };
+      }
+      try {
+        await options.persistToolLog(callName, payload);
+        emitToolToken?.(`\n\n${marker}${JSON.stringify({ ...payload, persisted: true })}\n\n`);
+        return {
+          functionResponse: {
+            name: callName,
+            ...(callId ? { id: callId } : {}),
+            response: { status: 'success', message: successMessage },
+          },
+        };
+      } catch (err) {
+        console.error(`[SageAI] Failed to persist ${callName}:`, err);
+        return {
+          functionResponse: {
+            name: callName,
+            ...(callId ? { id: callId } : {}),
+            response: { status: 'error', error: 'Palate could not save this log entry.' },
+          },
+        };
+      }
+    }
+
+    emitToolToken?.(`\n\n${marker}${JSON.stringify({ ...payload, persisted: false })}\n\n`);
+    return {
+      functionResponse: {
+        name: callName,
+        ...(callId ? { id: callId } : {}),
+        response: {
+          status: 'pending_client_persistence',
+          message: `${successMessage} is awaiting client confirmation.`,
+        },
+      },
+    };
+  };
 
   const settledResults = await Promise.allSettled(
     functionCalls.map(async (call): Promise<Part> => {
@@ -588,18 +671,24 @@ export async function executeSageToolCalls(
           };
         }
         const { food_name, calories, protein, carbs, fat } = parsed.data;
+        const normalizedCalories = calories ?? 0;
+        const normalizedProtein = protein ?? 0;
+        const normalizedCarbs = carbs ?? 0;
+        const normalizedFat = fat ?? 0;
         console.log(`[Tool Call] Logging food: ${food_name}`);
-        emitToolToken?.(`\n\n___TOOL_CALL_LOG_FOOD___${JSON.stringify({ food_name, calories, protein, carbs, fat })}\n\n`);
-        return {
-          functionResponse: {
-            name: callName,
-            ...(callId ? { id: callId } : {}),
-            response: {
-              status: "success",
-              message: `Successfully logged ${food_name}`,
-            },
+        return completeLogCall(
+          'log_food_consumption',
+          callId,
+          '___TOOL_CALL_LOG_FOOD___',
+          {
+            food_name,
+            calories: normalizedCalories,
+            protein: normalizedProtein,
+            carbs: normalizedCarbs,
+            fat: normalizedFat,
           },
-        };
+          `Successfully logged ${food_name}`,
+        );
       }
 
       if (callName === "log_exercise") {
@@ -614,18 +703,17 @@ export async function executeSageToolCalls(
           };
         }
         const { exercise_name, duration_minutes, calories_burned } = parsed.data;
+        const normalizedCaloriesBurned = calories_burned ?? 0;
         console.log(`[Tool Call] Logging exercise: ${exercise_name}`);
-        emitToolToken?.(`\n\n___TOOL_CALL_LOG_EXERCISE___${JSON.stringify({ exercise_name, duration_minutes, calories_burned })}\n\n`);
-        return {
-          functionResponse: {
-            name: callName,
-            ...(callId ? { id: callId } : {}),
-            response: {
-              status: "success",
-              message: `Successfully logged ${exercise_name} (${duration_minutes} min, ${calories_burned} kcal burned)`,
-            },
-          },
-        };
+        return completeLogCall(
+          'log_exercise',
+          callId,
+          '___TOOL_CALL_LOG_EXERCISE___',
+          { exercise_name, duration_minutes, calories_burned: normalizedCaloriesBurned },
+          `Successfully logged ${exercise_name} (${duration_minutes} min${
+            normalizedCaloriesBurned > 0 ? `, ${normalizedCaloriesBurned} kcal burned` : ''
+          })`,
+        );
       }
 
       if (callName === "log_hydration") {
@@ -641,17 +729,13 @@ export async function executeSageToolCalls(
         }
         const { amount_ml } = parsed.data;
         console.log(`[Tool Call] Logging hydration: ${amount_ml}ml`);
-        emitToolToken?.(`\n\n___TOOL_CALL_LOG_HYDRATION___${JSON.stringify({ amount_ml })}\n\n`);
-        return {
-          functionResponse: {
-            name: callName,
-            ...(callId ? { id: callId } : {}),
-            response: {
-              status: "success",
-              message: `Successfully logged ${amount_ml}ml water intake`,
-            },
-          },
-        };
+        return completeLogCall(
+          'log_hydration',
+          callId,
+          '___TOOL_CALL_LOG_HYDRATION___',
+          { amount_ml },
+          `Successfully logged ${amount_ml}ml water intake`,
+        );
       }
 
       if (callName === "log_weight") {
@@ -667,17 +751,13 @@ export async function executeSageToolCalls(
         }
         const { weight_kg } = parsed.data;
         console.log(`[Tool Call] Logging weight: ${weight_kg}kg`);
-        emitToolToken?.(`\n\n___TOOL_CALL_LOG_WEIGHT___${JSON.stringify({ weight_kg })}\n\n`);
-        return {
-          functionResponse: {
-            name: callName,
-            ...(callId ? { id: callId } : {}),
-            response: {
-              status: "success",
-              message: `Successfully logged weight: ${weight_kg} kg`,
-            },
-          },
-        };
+        return completeLogCall(
+          'log_weight',
+          callId,
+          '___TOOL_CALL_LOG_WEIGHT___',
+          { weight_kg },
+          `Successfully logged weight: ${weight_kg} kg`,
+        );
       }
 
       if (callName === "get_fitness_summary") {
@@ -773,7 +853,7 @@ export function createSageCallableTool(options?: SageCallableToolOptions): Calla
   };
 }
 
-export const LOGGING_INTENT_REGEX = /^\s*(?:log|i\s+(?:ate|drank|had)|track|weighed|water intake|drank\s+\d+)/i;
+export const LOGGING_INTENT_REGEX = /^\s*(?:(?:please\s+)?(?:log|track|record)\b|i\s+(?:just\s+)?(?:ate|drank|had|consumed|weighed|ran|walked|cycled|did)\b|i\s+(?:just\s+)?finished\s+(?:breakfast|lunch|dinner|a\s+snack|my\s+workout)\b|my\s+weight\s+is\b|weighed\b|water\s+intake\b|drank\s+\d+)/i;
 
 export function resolveSageIntent(
   prompt: string,
@@ -782,7 +862,8 @@ export function resolveSageIntent(
   if (intent) {
     return intent;
   }
-  if (LOGGING_INTENT_REGEX.test(prompt)) {
+  const cleanPrompt = (prompt || '').trim();
+  if (LOGGING_INTENT_REGEX.test(cleanPrompt)) {
     return 'logging';
   }
   return 'general';
@@ -796,7 +877,8 @@ export async function* streamSage(
   measurementSystem: 'metric' | 'imperial' = 'metric',
   history?: { role: string; content: string; thoughts?: string }[],
   userId?: string | null,
-  intent?: 'logging' | 'culinary' | 'general'
+  intent?: 'logging' | 'culinary' | 'general',
+  runtimeOptions?: SageStreamRuntimeOptions,
 ) {
   const finalApiKey = clientApiKey || process.env.GEMINI_API_KEY || "";
   if (!finalApiKey) {
@@ -913,6 +995,8 @@ export async function* streamSage(
         const functionResponseParts = await executeSageToolCalls(functionCalls, {
           userId,
           emitToolToken: (token) => demarcator.pushToolToken(token),
+          persistenceMode: runtimeOptions?.persistenceMode,
+          persistToolLog: runtimeOptions?.persistToolLog,
         });
 
         currentStream = await chat.sendMessageStream({ message: functionResponseParts });

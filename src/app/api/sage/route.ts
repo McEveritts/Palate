@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { decryptKey } from "@/lib/encryption";
 import { analyzeDietaryPatterns, buildProactiveContext } from "@/lib/patternAnalysis";
+import { persistSageToolLog } from "@/lib/sageLogPersistence";
 import { z } from 'zod';
 
 // H-4 Fix: Zod schema for request body validation
@@ -17,11 +18,20 @@ const sageRequestSchema = z.object({
   dailyTargets: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
   currentTotals: z.object({ calories: z.number(), protein: z.number(), carbs: z.number(), fat: z.number() }).optional(),
   intent: z.enum(['logging', 'culinary', 'general']).optional(),
+  localHour: z.number().int().min(0).max(23).optional(),
 });
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
     const parseResult = sageRequestSchema.safeParse(body);
     if (!parseResult.success) {
       return new Response(
@@ -29,7 +39,7 @@ export async function POST(req: Request) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    const { prompt, image, measurementSystem, history, dailyTargets, currentTotals, intent } = parseResult.data;
+    const { prompt, image, measurementSystem, history, dailyTargets, currentTotals, intent, localHour } = parseResult.data;
 
     // Retrieve NextAuth session
     const session = await getServerSession(authOptions).catch(() => null);
@@ -134,7 +144,26 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = streamSage(prompt, vaultContext, image, clientApiKey, measurementSystem, history, userId, intent);
+    const serverPersistenceRequested = req.headers.get('x-sage-persistence') === 'server-v1';
+    const persistenceMode = serverPersistenceRequested
+      ? (userId ? 'server' : 'disabled')
+      : 'legacy-client';
+    const stream = streamSage(
+      prompt,
+      vaultContext,
+      image,
+      clientApiKey,
+      measurementSystem,
+      history,
+      userId,
+      intent,
+      {
+        persistenceMode,
+        persistToolLog: userId
+          ? (toolName, args) => persistSageToolLog(userId, toolName, args, { localHour })
+          : undefined,
+      },
+    );
 
     // Discard key immediately after calling the stream function
     clientApiKey = undefined;
@@ -167,4 +196,3 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "An unexpected error occurred while communicating with Sage." }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
-

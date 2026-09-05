@@ -25,12 +25,12 @@ export const SAGE_THINKING_CONFIG = {
 
 /**
  * Thinking configuration for fast transactional logging operations (food, hydration, weight, exercise).
- * Uses "minimal" thinkingLevel for near-instant response time while preserving
+ * Uses "low" thinkingLevel for low-latency responses while preserving
  * a brief 1-line reasoning trace.
  */
 export const SAGE_LOGGING_THINKING_CONFIG = {
   thinkingConfig: {
-    thinkingLevel: ThinkingLevel.MINIMAL,
+    thinkingLevel: ThinkingLevel.LOW,
     includeThoughts: true,
   },
 };
