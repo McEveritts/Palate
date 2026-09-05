@@ -38,9 +38,10 @@ try {
 }
 
 async function getDeps() {
-  const [enc, tokens, link, db] = await Promise.all([
+  const [enc, tokens, chats, link, db] = await Promise.all([
     import("./migrateEncryption"),
     import("./migrateGoogleTokens"),
+    import("./migrateChatEncryption"),
     import("./linkIdentity"),
     import("../db"),
   ]);
@@ -49,6 +50,8 @@ async function getDeps() {
     migrateUserConfigEncryption: enc.migrateUserConfigEncryption,
     inspectGoogleTokenMigration: tokens.inspectGoogleTokenMigration,
     migrateGoogleTokens: tokens.migrateGoogleTokens,
+    inspectChatEncryption: chats.inspectChatEncryption,
+    migrateChatEncryption: chats.migrateChatEncryption,
     countGoogleUsers: link.countGoogleUsers,
     reportIdentityCollisions: link.reportIdentityCollisions,
     linkPalateUserToJellyfin: link.linkPalateUserToJellyfin,
@@ -90,6 +93,9 @@ Commands:
   tokens:inspect                 Inspect Google OAuth token encryption status
   tokens:dry-run                 Dry-run encryption of plaintext Google OAuth tokens
   tokens:migrate                 Execute live encryption of Google OAuth tokens (requires --confirmed)
+  chats:inspect                  Inspect Sage chat field encryption status
+  chats:dry-run                  Dry-run encryption of Sage chat fields
+  chats:migrate                  Execute live encryption of Sage chat fields (requires --confirmed)
   users:count-google             Count total Google accounts and unlinked users
   users:collision-report         Aggregate report of Google vs Jellyfin identity collisions
   users:pre-link                 Pre-link a Google-era user to Jellyfin (requires --confirmed, --palate-user-id, --jellyfin-user-id, --jellyfin-username, --jellyfin-server-id)
@@ -150,6 +156,32 @@ Commands:
           result.malformedSkipped > 0 ||
           result.casSkipped > 0
         ) {
+          console.error(JSON.stringify({ error: "Migration completed with unresolved records." }));
+          process.exit(1);
+        }
+        break;
+      }
+
+      case "chats:inspect": {
+        const result = await deps.inspectChatEncryption();
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "chats:dry-run": {
+        const result = await deps.migrateChatEncryption({ dryRun: true });
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+
+      case "chats:migrate": {
+        if (!flags.confirmed) {
+          console.error(JSON.stringify({ error: "Live migration requires --confirmed flag." }));
+          process.exit(1);
+        }
+        const result = await deps.migrateChatEncryption({ dryRun: false, confirmed: true });
+        console.log(JSON.stringify(result, null, 2));
+        if (result.malformedOrUnreadable > 0 || result.casSkipped > 0 || result.errors > 0) {
           console.error(JSON.stringify({ error: "Migration completed with unresolved records." }));
           process.exit(1);
         }

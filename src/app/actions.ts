@@ -14,6 +14,27 @@ import { getAllRecipes } from "../lib/vault";
 import lockfile from 'proper-lockfile';
 import { MealType, ChatRole, Prisma } from '@prisma/client';
 import { syncMealToGoogle, deleteMealFromGoogle } from "@/lib/googleCalendar";
+import { decryptProtectedField, encryptProtectedField } from "@/lib/protectedField";
+
+function decryptChatMessage<T extends { content: string; thought: string | null }>(message: T): T {
+  return {
+    ...message,
+    content: decryptProtectedField(message.content, "chat-message-content"),
+    thought: message.thought === null
+      ? null
+      : decryptProtectedField(message.thought, "chat-message-thought"),
+  };
+}
+
+function decryptChatSession<
+  T extends { title: string; messages: Array<{ content: string; thought: string | null }> }
+>(session: T): T {
+  return {
+    ...session,
+    title: decryptProtectedField(session.title, "chat-session-title"),
+    messages: session.messages.map(decryptChatMessage),
+  } as T;
+}
 
 async function getCurrentUserId(): Promise<string | null> {
   if (typeof getServerSession !== 'function') return null;
@@ -919,7 +940,7 @@ export async function getChatSessions() {
           }
         }
       });
-      return { success: true, sessions };
+      return { success: true, sessions: sessions.map(decryptChatSession) };
     } else {
       return { success: true, sessions: [] };
     }
@@ -941,7 +962,7 @@ export async function getChatSession(sessionId: string) {
           }
         }
       });
-      return { success: true, session };
+      return { success: true, session: session ? decryptChatSession(session) : null };
     } else {
       return { success: true, session: null };
     }
@@ -958,11 +979,14 @@ export async function createChatSession(title: string) {
       const session = await prisma.chatSession.create({
         data: {
           userId,
-          title,
+          title: encryptProtectedField(title, "chat-session-title"),
         }
       });
       revalidatePath('/ask_sage');
-      return { success: true, session };
+      return {
+        success: true,
+        session: { ...session, title },
+      };
     } else {
       return { success: false, error: "Authentication required to create database sessions" };
     }
@@ -993,8 +1017,10 @@ export async function saveChatMessage(sessionId: string, role: string, content: 
         data: {
           sessionId,
           role: dbRole as ChatRole,
-          content,
-          thought: thought || null,
+          content: encryptProtectedField(content, "chat-message-content"),
+          thought: thought
+            ? encryptProtectedField(thought, "chat-message-thought")
+            : null,
         }
       });
 
@@ -1004,7 +1030,10 @@ export async function saveChatMessage(sessionId: string, role: string, content: 
       });
 
       revalidatePath('/ask_sage');
-      return { success: true, message };
+      return {
+        success: true,
+        message: { ...message, content, thought: thought || null },
+      };
     } else {
       return { success: false, error: "Authentication required to save messages" };
     }
@@ -1161,6 +1190,5 @@ export async function getWorkoutTelemetry() {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
-
 
 
