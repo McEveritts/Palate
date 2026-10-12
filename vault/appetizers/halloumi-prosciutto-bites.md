@@ -1,36 +1,4 @@
 ---
-        recipe: "Halloumi Prosciutto Bites"
-        tags: ["appetizer","finger-food","halloumi","prosciutto"]
-        macros: "Calories: 290 | Protein: 18g | Carbs: 8g | Fat: 19g"
-        category: "appetizers"
-        date: "2026-05-25"
-        ---
-    *   Ingredients:
-        *   @halloumi cheese{250%g}
-        *   @prosciutto di parma{6%slices}
-        *   @fresh figs{4%pieces}
-        *   @raw honey{1%tbsp}
-        *   @extra virgin olive oil{1%tsp}
-        *   @fresh thyme{1%sprig}
-    *   Instructions:
-        I. Prep halloumi into cubes.
-        II. Pan-sear. (Technique Note: Medium-high heat).
-        III. Wrap with prosciutto.
-        IV. Top with fig and honey. (Crucial Step: Glaze carefully).
-        V. Garnish.
-
-    *   Maillard reaction (halloumi searing).
-    *   Salt balance (prosciutto vs halloumi).
-    *   Texture contrast.
-
-    *   No meta-commentary? Yes.
-    *   Starts with `---`? Yes.
-    *   YAML fields correct? Yes.
-    *   Emojis in headers? Yes.
-    *   Roman numerals? Yes.
-    *   Cooklang format? Yes.
-    *   Explicit technique notes? Yes.
-    *   Science section at end? Yes.---
 recipe: "Halloumi Prosciutto Bites"
 tags: ["appetizer","finger-food","halloumi","prosciutto"]
 macros: "Calories: 290 | Protein: 18g | Carbs: 8g | Fat: 19g"
